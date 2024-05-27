@@ -1,0 +1,5 @@
+.envrc
+dist/
+memos.egg-info/
+build/
+*.pyc
