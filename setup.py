@@ -15,4 +15,5 @@ setup(
             'memos=memos.commands:app',
         ],
     },
+    python_requires='>=3.10',
 )
