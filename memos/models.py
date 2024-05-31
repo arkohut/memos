@@ -4,107 +4,92 @@ from sqlalchemy import (
     String,
     Text,
     DateTime,
-    Enum
+    Enum,
+    func
 )
 from datetime import datetime
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
-from enum import Enum as PyEnum
 from typing import List
 from .config import get_database_path
-
-
-class MetadataSource(PyEnum):
-    USER_GENERATED = "user_generated"
-    SYSTEM_GENERATED = "system_generated"
-    PLUGIN_GENERATED = "plugin_generated"
-
-
-class MetadataType(PyEnum):
-    EXTRACONTENT = "extra_content"
-    ATTRIBUTE = "attribute"
+from .schemas import MetadataSource, MetadataType
 
 
 class Base(DeclarativeBase):
-    pass
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
 
-class Library(Base):
+class LibraryModel(Base):
     __tablename__ = "libraries"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
-    folders: Mapped[List["Folder"]] = relationship("Folder", back_populates="library")
-    plugins: Mapped[List["Plugin"]] = relationship("LibraryPlugin", back_populates="library")
+    folders: Mapped[List["FolderModel"]] = relationship("FolderModel", back_populates="library")
+    plugins: Mapped[List["PluginModel"]] = relationship("LibraryPluginModel", back_populates="library")
 
 
-class Folder(Base):
+class FolderModel(Base):
     __tablename__ = "folders"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     path: Mapped[str] = mapped_column(String, nullable=False)
     library_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    library: Mapped["Library"] = relationship("Library", back_populates="folders")
-    entities: Mapped[List["Entity"]] = relationship("Entity", back_populates="folder")
+    library: Mapped["LibraryModel"] = relationship("LibraryModel", back_populates="folders")
+    entities: Mapped[List["EntityModel"]] = relationship("EntityModel", back_populates="folder")
 
 
-class Entity(Base):
+class EntityModel(Base):
     __tablename__ = "entities"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    path: Mapped[str] = mapped_column(String, nullable=False)
+    filepath: Mapped[str] = mapped_column(String, nullable=False)
     filename: Mapped[str] = mapped_column(String, nullable=False)
     size: Mapped[int] = mapped_column(Integer, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    last_modified_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    filetype: Mapped[str] = mapped_column(String, nullable=False)
+    file_created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    file_last_modified_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    file_type: Mapped[str] = mapped_column(String, nullable=False)
     last_scan_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     folder_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    folder: Mapped["Folder"] = relationship("Folder", back_populates="entities")
-    metadata_entries: Mapped[List["EntityMetadata"]] = relationship("EntityMetadata", back_populates="entity")
+    folder: Mapped["FolderModel"] = relationship("FolderModel", back_populates="entities")
+    metadata_entries: Mapped[List["EntityMetadataModel"]] = relationship("EntityMetadataModel", back_populates="entity")
+    tags: Mapped[List["TagModel"]] = relationship("EntityTagModel", back_populates="entity")
 
 
-class Tag(Base):
+class TagModel(Base):
     __tablename__ = "tags"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     color: Mapped[str | None] = mapped_column(String, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    source: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
-class EntityTag(Base):
+class EntityTagModel(Base):
     __tablename__ = "entity_tags"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     entity_id: Mapped[int] = mapped_column(Integer, nullable=False)
     tag_id: Mapped[int] = mapped_column(Integer, nullable=False)
     source: Mapped[MetadataSource] = mapped_column(Enum(MetadataSource), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
-class EntityMetadata(Base):
+class EntityMetadataModel(Base):
     __tablename__ = "metadata_entries"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     entity_id: Mapped[int] = mapped_column(Integer, nullable=False)
     key: Mapped[str] = mapped_column(String, nullable=False)
     value: Mapped[str] = mapped_column(Text, nullable=False)
-    source: Mapped[MetadataSource] = mapped_column(Enum(MetadataSource), nullable=False)
+    source_type: Mapped[MetadataSource] = mapped_column(Enum(MetadataSource), nullable=False)
+    source: Mapped[str | None] = mapped_column(String, nullable=True)
     datetype: Mapped[MetadataType] = mapped_column(Enum(MetadataType), nullable=False)
-    entity = relationship("Entity", back_populates="metadata_entries")
+    entity = relationship("EntityModel", back_populates="metadata_entries")
 
 
-class Plugin(Base):
+class PluginModel(Base):
     __tablename__ = "plugins"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     webhook_url: Mapped[str] = mapped_column(String, nullable=False)
-    libraries = relationship("LibraryPlugin", back_populates="plugin")
+    libraries = relationship("LibraryPluginModel", back_populates="plugin")
 
 
-class LibraryPlugin(Base):
+class LibraryPluginModel(Base):
     __tablename__ = "library_plugins"
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     library_id: Mapped[int] = mapped_column(Integer, nullable=False)
     plugin_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    library = relationship("Library", back_populates="plugins")
-    plugin = relationship("Plugin", back_populates="libraries")
+    library: Mapped["LibraryModel"] = relationship("LibraryModel", back_populates="plugins")
+    plugin: Mapped["PluginModel"] = relationship("PluginModel", back_populates="libraries")
 
 
 # Create the database engine with the path from config
