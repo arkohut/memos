@@ -1,4 +1,6 @@
 fastapi
 uvicorn
 httpx
+pydantic
+sqlalchemy
 typer

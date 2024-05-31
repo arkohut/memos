@@ -16,6 +16,8 @@ setup(
         'fastapi',
         'uvicorn',
         'httpx',
+        'pydantic',
+        'sqlalchemy',
         'typer'
     ],
     entry_points={
