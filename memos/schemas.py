@@ -26,9 +26,8 @@ class NewFolderParam(BaseModel):
 
 class NewEntityParam(BaseModel):
     filename: str
-    path: str
+    filepath: str
     size: int
-    created_at: datetime
     file_created_at: datetime
     file_last_modified_at: datetime
     file_type: str
@@ -92,7 +91,7 @@ class Library(BaseModel):
 
 class Entity(BaseModel):
     id: int
-    path: str
+    filepath: str
     filename: str
     size: int
     file_created_at: datetime

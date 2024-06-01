@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from typing import List
 
 from .config import get_database_path
-from .crud import get_library_by_id, create_library
+from .crud import get_library_by_id, create_library, create_entity
 from .schemas import (
     Library,
     Folder,
@@ -57,14 +57,10 @@ def new_folder(
 
 @app.post("/libraries/{library_id}/entities", response_model=Entity)
 def new_entity(
-    entity: NewEntityParam, library_id: int, db: Session = Depends(get_db)
+    new_entity: NewEntityParam, library_id: int, db: Session = Depends(get_db)
 ):
-
-    db_entity = Entity(**entity.model_dump(), library_id=library_id)
-    db.add(db_entity)
-    db.commit()
-    db.refresh(db_entity)
-    return db_entity
+    entity = create_entity(library_id, new_entity, db)
+    return entity
 
 
 @app.post("/plugins", response_model=Plugin)
