@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from typing import List
 
 from .config import get_database_path
-from .crud import get_library_by_id, create_library, create_entity
+from .crud import get_library_by_id, create_library, create_entity, create_plugin, add_plugin_to_library
 from .schemas import (
     Library,
     Folder,
@@ -64,22 +64,16 @@ def new_entity(
 
 
 @app.post("/plugins", response_model=Plugin)
-def new_plugin(plugin: NewPluginParam, db: Session = Depends(get_db)):
-    db_plugin = Plugin(**plugin.model_dump())
-    db.add(db_plugin)
-    db.commit()
-    db.refresh(db_plugin)
-    return db_plugin
+def new_plugin(new_plugin: NewPluginParam, db: Session = Depends(get_db)):
+    plugin = create_plugin(new_plugin, db)
+    return plugin
 
 
 @app.post("/libraries/{library_id}/plugins", status_code=status.HTTP_204_NO_CONTENT)
 def add_library_plugin(
-    library_id: int, plugin: NewLibraryPluginParam, db: Session = Depends(get_db)
+    library_id: int, new_plugin: NewLibraryPluginParam, db: Session = Depends(get_db)
 ):
-    db_library_plugin = LibrayPlugin(library_id=library_id, plugin_id=plugin.plugin_id)
-    db.add(db_library_plugin)
-    db.commit()
-    db.refresh(db_library_plugin)
+    add_plugin_to_library(library_id, new_plugin.plugin_id, db)
 
 
 def run_server():

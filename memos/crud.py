@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from .schemas import Library, NewLibraryParam, Folder, NewEntityParam, Entity
-from .models import LibraryModel, FolderModel, EntityModel, EntityModel
+from .schemas import Library, NewLibraryParam, Folder, NewEntityParam, Entity, Plugin, NewPluginParam
+from .models import LibraryModel, FolderModel, EntityModel, EntityModel, PluginModel, LibraryPluginModel
 
 
 def get_library_by_id(library_id: int, db: Session) -> Library | None:
@@ -35,3 +35,18 @@ def create_entity(library_id: int, entity: NewEntityParam, db: Session) -> Entit
     db.commit()
     db.refresh(db_entity)
     return db_entity
+
+
+def create_plugin(newPlugin: NewPluginParam, db: Session) -> Plugin:
+    db_plugin = PluginModel(**newPlugin.model_dump(mode='json'))
+    db.add(db_plugin)
+    db.commit()
+    db.refresh(db_plugin)
+    return db_plugin
+
+
+def add_plugin_to_library(library_id: int, plugin_id: int, db: Session):
+    library_plugin = LibraryPluginModel(library_id=library_id, plugin_id=plugin_id)
+    db.add(library_plugin)
+    db.commit()
+    db.refresh(library_plugin)
