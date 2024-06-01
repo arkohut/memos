@@ -33,6 +33,11 @@ def get_db():
         db.close()
 
 
+@app.get("/")
+def root():
+    return {"healthy": True}
+
+
 @app.post("/libraries", response_model=Library)
 def new_library(library_param: NewLibraryParam, db: Session = Depends(get_db)):
     library = create_library(library_param, db)
