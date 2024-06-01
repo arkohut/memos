@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, DirectoryPath, HttpUrl, field_validator
+from pydantic import BaseModel, ConfigDict, DirectoryPath, HttpUrl
 from typing import List
 from datetime import datetime
 from enum import Enum

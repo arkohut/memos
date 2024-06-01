@@ -4,3 +4,4 @@ httpx
 pydantic
 sqlalchemy
 typer
+tabulate

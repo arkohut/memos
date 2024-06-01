@@ -131,5 +131,5 @@ class LibraryPluginModel(Base):
 
 
 # Create the database engine with the path from config
-engine = create_engine(f"sqlite:///{get_database_path()}", echo=True)
+engine = create_engine(f"sqlite:///{get_database_path()}")
 Base.metadata.create_all(engine)
