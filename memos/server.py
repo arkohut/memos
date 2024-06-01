@@ -6,7 +6,14 @@ from sqlalchemy.orm import sessionmaker
 from typing import List
 
 from .config import get_database_path
-from .crud import get_library_by_id, create_library, create_entity, create_plugin, add_plugin_to_library
+from .crud import (
+    get_library_by_id,
+    create_library,
+    create_entity,
+    create_plugin,
+    add_plugin_to_library,
+    get_libraries,
+)
 from .schemas import (
     Library,
     Folder,
@@ -44,15 +51,22 @@ def new_library(library_param: NewLibraryParam, db: Session = Depends(get_db)):
     return library
 
 
+@app.get("/libraries", response_model=List[Library])
+def list_libraries(db: Session = Depends(get_db)):
+    libraries = get_libraries(db)
+    return libraries
+
+
 @app.post("/libraries/{library_id}/folders", response_model=Folder)
 def new_folder(
     library_id: int,
-    folder: NewFolderParam, db: Session = Depends(get_db),
+    folder: NewFolderParam,
+    db: Session = Depends(get_db),
 ):
     library = get_library_by_id(library_id, db)
     if library is None:
         raise HTTPException(status_code=404, detail="Library not found")
-    
+
     db_folder = Folder(path=folder.path, library_id=library.id)
     db.add(db_folder)
     db.commit()

@@ -66,7 +66,7 @@ class NewLibraryPluginParam(BaseModel):
 
 class Folder(BaseModel):
     id: int
-    name: str
+    path: str
 
     model_config = ConfigDict(from_attributes=True)
 

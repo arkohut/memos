@@ -1,3 +1,4 @@
+from typing import List
 from sqlalchemy.orm import Session
 from .schemas import Library, NewLibraryParam, Folder, NewEntityParam, Entity, Plugin, NewPluginParam
 from .models import LibraryModel, FolderModel, EntityModel, EntityModel, PluginModel, LibraryPluginModel
@@ -21,9 +22,13 @@ def create_library(library: NewLibraryParam, db: Session) -> Library:
     return Library(
         id=db_library.id,
         name=db_library.name,
-        folders=[Folder(id=db_folder.id, name=db_folder.path) for db_folder in db_library.folders],
+        folders=[Folder(id=db_folder.id, path=db_folder.path) for db_folder in db_library.folders],
         plugins=[]
     )
+
+
+def get_libraries(db: Session) -> List[Library]:
+    return db.query(LibraryModel).all()
 
 
 def create_entity(library_id: int, entity: NewEntityParam, db: Session) -> Entity:
