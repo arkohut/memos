@@ -170,3 +170,47 @@ def test_update_entity(client):
     invalid_update_response = client.put(f"/libraries/9999/entities/{entity_id}", json=updated_entity.model_dump(mode="json"))
     assert invalid_update_response.status_code == 404
     assert invalid_update_response.json() == {"detail": "Entity not found in the specified library"}
+
+
+# Test for getting an entity by filepath
+def test_get_entity_by_filepath(client):
+    # Setup data: Create a new library and entity
+    new_library = NewLibraryParam(name="Library for Get Entity Test", folders=["/tmp"])
+    library_response = client.post("/libraries", json=new_library.model_dump(mode="json"))
+    library_id = library_response.json()["id"]
+
+    new_entity = NewEntityParam(
+        filename="test_get.txt",
+        filepath="/tmp/test_get.txt",
+        size=100,
+        file_created_at="2023-01-01T00:00:00",
+        file_last_modified_at="2023-01-01T00:00:00",
+        file_type="text/plain",
+        folder_id=1
+    )
+    entity_response = client.post(f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json"))
+    entity_id = entity_response.json()["id"]
+
+    # Get the entity by filepath
+    get_response = client.get(f"/libraries/{library_id}/entities", params={"filepath": new_entity.filepath})
+    
+    # Check that the response is successful
+    assert get_response.status_code == 200
+
+    # Check the response data
+    entity_data = get_response.json()
+    assert entity_data["id"] == entity_id
+    assert entity_data["filepath"] == new_entity.filepath
+    assert entity_data["filename"] == new_entity.filename
+    assert entity_data["size"] == new_entity.size
+    assert entity_data["file_type"] == new_entity.file_type
+
+    # Test for entity not found
+    invalid_get_response = client.get(f"/libraries/{library_id}/entities", params={"filepath": "nonexistent.txt"})
+    assert invalid_get_response.status_code == 404
+    assert invalid_get_response.json() == {"detail": "Entity not found"}
+
+    # Test for library not found
+    invalid_get_response = client.get(f"/libraries/9999/entities", params={"filepath": new_entity.filepath})
+    assert invalid_get_response.status_code == 404
+    assert invalid_get_response.json() == {"detail": "Entity not found"}

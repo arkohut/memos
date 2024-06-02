@@ -80,6 +80,22 @@ def new_entity(
     return entity
 
 
+@app.get("/libraries/{library_id}/entities/{entity_id}", response_model=Entity)
+def get_entity_by_id(library_id: int, entity_id: int, db: Session = Depends(get_db)):
+    entity = crud.get_entity_by_id(entity_id, db)
+    if entity is None or entity.library_id != library_id:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    return entity
+
+
+@app.get("/libraries/{library_id}/entities", response_model=Entity)
+def get_entity_by_filepath(library_id: int, filepath: str, db: Session = Depends(get_db)):
+    entity = crud.get_entity_by_filepath(filepath, db)
+    if entity is None or entity.library_id != library_id:
+        raise HTTPException(status_code=404, detail="Entity not found")
+    return entity
+
+
 @app.put("/libraries/{library_id}/entities/{entity_id}", response_model=Entity)
 def update_entity(
     library_id: int,

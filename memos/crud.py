@@ -42,6 +42,14 @@ def create_entity(library_id: int, entity: NewEntityParam, db: Session) -> Entit
     return db_entity
 
 
+def get_entity_by_id(entity_id: int, db: Session) -> Entity | None:
+    return db.query(EntityModel).filter(EntityModel.id == entity_id).first()
+
+
+def get_entity_by_filepath(filepath: str, db: Session) -> Entity | None:
+    return db.query(EntityModel).filter(EntityModel.filepath == filepath).first()
+
+
 def create_plugin(newPlugin: NewPluginParam, db: Session) -> Plugin:
     db_plugin = PluginModel(**newPlugin.model_dump(mode='json'))
     db.add(db_plugin)
