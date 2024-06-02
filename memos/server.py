@@ -6,14 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from typing import List
 
 from .config import get_database_path
-from .crud import (
-    get_library_by_id,
-    create_library,
-    create_entity,
-    create_plugin,
-    add_plugin_to_library,
-    get_libraries,
-)
+import memos.crud as crud
 from .schemas import (
     Library,
     Folder,
@@ -22,6 +15,7 @@ from .schemas import (
     NewLibraryParam,
     NewFolderParam,
     NewEntityParam,
+    UpdateEntityParam,
     NewPluginParam,
     NewLibraryPluginParam,
 )
@@ -47,13 +41,13 @@ def root():
 
 @app.post("/libraries", response_model=Library)
 def new_library(library_param: NewLibraryParam, db: Session = Depends(get_db)):
-    library = create_library(library_param, db)
+    library = crud.create_library(library_param, db)
     return library
 
 
 @app.get("/libraries", response_model=List[Library])
 def list_libraries(db: Session = Depends(get_db)):
-    libraries = get_libraries(db)
+    libraries = crud.get_libraries(db)
     return libraries
 
 
@@ -63,7 +57,7 @@ def new_folder(
     folder: NewFolderParam,
     db: Session = Depends(get_db),
 ):
-    library = get_library_by_id(library_id, db)
+    library = crud.get_library_by_id(library_id, db)
     if library is None:
         raise HTTPException(status_code=404, detail="Library not found")
 
@@ -78,13 +72,34 @@ def new_folder(
 def new_entity(
     new_entity: NewEntityParam, library_id: int, db: Session = Depends(get_db)
 ):
-    entity = create_entity(library_id, new_entity, db)
+    library = crud.get_library_by_id(library_id, db)
+    if library is None:
+        raise HTTPException(status_code=404, detail="Library not found")
+    
+    entity = crud.create_entity(library_id, new_entity, db)
+    return entity
+
+
+@app.put("/libraries/{library_id}/entities/{entity_id}", response_model=Entity)
+def update_entity(
+    library_id: int,
+    entity_id: int,
+    updated_entity: UpdateEntityParam,
+    db: Session = Depends(get_db),
+):
+    entity = crud.get_entity_by_id(entity_id, db)
+    if entity is None or entity.library_id != library_id:
+        raise HTTPException(
+            status_code=404, detail="Entity not found in the specified library"
+        )
+
+    entity = crud.update_entity(entity_id, updated_entity, db)
     return entity
 
 
 @app.post("/plugins", response_model=Plugin)
 def new_plugin(new_plugin: NewPluginParam, db: Session = Depends(get_db)):
-    plugin = create_plugin(new_plugin, db)
+    plugin = crud.create_plugin(new_plugin, db)
     return plugin
 
 
@@ -92,7 +107,7 @@ def new_plugin(new_plugin: NewPluginParam, db: Session = Depends(get_db)):
 def add_library_plugin(
     library_id: int, new_plugin: NewLibraryPluginParam, db: Session = Depends(get_db)
 ):
-    add_plugin_to_library(library_id, new_plugin.plugin_id, db)
+    crud.add_plugin_to_library(library_id, new_plugin.plugin_id, db)
 
 
 def run_server():

@@ -34,6 +34,13 @@ class NewEntityParam(BaseModel):
     folder_id: int
 
 
+class UpdateEntityParam(BaseModel):
+    size: int
+    file_created_at: datetime
+    file_last_modified_at: datetime
+    file_type: str
+
+
 class UpdateTagParam(BaseModel):
     description: str | None
     color: str | None

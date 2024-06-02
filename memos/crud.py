@@ -1,11 +1,11 @@
 from typing import List
 from sqlalchemy.orm import Session
-from .schemas import Library, NewLibraryParam, Folder, NewEntityParam, Entity, Plugin, NewPluginParam
+from .schemas import Library, NewLibraryParam, Folder, NewEntityParam, Entity, Plugin, NewPluginParam, UpdateEntityParam
 from .models import LibraryModel, FolderModel, EntityModel, EntityModel, PluginModel, LibraryPluginModel
 
 
 def get_library_by_id(library_id: int, db: Session) -> Library | None:
-    return db.query(Library).filter(Library.id == library_id).first()
+    return db.query(LibraryModel).filter(LibraryModel.id == library_id).first()
 
 
 def create_library(library: NewLibraryParam, db: Session) -> Library:
@@ -55,3 +55,16 @@ def add_plugin_to_library(library_id: int, plugin_id: int, db: Session):
     db.add(library_plugin)
     db.commit()
     db.refresh(library_plugin)
+
+
+def get_entity_by_id(entity_id: int, db: Session) -> Entity | None:
+    return db.query(EntityModel).filter(EntityModel.id == entity_id).first()
+
+
+def update_entity(entity_id: int, updated_entity: UpdateEntityParam, db: Session) -> Entity:
+    db_entity = get_entity_by_id(entity_id, db)
+    for key, value in updated_entity.model_dump().items():
+        setattr(db_entity, key, value)
+    db.commit()
+    db.refresh(db_entity)
+    return db_entity
