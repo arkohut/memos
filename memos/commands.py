@@ -52,5 +52,16 @@ def add(name: str, folders: List[str]):
         print(f"Failed to create library: {response.status_code} - {response.text}")
 
 
+@lib_app.command("show")
+def show(library_id: int):
+    response = httpx.get(f"http://localhost:8080/libraries/{library_id}")
+    if response.status_code == 200:
+        library = response.json()
+        display_libraries([library])
+    else:
+        print(f"Failed to retrieve library: {response.status_code} - {response.text}")
+
+
+
 if __name__ == "__main__":
     app()

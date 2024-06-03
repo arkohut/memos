@@ -51,6 +51,14 @@ def list_libraries(db: Session = Depends(get_db)):
     return libraries
 
 
+@app.get("/libraries/{library_id}", response_model=Library)
+def get_library_by_id(library_id: int, db: Session = Depends(get_db)):
+    library = crud.get_library_by_id(library_id, db)
+    if library is None:
+        raise HTTPException(status_code=404, detail="Library not found")
+    return library
+
+
 @app.post("/libraries/{library_id}/folders", response_model=Folder)
 def new_folder(
     library_id: int,
@@ -75,7 +83,7 @@ def new_entity(
     library = crud.get_library_by_id(library_id, db)
     if library is None:
         raise HTTPException(status_code=404, detail="Library not found")
-    
+
     entity = crud.create_entity(library_id, new_entity, db)
     return entity
 
@@ -89,7 +97,9 @@ def get_entity_by_id(library_id: int, entity_id: int, db: Session = Depends(get_
 
 
 @app.get("/libraries/{library_id}/entities", response_model=Entity)
-def get_entity_by_filepath(library_id: int, filepath: str, db: Session = Depends(get_db)):
+def get_entity_by_filepath(
+    library_id: int, filepath: str, db: Session = Depends(get_db)
+):
     entity = crud.get_entity_by_filepath(filepath, db)
     if entity is None or entity.library_id != library_id:
         raise HTTPException(status_code=404, detail="Entity not found")
