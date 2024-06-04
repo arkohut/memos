@@ -85,6 +85,7 @@ def scan(library_id: int):
     library = response.json()
     total_files_added = 0
     total_files_updated = 0
+    total_files_deleted = 0
 
     for folder in library["folders"]:
         folder_path = Path(folder["path"])
@@ -94,6 +95,7 @@ def scan(library_id: int):
 
         start_time = time.time()  # Start the timer
         file_count = 0  # Initialize the file counter
+        scanned_files = set()  # To keep track of scanned files
 
         for root, _, files in os.walk(folder_path):
             with tqdm(
@@ -110,6 +112,7 @@ def scan(library_id: int):
                     relative_file_path = file_path.relative_to(
                         folder_path
                     )  # Get relative path
+                    scanned_files.add(str(relative_file_path))  # Add to scanned files set
                     file_stat = file_path.stat()
                     file_type = (
                         mimetypes.guess_type(file_path)[0] or "application/octet-stream"
@@ -188,8 +191,43 @@ def scan(library_id: int):
                         )
                     file_count += 1
 
+        # Check for deleted files
+        limit = 200  # Adjust the limit as needed
+        offset = 0
+        while True:
+            existing_files_response = httpx.get(
+                f"http://localhost:8080/libraries/{library_id}/folders/{folder['id']}/entities",
+                params={"limit": limit, "offset": offset}
+            )
+            if existing_files_response.status_code != 200:
+                tqdm.write(
+                    f"Failed to retrieve existing files: {existing_files_response.status_code} - {existing_files_response.text}"
+                )
+                break
+
+            existing_files = existing_files_response.json()
+            if not existing_files:
+                break
+
+            for existing_file in existing_files:
+                if existing_file["filepath"] not in scanned_files:
+                    # File has been deleted
+                    delete_response = httpx.delete(
+                        f"http://localhost:8080/libraries/{library_id}/entities/{existing_file['id']}"
+                    )
+                    if 200 <= delete_response.status_code < 300:
+                        tqdm.write(f"Deleted file from library: {existing_file['filepath']}")
+                        total_files_deleted += 1
+                    else:
+                        tqdm.write(
+                            f"Failed to delete file: {delete_response.status_code} - {delete_response.text}"
+                        )
+
+            offset += limit
+
     print(f"Total files added: {total_files_added}")
     print(f"Total files updated: {total_files_updated}")
+    print(f"Total files deleted: {total_files_deleted}")
 
 
 if __name__ == "__main__":
