@@ -44,7 +44,10 @@ def new_library(library_param: NewLibraryParam, db: Session = Depends(get_db)):
     # Check if a library with the same name (case insensitive) already exists
     existing_library = crud.get_library_by_name(library_param.name, db)
     if existing_library:
-        raise HTTPException(status_code=400, detail="Library with this name already exists")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Library with this name already exists",
+        )
 
     # Remove duplicate folders from the library_param
     unique_folders = list(set(library_param.folders))
@@ -63,7 +66,9 @@ def list_libraries(db: Session = Depends(get_db)):
 def get_library_by_id(library_id: int, db: Session = Depends(get_db)):
     library = crud.get_library_by_id(library_id, db)
     if library is None:
-        raise HTTPException(status_code=404, detail="Library not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Library not found"
+        )
     return library
 
 
@@ -75,11 +80,16 @@ def new_folder(
 ):
     library = crud.get_library_by_id(library_id, db)
     if library is None:
-        raise HTTPException(status_code=404, detail="Library not found")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Library not found"
+        )
+
     existing_folders = [folder.path for folder in library.folders]
     if str(folder.path) in existing_folders:
-        raise HTTPException(status_code=400, detail="Folder already exists in the library")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Folder already exists in the library",
+        )
 
     return crud.add_folder(library_id=library.id, folder=folder, db=db)
 
@@ -90,7 +100,9 @@ def new_entity(
 ):
     library = crud.get_library_by_id(library_id, db)
     if library is None:
-        raise HTTPException(status_code=404, detail="Library not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Library not found"
+        )
 
     entity = crud.create_entity(library_id, new_entity, db)
     return entity
@@ -108,11 +120,14 @@ def list_entities_in_folder(
 ):
     library = crud.get_library_by_id(library_id, db)
     if library is None:
-        raise HTTPException(status_code=404, detail="Library not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Library not found"
+        )
 
     if folder_id not in [folder.id for folder in library.folders]:
         raise HTTPException(
-            status_code=404, detail="Folder not found in the specified library"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Folder not found in the specified library",
         )
 
     return crud.get_entities_of_folder(library_id, folder_id, db, limit, offset)
@@ -124,7 +139,9 @@ def get_entity_by_filepath(
 ):
     entity = crud.get_entity_by_filepath(filepath, db)
     if entity is None or entity.library_id != library_id:
-        raise HTTPException(status_code=404, detail="Entity not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found"
+        )
     return entity
 
 
@@ -132,7 +149,9 @@ def get_entity_by_filepath(
 def get_entity_by_id(library_id: int, entity_id: int, db: Session = Depends(get_db)):
     entity = crud.get_entity_by_id(entity_id, db)
     if entity is None or entity.library_id != library_id:
-        raise HTTPException(status_code=404, detail="Entity not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found"
+        )
     return entity
 
 
@@ -146,19 +165,26 @@ def update_entity(
     entity = crud.get_entity_by_id(entity_id, db)
     if entity is None or entity.library_id != library_id:
         raise HTTPException(
-            status_code=404, detail="Entity not found in the specified library"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Entity not found in the specified library",
         )
 
     entity = crud.update_entity(entity_id, updated_entity, db)
     return entity
 
 
-@app.delete("/libraries/{library_id}/entities/{entity_id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete(
+    "/libraries/{library_id}/entities/{entity_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
 def remove_entity(library_id: int, entity_id: int, db: Session = Depends(get_db)):
     entity = crud.get_entity_by_id(entity_id, db)
     if entity is None or entity.library_id != library_id:
-        raise HTTPException(status_code=404, detail="Entity not found in the specified library")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Entity not found in the specified library",
+        )
+
     crud.remove_entity(entity_id, db)
 
 
