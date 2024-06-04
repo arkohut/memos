@@ -41,6 +41,9 @@ def root():
 
 @app.post("/libraries", response_model=Library)
 def new_library(library_param: NewLibraryParam, db: Session = Depends(get_db)):
+    # Remove duplicate folders from the library_param
+    unique_folders = list(set(library_param.folders))
+    library_param.folders = unique_folders
     library = crud.create_library(library_param, db)
     return library
 
@@ -68,6 +71,10 @@ def new_folder(
     library = crud.get_library_by_id(library_id, db)
     if library is None:
         raise HTTPException(status_code=404, detail="Library not found")
+    
+    existing_folders = [folder.path for folder in library.folders]
+    if str(folder.path) in existing_folders:
+        raise HTTPException(status_code=400, detail="Folder already exists in the library")
 
     return crud.add_folder(library_id=library.id, folder=folder, db=db)
 
