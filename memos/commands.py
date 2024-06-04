@@ -15,6 +15,7 @@ app = typer.Typer()
 lib_app = typer.Typer()
 app.add_typer(lib_app, name="lib")
 
+BASE_URL = "http://localhost:8080"
 
 def format_timestamp(timestamp):
     if isinstance(timestamp, str):
@@ -45,7 +46,7 @@ def serve():
 
 @lib_app.command("ls")
 def ls():
-    response = httpx.get("http://localhost:8080/libraries")
+    response = httpx.get(f"{BASE_URL}/libraries")
     libraries = response.json()
     display_libraries(libraries)
 
@@ -55,7 +56,7 @@ def add(name: str, folders: List[str]):
 
     absolute_folders = [str(Path(folder).resolve()) for folder in folders]
     response = httpx.post(
-        "http://localhost:8080/libraries",
+        f"{BASE_URL}/libraries",
         json={"name": name, "folders": absolute_folders},
     )
     if 200 <= response.status_code < 300:
@@ -66,7 +67,7 @@ def add(name: str, folders: List[str]):
 
 @lib_app.command("show")
 def show(library_id: int):
-    response = httpx.get(f"http://localhost:8080/libraries/{library_id}")
+    response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
     if response.status_code == 200:
         library = response.json()
         display_libraries([library])
@@ -77,7 +78,7 @@ def show(library_id: int):
 @lib_app.command("scan")
 def scan(library_id: int):
 
-    response = httpx.get(f"http://localhost:8080/libraries/{library_id}")
+    response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
     if response.status_code != 200:
         print(f"Failed to retrieve library: {response.status_code} - {response.text}")
         return
@@ -129,7 +130,7 @@ def scan(library_id: int):
 
                     # Check if the entity already exists
                     get_response = httpx.get(
-                        f"http://localhost:8080/libraries/{library_id}/entities/by-filepath",
+                        f"{BASE_URL}/libraries/{library_id}/entities/by-filepath",
                         params={
                             "filepath": str(relative_file_path)
                         },  # Use relative path
@@ -161,7 +162,7 @@ def scan(library_id: int):
                             )
                             # Update the existing entity
                             update_response = httpx.put(
-                                f"http://localhost:8080/libraries/{library_id}/entities/{existing_entity['id']}",
+                                f"{BASE_URL}/libraries/{library_id}/entities/{existing_entity['id']}",
                                 json=new_entity,
                             )
                             if 200 <= update_response.status_code < 300:
@@ -179,7 +180,7 @@ def scan(library_id: int):
 
                     # Add the new entity
                     post_response = httpx.post(
-                        f"http://localhost:8080/libraries/{library_id}/entities",
+                        f"{BASE_URL}/libraries/{library_id}/entities",
                         json=new_entity,
                     )
                     if 200 <= post_response.status_code < 300:
@@ -192,11 +193,11 @@ def scan(library_id: int):
                     file_count += 1
 
         # Check for deleted files
-        limit = 200  # Adjust the limit as needed
+        limit = 200
         offset = 0
         while True:
             existing_files_response = httpx.get(
-                f"http://localhost:8080/libraries/{library_id}/folders/{folder['id']}/entities",
+                f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
                 params={"limit": limit, "offset": offset}
             )
             if existing_files_response.status_code != 200:
@@ -213,7 +214,7 @@ def scan(library_id: int):
                 if existing_file["filepath"] not in scanned_files:
                     # File has been deleted
                     delete_response = httpx.delete(
-                        f"http://localhost:8080/libraries/{library_id}/entities/{existing_file['id']}"
+                        f"{BASE_URL}/libraries/{library_id}/entities/{existing_file['id']}"
                     )
                     if 200 <= delete_response.status_code < 300:
                         tqdm.write(f"Deleted file from library: {existing_file['filepath']}")
