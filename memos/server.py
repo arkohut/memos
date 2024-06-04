@@ -1,9 +1,9 @@
 import uvicorn
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from typing import List
+from typing import List, Annotated
 
 from .config import get_database_path
 import memos.crud as crud
@@ -69,11 +69,7 @@ def new_folder(
     if library is None:
         raise HTTPException(status_code=404, detail="Library not found")
 
-    db_folder = Folder(path=folder.path, library_id=library.id)
-    db.add(db_folder)
-    db.commit()
-    db.refresh(db_folder)
-    return db_folder
+    return crud.add_folder(library_id=library.id, folder=folder, db=db)
 
 
 @app.post("/libraries/{library_id}/entities", response_model=Entity)
@@ -86,6 +82,28 @@ def new_entity(
 
     entity = crud.create_entity(library_id, new_entity, db)
     return entity
+
+
+@app.get(
+    "/libraries/{library_id}/folders/{folder_id}/entities", response_model=List[Entity]
+)
+def list_entities_in_folder(
+    library_id: int,
+    folder_id: int,
+    limit: Annotated[int, Query(ge=1, le=200)] = 10,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+):
+    library = crud.get_library_by_id(library_id, db)
+    if library is None:
+        raise HTTPException(status_code=404, detail="Library not found")
+
+    if folder_id not in [folder.id for folder in library.folders]:
+        raise HTTPException(
+            status_code=404, detail="Folder not found in the specified library"
+        )
+
+    return crud.get_entities_of_folder(library_id, folder_id, db, limit, offset)
 
 
 @app.get("/libraries/{library_id}/entities/by-filepath", response_model=Entity)

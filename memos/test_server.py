@@ -8,7 +8,13 @@ from pathlib import Path
 
 
 from memos.server import app, get_db
-from memos.schemas import Library, NewLibraryParam, NewEntityParam, UpdateEntityParam
+from memos.schemas import (
+    Library,
+    NewLibraryParam,
+    NewEntityParam,
+    UpdateEntityParam,
+    NewFolderParam,
+)
 from memos.models import Base
 
 
@@ -84,10 +90,13 @@ def test_list_libraries(client):
     ]
     assert response.json() == expected_data
 
+
 def test_new_entity(client):
     # Setup data: Create a new library
     new_library = NewLibraryParam(name="Library for Entity Test", folders=["/tmp"])
-    library_response = client.post("/libraries", json=new_library.model_dump(mode="json"))
+    library_response = client.post(
+        "/libraries", json=new_library.model_dump(mode="json")
+    )
     library_id = library_response.json()["id"]
     folder_id = library_response.json()["folders"][0]["id"]
 
@@ -99,9 +108,11 @@ def test_new_entity(client):
         file_created_at="2023-01-01T00:00:00",
         file_last_modified_at="2023-01-01T00:00:00",
         file_type="text/plain",
-        folder_id=folder_id
+        folder_id=folder_id,
     )
-    entity_response = client.post(f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json"))
+    entity_response = client.post(
+        f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json")
+    )
 
     # Check that the response is successful
     assert entity_response.status_code == 200
@@ -117,16 +128,19 @@ def test_new_entity(client):
     assert entity_data["folder_id"] == 1
 
     # Test for library not found
-    invalid_entity_response = client.post("/libraries/9999/entities", json=new_entity.model_dump(mode="json"))
+    invalid_entity_response = client.post(
+        "/libraries/9999/entities", json=new_entity.model_dump(mode="json")
+    )
     assert invalid_entity_response.status_code == 404
     assert invalid_entity_response.json() == {"detail": "Library not found"}
-
 
 
 def test_update_entity(client):
     # Setup data: Create a new library and entity
     new_library = NewLibraryParam(name="Library for Update Test", folders=["/tmp"])
-    library_response = client.post("/libraries", json=new_library.model_dump(mode="json"))
+    library_response = client.post(
+        "/libraries", json=new_library.model_dump(mode="json")
+    )
     library_id = library_response.json()["id"]
 
     new_entity = NewEntityParam(
@@ -136,9 +150,11 @@ def test_update_entity(client):
         file_created_at="2023-01-01T00:00:00",
         file_last_modified_at="2023-01-01T00:00:00",
         file_type="text/plain",
-        folder_id=1
+        folder_id=1,
     )
-    entity_response = client.post(f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json"))
+    entity_response = client.post(
+        f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json")
+    )
     entity_id = entity_response.json()["id"]
 
     # Update the entity
@@ -146,9 +162,12 @@ def test_update_entity(client):
         size=200,
         file_created_at="2023-01-02T00:00:00",
         file_last_modified_at="2023-01-02T00:00:00",
-        file_type="text/markdown"
+        file_type="text/markdown",
     )
-    update_response = client.put(f"/libraries/{library_id}/entities/{entity_id}", json=updated_entity.model_dump(mode="json"))
+    update_response = client.put(
+        f"/libraries/{library_id}/entities/{entity_id}",
+        json=updated_entity.model_dump(mode="json"),
+    )
 
     # Check that the response is successful
     assert update_response.status_code == 200
@@ -162,21 +181,33 @@ def test_update_entity(client):
     assert updated_data["file_type"] == "text/markdown"
 
     # Test for entity not found
-    invalid_update_response = client.put(f"/libraries/{library_id}/entities/9999", json=updated_entity.model_dump(mode="json"))
+    invalid_update_response = client.put(
+        f"/libraries/{library_id}/entities/9999",
+        json=updated_entity.model_dump(mode="json"),
+    )
     assert invalid_update_response.status_code == 404
-    assert invalid_update_response.json() == {"detail": "Entity not found in the specified library"}
+    assert invalid_update_response.json() == {
+        "detail": "Entity not found in the specified library"
+    }
 
     # Test for library not found
-    invalid_update_response = client.put(f"/libraries/9999/entities/{entity_id}", json=updated_entity.model_dump(mode="json"))
+    invalid_update_response = client.put(
+        f"/libraries/9999/entities/{entity_id}",
+        json=updated_entity.model_dump(mode="json"),
+    )
     assert invalid_update_response.status_code == 404
-    assert invalid_update_response.json() == {"detail": "Entity not found in the specified library"}
+    assert invalid_update_response.json() == {
+        "detail": "Entity not found in the specified library"
+    }
 
 
 # Test for getting an entity by filepath
 def test_get_entity_by_filepath(client):
     # Setup data: Create a new library and entity
     new_library = NewLibraryParam(name="Library for Get Entity Test", folders=["/tmp"])
-    library_response = client.post("/libraries", json=new_library.model_dump(mode="json"))
+    library_response = client.post(
+        "/libraries", json=new_library.model_dump(mode="json")
+    )
     library_id = library_response.json()["id"]
 
     new_entity = NewEntityParam(
@@ -186,13 +217,18 @@ def test_get_entity_by_filepath(client):
         file_created_at="2023-01-01T00:00:00",
         file_last_modified_at="2023-01-01T00:00:00",
         file_type="text/plain",
-        folder_id=1
+        folder_id=1,
     )
-    entity_response = client.post(f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json"))
+    entity_response = client.post(
+        f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json")
+    )
     entity_id = entity_response.json()["id"]
 
-    get_response = client.get(f"/libraries/{library_id}/entities/by-filepath", params={"filepath": new_entity.filepath})
-    
+    get_response = client.get(
+        f"/libraries/{library_id}/entities/by-filepath",
+        params={"filepath": new_entity.filepath},
+    )
+
     # Check that the response is successful
     assert get_response.status_code == 200
 
@@ -205,11 +241,76 @@ def test_get_entity_by_filepath(client):
     assert entity_data["file_type"] == new_entity.file_type
 
     # Test for entity not found
-    invalid_get_response = client.get(f"/libraries/{library_id}/entities/by-filepath", params={"filepath": "nonexistent.txt"})
+    invalid_get_response = client.get(
+        f"/libraries/{library_id}/entities/by-filepath",
+        params={"filepath": "nonexistent.txt"},
+    )
     assert invalid_get_response.status_code == 404
     assert invalid_get_response.json() == {"detail": "Entity not found"}
 
     # Test for library not found
-    invalid_get_response = client.get(f"/libraries/9999/entities/by-filepath", params={"filepath": new_entity.filepath})
+    invalid_get_response = client.get(
+        f"/libraries/9999/entities/by-filepath",
+        params={"filepath": new_entity.filepath},
+    )
     assert invalid_get_response.status_code == 404
     assert invalid_get_response.json() == {"detail": "Entity not found"}
+
+
+def test_list_entities_in_folder(client):
+    # Setup data: Create a new library and folder
+    new_library = NewLibraryParam(
+        name="Library for List Entities Test", folders=["/tmp"]
+    )
+    library_response = client.post(
+        "/libraries", json=new_library.model_dump(mode="json")
+    )
+    library_id = library_response.json()["id"]
+
+    new_folder = NewFolderParam(path="/tmp")
+    folder_response = client.post(
+        f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
+    )
+    folder_id = folder_response.json()["id"]
+
+    # Create a new entity in the folder
+    new_entity = NewEntityParam(
+        filename="test_list.txt",
+        filepath="test_list.txt",
+        size=100,
+        file_created_at="2023-01-01T00:00:00",
+        file_last_modified_at="2023-01-01T00:00:00",
+        file_type="text/plain",
+        folder_id=folder_id,
+    )
+    entity_response = client.post(
+        f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json")
+    )
+    entity_id = entity_response.json()["id"]
+
+    # List entities in the folder
+    list_response = client.get(f"/libraries/{library_id}/folders/{folder_id}/entities")
+
+    # Check that the response is successful
+    assert list_response.status_code == 200
+
+    # Check the response data
+    entities_data = list_response.json()
+    assert len(entities_data) == 1
+    assert entities_data[0]["id"] == entity_id
+    assert entities_data[0]["filepath"] == new_entity.filepath
+    assert entities_data[0]["filename"] == new_entity.filename
+    assert entities_data[0]["size"] == new_entity.size
+    assert entities_data[0]["file_type"] == new_entity.file_type
+
+    # Test for folder not found
+    invalid_list_response = client.get(f"/libraries/{library_id}/folders/9999/entities")
+    assert invalid_list_response.status_code == 404
+    assert invalid_list_response.json() == {
+        "detail": "Folder not found in the specified library"
+    }
+
+    # Test for library not found
+    invalid_list_response = client.get(f"/libraries/9999/folders/{folder_id}/entities")
+    assert invalid_list_response.status_code == 404
+    assert invalid_list_response.json() == {"detail": "Library not found"}

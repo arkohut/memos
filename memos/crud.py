@@ -1,6 +1,6 @@
 from typing import List
 from sqlalchemy.orm import Session
-from .schemas import Library, NewLibraryParam, Folder, NewEntityParam, Entity, Plugin, NewPluginParam, UpdateEntityParam
+from .schemas import Library, NewLibraryParam, Folder, NewEntityParam, Entity, Plugin, NewPluginParam, UpdateEntityParam, NewFolderParam
 from .models import LibraryModel, FolderModel, EntityModel, EntityModel, PluginModel, LibraryPluginModel
 
 
@@ -31,6 +31,14 @@ def get_libraries(db: Session) -> List[Library]:
     return db.query(LibraryModel).all()
 
 
+def add_folder(library_id: int, folder: NewFolderParam, db: Session) -> Folder:
+    db_folder = FolderModel(path=str(folder.path), library_id=library_id)
+    db.add(db_folder)
+    db.commit()
+    db.refresh(db_folder)
+    return Folder(id=db_folder.id, path=db_folder.path)
+
+
 def create_entity(library_id: int, entity: NewEntityParam, db: Session) -> Entity:
     db_entity = EntityModel(
         **entity.model_dump(),
@@ -44,6 +52,15 @@ def create_entity(library_id: int, entity: NewEntityParam, db: Session) -> Entit
 
 def get_entity_by_id(entity_id: int, db: Session) -> Entity | None:
     return db.query(EntityModel).filter(EntityModel.id == entity_id).first()
+
+
+def get_entities_of_folder(library_id: int, folder_id: int, db: Session, limit: int = 10, offset: int = 0) -> List[Entity]:
+    folder = db.query(FolderModel).filter(FolderModel.id == folder_id, FolderModel.library_id == library_id).first()
+    if folder is None:
+        return []
+
+    entities = db.query(EntityModel).filter(EntityModel.folder_id == folder_id).limit(limit).offset(offset).all()
+    return entities
 
 
 def get_entity_by_filepath(filepath: str, db: Session) -> Entity | None:
