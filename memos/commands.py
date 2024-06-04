@@ -126,7 +126,7 @@ def scan(library_id: int):
 
                     # Check if the entity already exists
                     get_response = httpx.get(
-                        f"http://localhost:8080/libraries/{library_id}/entities",
+                        f"http://localhost:8080/libraries/{library_id}/entities/by-filepath",
                         params={
                             "filepath": str(relative_file_path)
                         },  # Use relative path

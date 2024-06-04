@@ -94,7 +94,7 @@ def test_new_entity(client):
     # Create a new entity
     new_entity = NewEntityParam(
         filename="test_entity.txt",
-        filepath="/tmp/test_entity.txt",
+        filepath="test_entity.txt",
         size=150,
         file_created_at="2023-01-01T00:00:00",
         file_last_modified_at="2023-01-01T00:00:00",
@@ -109,7 +109,7 @@ def test_new_entity(client):
     # Check the response data
     entity_data = entity_response.json()
     assert entity_data["filename"] == "test_entity.txt"
-    assert entity_data["filepath"] == "/tmp/test_entity.txt"
+    assert entity_data["filepath"] == "test_entity.txt"
     assert entity_data["size"] == 150
     assert entity_data["file_created_at"] == "2023-01-01T00:00:00"
     assert entity_data["file_last_modified_at"] == "2023-01-01T00:00:00"
@@ -131,7 +131,7 @@ def test_update_entity(client):
 
     new_entity = NewEntityParam(
         filename="test.txt",
-        filepath="/tmp/test.txt",
+        filepath="test.txt",
         size=100,
         file_created_at="2023-01-01T00:00:00",
         file_last_modified_at="2023-01-01T00:00:00",
@@ -181,7 +181,7 @@ def test_get_entity_by_filepath(client):
 
     new_entity = NewEntityParam(
         filename="test_get.txt",
-        filepath="/tmp/test_get.txt",
+        filepath="test_get.txt",
         size=100,
         file_created_at="2023-01-01T00:00:00",
         file_last_modified_at="2023-01-01T00:00:00",
@@ -191,8 +191,7 @@ def test_get_entity_by_filepath(client):
     entity_response = client.post(f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json"))
     entity_id = entity_response.json()["id"]
 
-    # Get the entity by filepath
-    get_response = client.get(f"/libraries/{library_id}/entities", params={"filepath": new_entity.filepath})
+    get_response = client.get(f"/libraries/{library_id}/entities/by-filepath", params={"filepath": new_entity.filepath})
     
     # Check that the response is successful
     assert get_response.status_code == 200
@@ -206,11 +205,11 @@ def test_get_entity_by_filepath(client):
     assert entity_data["file_type"] == new_entity.file_type
 
     # Test for entity not found
-    invalid_get_response = client.get(f"/libraries/{library_id}/entities", params={"filepath": "nonexistent.txt"})
+    invalid_get_response = client.get(f"/libraries/{library_id}/entities/by-filepath", params={"filepath": "nonexistent.txt"})
     assert invalid_get_response.status_code == 404
     assert invalid_get_response.json() == {"detail": "Entity not found"}
 
     # Test for library not found
-    invalid_get_response = client.get(f"/libraries/9999/entities", params={"filepath": new_entity.filepath})
+    invalid_get_response = client.get(f"/libraries/9999/entities/by-filepath", params={"filepath": new_entity.filepath})
     assert invalid_get_response.status_code == 404
     assert invalid_get_response.json() == {"detail": "Entity not found"}
