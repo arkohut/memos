@@ -1,6 +1,7 @@
 import mimetypes
 import os
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
 
@@ -13,6 +14,12 @@ from tqdm import tqdm
 app = typer.Typer()
 lib_app = typer.Typer()
 app.add_typer(lib_app, name="lib")
+
+
+def format_timestamp(timestamp):
+    if isinstance(timestamp, str):
+        return timestamp
+    return datetime.fromtimestamp(timestamp, tz=timezone.utc).replace(tzinfo=None).isoformat()
 
 
 def display_libraries(libraries):
@@ -67,7 +74,6 @@ def show(library_id: int):
         print(f"Failed to retrieve library: {response.status_code} - {response.text}")
 
 
-
 @lib_app.command("scan")
 def scan(library_id: int):
 
@@ -78,6 +84,7 @@ def scan(library_id: int):
 
     library = response.json()
     total_files_added = 0
+    total_files_updated = 0
 
     for folder in library["folders"]:
         folder_path = Path(folder["path"])
@@ -100,15 +107,19 @@ def scan(library_id: int):
                     )
                     pbar.update(1)
                     file_path = Path(root) / file
-                    relative_file_path = file_path.relative_to(folder_path)  # Get relative path
+                    relative_file_path = file_path.relative_to(
+                        folder_path
+                    )  # Get relative path
                     file_stat = file_path.stat()
-                    file_type = mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+                    file_type = (
+                        mimetypes.guess_type(file_path)[0] or "application/octet-stream"
+                    )
                     new_entity = {
                         "filename": file_path.name,
                         "filepath": str(relative_file_path),  # Save relative path
                         "size": file_stat.st_size,
-                        "file_created_at": file_stat.st_ctime,
-                        "file_last_modified_at": file_stat.st_mtime,
+                        "file_created_at": format_timestamp(file_stat.st_ctime),
+                        "file_last_modified_at": format_timestamp(file_stat.st_mtime),
                         "file_type": file_type,
                         "folder_id": folder["id"],
                     }
@@ -116,10 +127,51 @@ def scan(library_id: int):
                     # Check if the entity already exists
                     get_response = httpx.get(
                         f"http://localhost:8080/libraries/{library_id}/entities",
-                        params={"filepath": str(relative_file_path)},  # Use relative path
+                        params={
+                            "filepath": str(relative_file_path)
+                        },  # Use relative path
                     )
                     if get_response.status_code == 200:
-                        tqdm.write(f"File already exists in library: {file_path}")
+                        existing_entity = get_response.json()
+                        existing_created_at = format_timestamp(
+                            existing_entity["file_created_at"]
+                        )
+                        new_created_at = format_timestamp(new_entity["file_created_at"])
+                        existing_modified_at = format_timestamp(
+                            existing_entity["file_last_modified_at"]
+                        )
+                        new_modified_at = format_timestamp(
+                            new_entity["file_last_modified_at"]
+                        )
+
+                        if (
+                            existing_created_at != new_created_at
+                            or existing_modified_at != new_modified_at
+                        ):
+                            # Show the difference before update
+                            tqdm.write(f"Updating file: {file_path}")
+                            tqdm.write(
+                                f"Old created at: {existing_created_at}, New created at: {new_created_at}"
+                            )
+                            tqdm.write(
+                                f"Old last modified at: {existing_modified_at}, New last modified at: {new_modified_at}"
+                            )
+                            # Update the existing entity
+                            update_response = httpx.put(
+                                f"http://localhost:8080/libraries/{library_id}/entities/{existing_entity['id']}",
+                                json=new_entity,
+                            )
+                            if 200 <= update_response.status_code < 300:
+                                tqdm.write(f"Updated file in library: {file_path}")
+                                total_files_updated += 1
+                            else:
+                                tqdm.write(
+                                    f"Failed to update file: {update_response.status_code} - {update_response.text}"
+                                )
+                        else:
+                            tqdm.write(
+                                f"File already exists in library and is up-to-date: {file_path}"
+                            )
                         continue
 
                     # Add the new entity
@@ -137,6 +189,7 @@ def scan(library_id: int):
                     file_count += 1
 
     print(f"Total files added: {total_files_added}")
+    print(f"Total files updated: {total_files_updated}")
 
 
 if __name__ == "__main__":
