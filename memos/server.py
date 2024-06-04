@@ -41,6 +41,11 @@ def root():
 
 @app.post("/libraries", response_model=Library)
 def new_library(library_param: NewLibraryParam, db: Session = Depends(get_db)):
+    # Check if a library with the same name (case insensitive) already exists
+    existing_library = crud.get_library_by_name(library_param.name, db)
+    if existing_library:
+        raise HTTPException(status_code=400, detail="Library with this name already exists")
+
     # Remove duplicate folders from the library_param
     unique_folders = list(set(library_param.folders))
     library_param.folders = unique_folders

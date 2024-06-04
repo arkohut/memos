@@ -67,6 +67,12 @@ def test_new_library(client):
         "plugins": [],
     }
 
+    # Test for duplicate library name
+    duplicate_response = client.post("/libraries", json=library_param.model_dump())
+    # Check that the response indicates a failure due to duplicate name
+    assert duplicate_response.status_code == 400
+    assert duplicate_response.json() == {"detail": "Library with this name already exists"}
+
 
 def test_list_libraries(client):
     # Setup data: Create a new library

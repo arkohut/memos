@@ -27,7 +27,7 @@ class Base(DeclarativeBase):
 
 class LibraryModel(Base):
     __tablename__ = "libraries"
-    name: Mapped[str] = mapped_column(String, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     folders: Mapped[List["FolderModel"]] = relationship(
         "FolderModel", back_populates="library", lazy="joined"
     )
