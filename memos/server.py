@@ -141,6 +141,15 @@ def update_entity(
     return entity
 
 
+@app.delete("/libraries/{library_id}/entities/{entity_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_entity(library_id: int, entity_id: int, db: Session = Depends(get_db)):
+    entity = crud.get_entity_by_id(entity_id, db)
+    if entity is None or entity.library_id != library_id:
+        raise HTTPException(status_code=404, detail="Entity not found in the specified library")
+    
+    crud.remove_entity(entity_id, db)
+
+
 @app.post("/plugins", response_model=Plugin)
 def new_plugin(new_plugin: NewPluginParam, db: Session = Depends(get_db)):
     plugin = crud.create_plugin(new_plugin, db)

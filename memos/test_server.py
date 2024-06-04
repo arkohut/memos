@@ -314,3 +314,44 @@ def test_list_entities_in_folder(client):
     invalid_list_response = client.get(f"/libraries/9999/folders/{folder_id}/entities")
     assert invalid_list_response.status_code == 404
     assert invalid_list_response.json() == {"detail": "Library not found"}
+
+
+def test_remove_entity(client):
+    # Create a new library
+    new_library = NewLibraryParam(name="Test Library")
+    library_response = client.post("/libraries", json=new_library.model_dump(mode="json"))
+    library_id = library_response.json()["id"]
+
+    # Create a new folder in the library
+    new_folder = NewFolderParam(path="/tmp")
+    folder_response = client.post(f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json"))
+    folder_id = folder_response.json()["id"]
+
+    # Create a new entity to be deleted
+    new_entity = NewEntityParam(
+        filename="test_delete.txt",
+        filepath="test_delete.txt",
+        size=100,
+        file_created_at="2023-01-01T00:00:00",
+        file_last_modified_at="2023-01-01T00:00:00",
+        file_type="text/plain",
+        folder_id=folder_id,
+    )
+    entity_response = client.post(
+        f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json")
+    )
+    entity_id = entity_response.json()["id"]
+
+    # Delete the entity
+    delete_response = client.delete(f"/libraries/{library_id}/entities/{entity_id}")
+    assert delete_response.status_code == 204
+
+    # Verify the entity is deleted
+    get_response = client.get(f"/libraries/{library_id}/entities/{entity_id}")
+    assert get_response.status_code == 404
+    assert get_response.json() == {"detail": "Entity not found"}
+
+    # Test for entity not found in the specified library
+    invalid_delete_response = client.delete(f"/libraries/{library_id}/entities/9999")
+    assert invalid_delete_response.status_code == 404
+    assert invalid_delete_response.json() == {"detail": "Entity not found in the specified library"}

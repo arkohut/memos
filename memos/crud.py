@@ -67,6 +67,15 @@ def get_entity_by_filepath(filepath: str, db: Session) -> Entity | None:
     return db.query(EntityModel).filter(EntityModel.filepath == filepath).first()
 
 
+def remove_entity(entity_id: int, db: Session):
+    entity = db.query(EntityModel).filter(EntityModel.id == entity_id).first()
+    if entity:
+        db.delete(entity)
+        db.commit()
+    else:
+        raise ValueError(f"Entity with id {entity_id} not found")
+
+
 def create_plugin(newPlugin: NewPluginParam, db: Session) -> Plugin:
     db_plugin = PluginModel(**newPlugin.model_dump(mode='json'))
     db.add(db_plugin)
