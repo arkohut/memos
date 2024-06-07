@@ -32,7 +32,7 @@ class LibraryModel(Base):
         "FolderModel", back_populates="library", lazy="joined"
     )
     plugins: Mapped[List["PluginModel"]] = relationship(
-        "LibraryPluginModel", back_populates="library", lazy="joined"
+        "PluginModel", secondary="library_plugins", lazy="joined"
     )
 
 
@@ -111,7 +111,6 @@ class PluginModel(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     webhook_url: Mapped[str] = mapped_column(String, nullable=False)
-    libraries = relationship("LibraryPluginModel", back_populates="plugin")
 
 
 class LibraryPluginModel(Base):
@@ -122,12 +121,7 @@ class LibraryPluginModel(Base):
     plugin_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("plugins.id"), nullable=False
     )
-    library: Mapped["LibraryModel"] = relationship(
-        "LibraryModel", back_populates="plugins"
-    )
-    plugin: Mapped["PluginModel"] = relationship(
-        "PluginModel", back_populates="libraries"
-    )
+    
 
 
 # Create the database engine with the path from config
