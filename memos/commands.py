@@ -110,29 +110,26 @@ def scan(library_id: int):
                     )
                     pbar.update(1)
                     file_path = Path(root) / file
-                    relative_file_path = file_path.relative_to(
-                        folder_path
-                    )  # Get relative path
-                    scanned_files.add(str(relative_file_path))  # Add to scanned files set
+                    absolute_file_path = file_path.resolve()  # Get absolute path
+                    scanned_files.add(str(absolute_file_path))  # Add to scanned files set
                     file_stat = file_path.stat()
                     file_type = (
                         mimetypes.guess_type(file_path)[0] or "application/octet-stream"
                     )
                     new_entity = {
                         "filename": file_path.name,
-                        "filepath": str(relative_file_path),  # Save relative path
+                        "filepath": str(absolute_file_path),  # Save absolute path
                         "size": file_stat.st_size,
                         "file_created_at": format_timestamp(file_stat.st_ctime),
                         "file_last_modified_at": format_timestamp(file_stat.st_mtime),
                         "file_type": file_type,
                         "folder_id": folder["id"],
                     }
-
                     # Check if the entity already exists
                     get_response = httpx.get(
                         f"{BASE_URL}/libraries/{library_id}/entities/by-filepath",
                         params={
-                            "filepath": str(relative_file_path)
+                            "filepath": str(absolute_file_path)
                         },  # Use relative path
                     )
                     if get_response.status_code == 200:
