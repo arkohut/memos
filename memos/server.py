@@ -190,6 +190,12 @@ def remove_entity(library_id: int, entity_id: int, db: Session = Depends(get_db)
 
 @app.post("/plugins", response_model=Plugin)
 def new_plugin(new_plugin: NewPluginParam, db: Session = Depends(get_db)):
+    existing_plugin = crud.get_plugin_by_name(new_plugin.name, db)
+    if existing_plugin:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Plugin with this name already exists",
+        )
     plugin = crud.create_plugin(new_plugin, db)
     return plugin
 

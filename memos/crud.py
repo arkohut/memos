@@ -122,6 +122,14 @@ def create_plugin(newPlugin: NewPluginParam, db: Session) -> Plugin:
     return db_plugin
 
 
+def get_plugin_by_name(plugin_name: str, db: Session) -> Plugin | None:
+    return (
+        db.query(PluginModel)
+        .filter(func.lower(PluginModel.name) == plugin_name.lower())
+        .first()
+    )
+
+
 def add_plugin_to_library(library_id: int, plugin_id: int, db: Session):
     library_plugin = LibraryPluginModel(library_id=library_id, plugin_id=plugin_id)
     db.add(library_plugin)

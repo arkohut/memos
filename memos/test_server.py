@@ -423,4 +423,10 @@ def test_new_plugin(client):
     assert duplicate_response.status_code == 400
     assert duplicate_response.json() == {"detail": "Plugin with this name already exists"}
 
+    # Test for another duplicate plugin name
+    another_duplicate_response = client.post("/plugins", json=new_plugin.model_dump(mode="json"))
+    # Check that the response indicates a failure due to duplicate name
+    assert another_duplicate_response.status_code == 400
+    assert another_duplicate_response.json() == {"detail": "Plugin with this name already exists"}
+
 
