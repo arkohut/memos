@@ -3,3 +3,4 @@ dist/
 memos.egg-info/
 build/
 *.pyc
+typesense-data/
