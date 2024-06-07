@@ -10,6 +10,7 @@ from pathlib import Path
 from memos.server import app, get_db
 from memos.schemas import (
     Library,
+    NewPluginParam,
     NewLibraryParam,
     NewEntityParam,
     UpdateEntityParam,
@@ -399,3 +400,27 @@ def test_add_folder_to_library(client):
     invalid_folder_response = client.post(f"/libraries/9999/folders", json=new_folder.model_dump(mode="json"))
     assert invalid_folder_response.status_code == 404
     assert invalid_folder_response.json() == {"detail": "Library not found"}
+
+
+def test_new_plugin(client):
+    new_plugin = NewPluginParam(name="Test Plugin", description="A test plugin", webhook_url="http://example.com/webhook")
+    
+    # Make a POST request to the /plugins endpoint
+    response = client.post("/plugins", json=new_plugin.model_dump(mode="json"))
+    
+    # Check that the response is successful
+    assert response.status_code == 200
+    
+    # Check the response data
+    plugin_data = response.json()
+    assert plugin_data["name"] == "Test Plugin"
+    assert plugin_data["description"] == "A test plugin"
+    assert plugin_data["webhook_url"] == "http://example.com/webhook"
+    
+    # Test for duplicate plugin name
+    duplicate_response = client.post("/plugins", json=new_plugin.model_dump(mode="json"))
+    # Check that the response indicates a failure due to duplicate name
+    assert duplicate_response.status_code == 400
+    assert duplicate_response.json() == {"detail": "Plugin with this name already exists"}
+
+
