@@ -73,7 +73,7 @@ def create_entity(library_id: int, entity: NewEntityParam, db: Session) -> Entit
     db.add(db_entity)
     db.commit()
     db.refresh(db_entity)
-    return db_entity
+    return Entity(**db_entity.__dict__)
 
 
 def get_entity_by_id(entity_id: int, db: Session) -> Entity | None:
@@ -153,4 +153,4 @@ def update_entity(
         setattr(db_entity, key, value)
     db.commit()
     db.refresh(db_entity)
-    return db_entity
+    return Entity(**db_entity.__dict__)
