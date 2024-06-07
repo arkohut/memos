@@ -40,10 +40,14 @@ def display_libraries(libraries):
                 "\n".join(
                     f"{folder['id']}: {folder['path']}" for folder in library["folders"]
                 ),
+                "\n".join(
+                    f"{plugin['id']}: {plugin['name']} {plugin['webhook_url']}"
+                    for plugin in library["plugins"]
+                ),
             ]
         )
 
-    print(tabulate(table, headers=["ID", "Name", "Folders"], tablefmt="plain"))
+    print(tabulate(table, headers=["ID", "Name", "Folders", "Plugins"], tablefmt="plain"))
 
 
 @app.command()
