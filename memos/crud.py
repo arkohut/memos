@@ -122,6 +122,10 @@ def create_plugin(newPlugin: NewPluginParam, db: Session) -> Plugin:
     return db_plugin
 
 
+def get_plugins(db: Session) -> List[Plugin]:
+    return db.query(PluginModel).all()
+
+
 def get_plugin_by_name(plugin_name: str, db: Session) -> Plugin | None:
     return (
         db.query(PluginModel)

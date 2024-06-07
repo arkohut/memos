@@ -13,14 +13,21 @@ from tqdm import tqdm
 
 app = typer.Typer()
 lib_app = typer.Typer()
+plugin_app = typer.Typer()
+app.add_typer(plugin_app, name="plugin")
 app.add_typer(lib_app, name="lib")
 
 BASE_URL = "http://localhost:8080"
 
+
 def format_timestamp(timestamp):
     if isinstance(timestamp, str):
         return timestamp
-    return datetime.fromtimestamp(timestamp, tz=timezone.utc).replace(tzinfo=None).isoformat()
+    return (
+        datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        .replace(tzinfo=None)
+        .isoformat()
+    )
 
 
 def display_libraries(libraries):
@@ -111,7 +118,9 @@ def scan(library_id: int):
                     pbar.update(1)
                     file_path = Path(root) / file
                     absolute_file_path = file_path.resolve()  # Get absolute path
-                    scanned_files.add(str(absolute_file_path))  # Add to scanned files set
+                    scanned_files.add(
+                        str(absolute_file_path)
+                    )  # Add to scanned files set
                     file_stat = file_path.stat()
                     file_type = (
                         mimetypes.guess_type(file_path)[0] or "application/octet-stream"
@@ -195,7 +204,7 @@ def scan(library_id: int):
         while True:
             existing_files_response = httpx.get(
                 f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
-                params={"limit": limit, "offset": offset}
+                params={"limit": limit, "offset": offset},
             )
             if existing_files_response.status_code != 200:
                 tqdm.write(
@@ -214,7 +223,9 @@ def scan(library_id: int):
                         f"{BASE_URL}/libraries/{library_id}/entities/{existing_file['id']}"
                     )
                     if 200 <= delete_response.status_code < 300:
-                        tqdm.write(f"Deleted file from library: {existing_file['filepath']}")
+                        tqdm.write(
+                            f"Deleted file from library: {existing_file['filepath']}"
+                        )
                         total_files_deleted += 1
                     else:
                         tqdm.write(
@@ -226,6 +237,40 @@ def scan(library_id: int):
     print(f"Total files added: {total_files_added}")
     print(f"Total files updated: {total_files_updated}")
     print(f"Total files deleted: {total_files_deleted}")
+
+
+def display_plugins(plugins):
+    table = []
+    for plugin in plugins:
+        table.append(
+            [plugin["id"], plugin["name"], plugin["description"], plugin["webhook_url"]]
+        )
+    print(
+        tabulate(
+            table,
+            headers=["ID", "Name", "Description", "Webhook URL"],
+            tablefmt="plain",
+        )
+    )
+
+
+@plugin_app.command("ls")
+def ls():
+    response = httpx.get(f"{BASE_URL}/plugins")
+    plugins = response.json()
+    display_plugins(plugins)
+
+
+@plugin_app.command("create")
+def create(name: str, webhook_url: str, description: str = ""):
+    response = httpx.post(
+        f"{BASE_URL}/plugins",
+        json={"name": name, "description": description, "webhook_url": webhook_url},
+    )
+    if 200 <= response.status_code < 300:
+        print("Plugin created successfully")
+    else:
+        print(f"Failed to create plugin: {response.status_code} - {response.text}")
 
 
 if __name__ == "__main__":

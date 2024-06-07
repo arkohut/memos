@@ -200,6 +200,13 @@ def new_plugin(new_plugin: NewPluginParam, db: Session = Depends(get_db)):
     return plugin
 
 
+@app.get("/plugins", response_model=List[Plugin])
+def list_plugins(db: Session = Depends(get_db)):
+    plugins = crud.get_plugins(db)
+    return plugins
+
+
+
 @app.post("/libraries/{library_id}/plugins", status_code=status.HTTP_204_NO_CONTENT)
 def add_library_plugin(
     library_id: int, new_plugin: NewLibraryPluginParam, db: Session = Depends(get_db)
