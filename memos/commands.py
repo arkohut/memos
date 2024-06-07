@@ -273,5 +273,22 @@ def create(name: str, webhook_url: str, description: str = ""):
         print(f"Failed to create plugin: {response.status_code} - {response.text}")
 
 
+@plugin_app.command("bind")
+def bind(
+    library_id: int = typer.Option(..., "--lib", help="ID of the library"),
+    plugin_id: int = typer.Option(..., "--plugin", help="ID of the plugin"),
+):
+    response = httpx.post(
+        f"{BASE_URL}/libraries/{library_id}/plugins",
+        json={"plugin_id": plugin_id},
+    )
+    if 200 <= response.status_code < 300:
+        print("Plugin bound to library successfully")
+    else:
+        print(
+            f"Failed to bind plugin to library: {response.status_code} - {response.text}"
+        )
+
+
 if __name__ == "__main__":
     app()

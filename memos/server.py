@@ -211,6 +211,12 @@ def list_plugins(db: Session = Depends(get_db)):
 def add_library_plugin(
     library_id: int, new_plugin: NewLibraryPluginParam, db: Session = Depends(get_db)
 ):
+    library = crud.get_library_by_id(library_id, db)
+    if any(plugin.id == new_plugin.plugin_id for plugin in library.plugins):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Plugin already exists in the library",
+        )
     crud.add_plugin_to_library(library_id, new_plugin.plugin_id, db)
 
 
