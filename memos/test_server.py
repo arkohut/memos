@@ -168,7 +168,6 @@ def test_update_entity(client):
     updated_entity = UpdateEntityParam(
         size=200,
         file_created_at="2023-01-02T00:00:00",
-        file_last_modified_at="2023-01-02T00:00:00",
         file_type="text/markdown",
     )
     update_response = client.put(
@@ -184,7 +183,7 @@ def test_update_entity(client):
     assert updated_data["id"] == entity_id
     assert updated_data["size"] == 200
     assert updated_data["file_created_at"] == "2023-01-02T00:00:00"
-    assert updated_data["file_last_modified_at"] == "2023-01-02T00:00:00"
+    assert updated_data["file_last_modified_at"] == "2023-01-01T00:00:00"
     assert updated_data["file_type"] == "text/markdown"
 
     # Test for entity not found
