@@ -197,6 +197,7 @@ async def update_entity(
     updated_entity: UpdateEntityParam,
     request: Request,
     db: Session = Depends(get_db),
+    trigger_webhooks_flag: bool = False,
 ):
     entity = crud.get_entity_by_id(entity_id, db)
     if entity is None or entity.library_id != library_id:
@@ -212,7 +213,8 @@ async def update_entity(
         )
 
     entity = crud.update_entity(entity_id, updated_entity, db)
-    await trigger_webhooks(library, entity, request)
+    if trigger_webhooks_flag:
+        await trigger_webhooks(library, entity, request)
     return entity
 
 

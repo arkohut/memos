@@ -34,11 +34,20 @@ class NewEntityParam(BaseModel):
     folder_id: int
 
 
+class EntityMetadataParam(BaseModel):
+    key: str
+    value: str
+    source: str
+    data_type: MetadataType
+
+
 class UpdateEntityParam(BaseModel):
-    size: int
-    file_created_at: datetime
-    file_last_modified_at: datetime
-    file_type: str
+    size: int | None = None
+    file_created_at: datetime | None = None
+    file_last_modified_at: datetime | None = None
+    file_type: str | None = None
+    tags: List[str] = []
+    attrs: List[EntityMetadataParam] = []
 
 
 class UpdateTagParam(BaseModel):
@@ -48,13 +57,6 @@ class UpdateTagParam(BaseModel):
 
 class UpdateEntityTagsParam(BaseModel):
     tags: List[str] = []
-
-
-class EntityMetadataParam(BaseModel):
-    key: str
-    value: str
-    source: MetadataSource
-    data_type: MetadataType
 
 
 class UpdateEntityMetadataParam(BaseModel):
@@ -96,6 +98,28 @@ class Library(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class Tag(BaseModel):
+    id: int
+    name: str
+    description: str | None
+    color: str | None
+    created_at: datetime
+    # source: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class EntityMetadata(BaseModel):
+    id: int
+    entity_id: int
+    key: str
+    value: str
+    source: str
+    data_type: MetadataType
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class Entity(BaseModel):
     id: int
     filepath: str
@@ -107,27 +131,8 @@ class Entity(BaseModel):
     last_scan_at: datetime | None
     folder_id: int
     library_id: int
+    tags: List[Tag] = []
+    metadata_entries: List[EntityMetadata] = []
 
     model_config = ConfigDict(from_attributes=True)
 
-
-class Tag(BaseModel):
-    id: int
-    name: str
-    description: str | None
-    color: str | None
-    created_at: datetime
-    source: str
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class EntityMetadata(BaseModel):
-    id: int
-    entity_id: int
-    key: str
-    value: str
-    source: str
-    date_type: MetadataType
-
-    model_config = ConfigDict(from_attributes=True)

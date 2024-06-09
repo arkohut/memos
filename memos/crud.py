@@ -11,6 +11,7 @@ from .schemas import (
     NewPluginParam,
     UpdateEntityParam,
     NewFolderParam,
+    MetadataSource,
 )
 from .models import (
     LibraryModel,
@@ -19,6 +20,9 @@ from .models import (
     EntityModel,
     PluginModel,
     LibraryPluginModel,
+    TagModel,
+    EntityMetadataModel,
+    EntityTagModel,
 )
 
 
@@ -149,8 +153,45 @@ def update_entity(
     entity_id: int, updated_entity: UpdateEntityParam, db: Session
 ) -> Entity:
     db_entity = get_entity_by_id(entity_id, db)
+
+    # Update the main fields of the entity
     for key, value in updated_entity.model_dump().items():
-        setattr(db_entity, key, value)
+        if key not in ["tags", "attrs"] and value is not None:
+            setattr(db_entity, key, value)
+
+    # Handle tags separately
+    if updated_entity.tags is not None:
+        db_entity.tags = []
+        for tag_name in updated_entity.tags:
+            tag = db.query(TagModel).filter(TagModel.name == tag_name).first()
+            if not tag:
+                tag = TagModel(name=tag_name)
+                db.add(tag)
+                db.commit()
+                db.refresh(tag)
+            entity_tag = EntityTagModel(
+                entity_id=db_entity.id,
+                tag_id=tag.id,
+                source=MetadataSource.PLUGIN_GENERATED,
+            )
+            db.add(entity_tag)
+        db.commit()
+
+    # Handle attrs separately
+    if updated_entity.attrs is not None:
+        db_entity.attrs = []
+        for attr in updated_entity.attrs:
+            entity_metadata = EntityMetadataModel(
+                entity_id=db_entity.id,
+                key=attr.key,
+                value=attr.value,
+                source=attr.source if attr.source is not None else None,
+                source_type=MetadataSource.PLUGIN_GENERATED if attr.source is not None else None,
+                data_type=attr.data_type,
+            )
+            db.add(entity_metadata)
+            db_entity.attrs.append(entity_metadata)
+
     db.commit()
     db.refresh(db_entity)
     return Entity(**db_entity.__dict__)

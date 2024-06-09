@@ -69,9 +69,10 @@ class EntityModel(Base):
         "FolderModel", back_populates="entities"
     )
     metadata_entries: Mapped[List["EntityMetadataModel"]] = relationship(
-        "EntityMetadataModel"
+        "EntityMetadataModel", lazy="joined"
     )
-    tags: Mapped[List["TagModel"]] = relationship("EntityTagModel")
+    tags: Mapped[List["TagModel"]] = relationship("TagModel", secondary="entity_tags", lazy="joined")
+
 
 
 class TagModel(Base):
@@ -79,7 +80,7 @@ class TagModel(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     color: Mapped[str | None] = mapped_column(String, nullable=True)
-    source: Mapped[str | None] = mapped_column(String, nullable=True)
+    # source: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class EntityTagModel(Base):
@@ -102,7 +103,7 @@ class EntityMetadataModel(Base):
         Enum(MetadataSource), nullable=False
     )
     source: Mapped[str | None] = mapped_column(String, nullable=True)
-    date_type: Mapped[MetadataType] = mapped_column(Enum(MetadataType), nullable=False)
+    data_type: Mapped[MetadataType] = mapped_column(Enum(MetadataType), nullable=False)
     entity = relationship("EntityModel", back_populates="metadata_entries")
 
 
@@ -121,7 +122,6 @@ class LibraryPluginModel(Base):
     plugin_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("plugins.id"), nullable=False
     )
-    
 
 
 # Create the database engine with the path from config

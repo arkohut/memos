@@ -15,6 +15,8 @@ from memos.schemas import (
     NewEntityParam,
     UpdateEntityParam,
     NewFolderParam,
+    EntityMetadataParam,
+    MetadataType,
 )
 from memos.models import Base
 
@@ -72,7 +74,9 @@ def test_new_library(client):
     duplicate_response = client.post("/libraries", json=library_param.model_dump())
     # Check that the response indicates a failure due to duplicate name
     assert duplicate_response.status_code == 400
-    assert duplicate_response.json() == {"detail": "Library with this name already exists"}
+    assert duplicate_response.json() == {
+        "detail": "Library with this name already exists"
+    }
 
 
 def test_list_libraries(client):
@@ -265,9 +269,7 @@ def test_get_entity_by_filepath(client):
 
 def test_list_entities_in_folder(client):
     # Setup data: Create a new library and folder
-    new_library = NewLibraryParam(
-        name="Library for List Entities Test", folders=[]
-    )
+    new_library = NewLibraryParam(name="Library for List Entities Test", folders=[])
     library_response = client.post(
         "/libraries", json=new_library.model_dump(mode="json")
     )
@@ -325,12 +327,16 @@ def test_list_entities_in_folder(client):
 def test_remove_entity(client):
     # Create a new library
     new_library = NewLibraryParam(name="Test Library")
-    library_response = client.post("/libraries", json=new_library.model_dump(mode="json"))
+    library_response = client.post(
+        "/libraries", json=new_library.model_dump(mode="json")
+    )
     library_id = library_response.json()["id"]
 
     # Create a new folder in the library
     new_folder = NewFolderParam(path="/tmp")
-    folder_response = client.post(f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json"))
+    folder_response = client.post(
+        f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
+    )
     folder_id = folder_response.json()["id"]
 
     # Create a new entity to be deleted
@@ -360,7 +366,9 @@ def test_remove_entity(client):
     # Test for entity not found in the specified library
     invalid_delete_response = client.delete(f"/libraries/{library_id}/entities/9999")
     assert invalid_delete_response.status_code == 404
-    assert invalid_delete_response.json() == {"detail": "Entity not found in the specified library"}
+    assert invalid_delete_response.json() == {
+        "detail": "Entity not found in the specified library"
+    }
 
 
 def test_add_folder_to_library(client):
@@ -374,12 +382,16 @@ def test_add_folder_to_library(client):
 
     # Create a new library
     new_library = NewLibraryParam(name="Test Library")
-    library_response = client.post("/libraries", json=new_library.model_dump(mode="json"))
+    library_response = client.post(
+        "/libraries", json=new_library.model_dump(mode="json")
+    )
     library_id = library_response.json()["id"]
 
     # Add a new folder to the library
     new_folder = NewFolderParam(path="/tmp/new_folder")
-    folder_response = client.post(f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json"))
+    folder_response = client.post(
+        f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
+    )
     assert folder_response.status_code == 200
     assert folder_response.json()["path"] == "/tmp/new_folder"
 
@@ -391,41 +403,174 @@ def test_add_folder_to_library(client):
     assert "/tmp/new_folder" in folder_paths
 
     # Test for adding a folder that already exists
-    duplicate_folder_response = client.post(f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json"))
+    duplicate_folder_response = client.post(
+        f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
+    )
     assert duplicate_folder_response.status_code == 400
-    assert duplicate_folder_response.json() == {"detail": "Folder already exists in the library"}
+    assert duplicate_folder_response.json() == {
+        "detail": "Folder already exists in the library"
+    }
 
     # Test for adding a folder to a non-existent library
-    invalid_folder_response = client.post(f"/libraries/9999/folders", json=new_folder.model_dump(mode="json"))
+    invalid_folder_response = client.post(
+        f"/libraries/9999/folders", json=new_folder.model_dump(mode="json")
+    )
     assert invalid_folder_response.status_code == 404
     assert invalid_folder_response.json() == {"detail": "Library not found"}
 
 
 def test_new_plugin(client):
-    new_plugin = NewPluginParam(name="Test Plugin", description="A test plugin", webhook_url="http://example.com/webhook")
-    
+    new_plugin = NewPluginParam(
+        name="Test Plugin",
+        description="A test plugin",
+        webhook_url="http://example.com/webhook",
+    )
+
     # Make a POST request to the /plugins endpoint
     response = client.post("/plugins", json=new_plugin.model_dump(mode="json"))
-    
+
     # Check that the response is successful
     assert response.status_code == 200
-    
+
     # Check the response data
     plugin_data = response.json()
     assert plugin_data["name"] == "Test Plugin"
     assert plugin_data["description"] == "A test plugin"
     assert plugin_data["webhook_url"] == "http://example.com/webhook"
-    
+
     # Test for duplicate plugin name
-    duplicate_response = client.post("/plugins", json=new_plugin.model_dump(mode="json"))
+    duplicate_response = client.post(
+        "/plugins", json=new_plugin.model_dump(mode="json")
+    )
     # Check that the response indicates a failure due to duplicate name
     assert duplicate_response.status_code == 400
-    assert duplicate_response.json() == {"detail": "Plugin with this name already exists"}
+    assert duplicate_response.json() == {
+        "detail": "Plugin with this name already exists"
+    }
 
     # Test for another duplicate plugin name
-    another_duplicate_response = client.post("/plugins", json=new_plugin.model_dump(mode="json"))
+    another_duplicate_response = client.post(
+        "/plugins", json=new_plugin.model_dump(mode="json")
+    )
     # Check that the response indicates a failure due to duplicate name
     assert another_duplicate_response.status_code == 400
-    assert another_duplicate_response.json() == {"detail": "Plugin with this name already exists"}
+    assert another_duplicate_response.json() == {
+        "detail": "Plugin with this name already exists"
+    }
 
 
+def test_update_entity_with_tags(client):
+    # Create a new library
+    new_library = NewLibraryParam(name="Test Library")
+    library_response = client.post(
+        "/libraries", json=new_library.model_dump(mode="json")
+    )
+    assert library_response.status_code == 200
+    library_id = library_response.json()["id"]
+
+    # Create a new folder in the library
+    new_folder = NewFolderParam(path="/tmp/new_folder")
+    folder_response = client.post(
+        f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
+    )
+    assert folder_response.status_code == 200
+    folder_id = folder_response.json()["id"]
+
+    # Create a new entity in the folder
+    new_entity = NewEntityParam(
+        filename="test_file.txt",
+        filepath="/tmp/new_folder/test_file.txt",
+        size=1234,
+        file_created_at="2023-01-01T00:00:00",
+        file_last_modified_at="2023-01-01T00:00:00",
+        file_type="text/plain",
+        folder_id=folder_id,
+    )
+    entity_response = client.post(
+        f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json")
+    )
+    assert entity_response.status_code == 200
+    entity_id = entity_response.json()["id"]
+
+    # Update the entity with tags
+    update_entity_param = UpdateEntityParam(tags=["tag1", "tag2"])
+
+    # Make a PUT request to the /libraries/{library_id}/entities/{entity_id} endpoint
+    update_response = client.put(
+        f"/libraries/{library_id}/entities/{entity_id}",
+        json=update_entity_param.model_dump(mode="json"),
+    )
+
+    # Check that the response is successful
+    assert update_response.status_code == 200
+
+    # Check the response data
+    updated_entity_data = update_response.json()
+    assert "tags" in updated_entity_data
+    assert len(updated_entity_data["tags"]) == 2
+    assert "tag1" in [tag["name"] for tag in updated_entity_data["tags"]]
+    assert "tag2" in [tag["name"] for tag in updated_entity_data["tags"]]
+
+
+def test_add_metadata_entry_to_entity_success(client):
+    # Create a new library
+    new_library = NewLibraryParam(name="Test Library for Metadata")
+    library_response = client.post(
+        "/libraries", json=new_library.model_dump(mode="json")
+    )
+    assert library_response.status_code == 200
+    library_id = library_response.json()["id"]
+
+    # Create a new folder in the library
+    new_folder = NewFolderParam(path="/tmp")
+    folder_response = client.post(
+        f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
+    )
+    assert folder_response.status_code == 200
+    folder_id = folder_response.json()["id"]
+
+    # Create a new entity in the folder
+    new_entity = NewEntityParam(
+        filename="metadata_test_file.txt",
+        filepath="/tmp/metadata_folder/metadata_test_file.txt",
+        size=5678,
+        file_created_at="2023-01-01T00:00:00",
+        file_last_modified_at="2023-01-01T00:00:00",
+        file_type="text/plain",
+        folder_id=folder_id,
+    )
+    entity_response = client.post(
+        f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json")
+    )
+    assert entity_response.status_code == 200
+    entity_id = entity_response.json()["id"]
+
+    # Add metadata entry to the entity
+    metadata_entry = EntityMetadataParam(
+        key="author",
+        value="John Doe",
+        source="plugin_generated",
+        data_type=MetadataType.ATTRIBUTE,
+    )
+    update_entity_param = UpdateEntityParam(attrs=[metadata_entry])
+
+    # Make a PUT request to the /libraries/{library_id}/entities/{entity_id} endpoint
+    update_response = client.put(
+        f"/libraries/{library_id}/entities/{entity_id}",
+        json=update_entity_param.model_dump(mode="json"),
+    )
+
+    # Check that the response is successful
+    assert update_response.status_code == 200
+
+    # Check the response data
+    updated_entity_data = update_response.json()
+    assert "metadata_entries" in updated_entity_data
+    assert len(updated_entity_data["metadata_entries"]) == 1
+    assert updated_entity_data["metadata_entries"][0]["key"] == "author"
+    assert updated_entity_data["metadata_entries"][0]["value"] == "John Doe"
+    assert updated_entity_data["metadata_entries"][0]["source"] == "plugin_generated"
+    assert (
+        updated_entity_data["metadata_entries"][0]["data_type"]
+        == MetadataType.ATTRIBUTE.value
+    )
