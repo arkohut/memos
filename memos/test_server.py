@@ -17,6 +17,7 @@ from memos.schemas import (
     NewFolderParam,
     EntityMetadataParam,
     MetadataType,
+    UpdateEntityMetadataParam,
 )
 from memos.models import Base
 
@@ -512,7 +513,7 @@ def test_update_entity_with_tags(client):
     assert "tag2" in [tag["name"] for tag in updated_entity_data["tags"]]
 
 
-def test_add_metadata_entry_to_entity_success(client):
+def setup_library_with_entity(client):
     # Create a new library
     new_library = NewLibraryParam(name="Test Library for Metadata")
     library_response = client.post(
@@ -545,6 +546,13 @@ def test_add_metadata_entry_to_entity_success(client):
     assert entity_response.status_code == 200
     entity_id = entity_response.json()["id"]
 
+    return library_id, folder_id, entity_id
+
+
+def test_add_metadata_entry_to_entity_success(client):
+
+    library_id, _, entity_id = setup_library_with_entity(client)
+
     # Add metadata entry to the entity
     metadata_entry = EntityMetadataParam(
         key="author",
@@ -573,4 +581,145 @@ def test_add_metadata_entry_to_entity_success(client):
     assert (
         updated_entity_data["metadata_entries"][0]["data_type"]
         == MetadataType.ATTRIBUTE.value
+    )
+
+
+def test_update_entity_tags(client):
+    library_id, _, entity_id = setup_library_with_entity(client)
+
+    # Add tags to the entity
+    tags = ["tag1", "tag2", "tag3"]
+    update_entity_param = UpdateEntityParam(tags=tags)
+
+    # Make a PUT request to the /libraries/{library_id}/entities/{entity_id} endpoint
+    update_response = client.put(
+        f"/libraries/{library_id}/entities/{entity_id}",
+        json=update_entity_param.model_dump(mode="json"),
+    )
+
+    # Check that the response is successful
+    assert update_response.status_code == 200
+
+    # Check the response data
+    updated_entity_data = update_response.json()
+    assert "tags" in updated_entity_data
+    assert sorted([t["name"] for t in updated_entity_data["tags"]]) == sorted(
+        tags, key=str
+    )
+
+
+def test_patch_entity_metadata_entries(client):
+    library_id, _, entity_id = setup_library_with_entity(client)
+
+    # Patch metadata entries of the entity
+    patch_metadata_entries = [
+        {
+            "key": "author",
+            "value": "Jane Smith",
+            "source": "user_generated",
+            "data_type": MetadataType.ATTRIBUTE.value,
+        },
+        {
+            "key": "year",
+            "value": "2023",
+            "source": "user_generated",
+            "data_type": MetadataType.ATTRIBUTE.value,
+        },
+    ]
+    update_entity_param = UpdateEntityParam(
+        attrs=[
+            EntityMetadataParam(**entry) for entry in patch_metadata_entries
+        ]
+    )
+
+    # Make a PUT request to the /libraries/{library_id}/entities/{entity_id} endpoint
+    patch_response = client.put(
+        f"/libraries/{library_id}/entities/{entity_id}",
+        json=update_entity_param.model_dump(mode="json"),
+    )
+
+    # Check that the response is successful
+    assert patch_response.status_code == 200
+
+    # Check the response data
+    patched_entity_data = patch_response.json()
+    assert "metadata_entries" in patched_entity_data
+    assert len(patched_entity_data["metadata_entries"]) == 2
+    assert patched_entity_data["metadata_entries"][0]["key"] == "author"
+    assert patched_entity_data["metadata_entries"][0]["value"] == "Jane Smith"
+    assert patched_entity_data["metadata_entries"][0]["source"] == "user_generated"
+    assert (
+        patched_entity_data["metadata_entries"][0]["data_type"]
+        == MetadataType.ATTRIBUTE.value
+    )
+    assert patched_entity_data["metadata_entries"][1]["key"] == "year"
+    assert patched_entity_data["metadata_entries"][1]["value"] == "2023"
+    assert patched_entity_data["metadata_entries"][1]["source"] == "user_generated"
+    assert (
+        patched_entity_data["metadata_entries"][1]["data_type"]
+        == MetadataType.ATTRIBUTE.value
+    )
+
+    # Update the "author" attribute of the entity
+    updated_metadata_entries = [
+        {
+            "key": "author",
+            "value": "John Doe",
+            "source": "user_generated",
+            "data_type": MetadataType.ATTRIBUTE.value,
+        }
+    ]
+    update_entity_param = UpdateEntityMetadataParam(
+        metadata_entries=[
+            EntityMetadataParam(**entry) for entry in updated_metadata_entries
+        ]
+    )
+
+    # Make a PATCH request to the /libraries/{library_id}/entities/{entity_id}/metadata endpoint
+    update_response = client.patch(
+        f"/libraries/{library_id}/entities/{entity_id}/metadata",
+        json=update_entity_param.model_dump(mode="json"),
+    )
+
+    # Check that the response is successful
+    assert update_response.status_code == 200
+
+    # Check the response data
+    updated_entity_data = update_response.json()
+    assert "metadata_entries" in updated_entity_data
+    assert any(
+        entry["key"] == "author" and entry["value"] == "John Doe"
+        for entry in updated_entity_data["metadata_entries"]
+    )
+
+    # Add a new attribute "media_type" with value "book"
+    new_metadata_entry = {
+        "key": "media_type",
+        "value": "book",
+        "source": "user_generated",
+        "data_type": MetadataType.ATTRIBUTE.value,
+    }
+    updated_metadata_entries.append(new_metadata_entry)
+
+    update_entity_param = UpdateEntityMetadataParam(
+        metadata_entries=[
+            EntityMetadataParam(**entry) for entry in updated_metadata_entries
+        ]
+    )
+
+    # Make a PATCH request to the /libraries/{library_id}/entities/{entity_id}/metadata endpoint
+    update_response = client.patch(
+        f"/libraries/{library_id}/entities/{entity_id}/metadata",
+        json=update_entity_param.model_dump(mode="json"),
+    )
+
+    # Check that the response is successful
+    assert update_response.status_code == 200
+
+    # Check the response data
+    updated_entity_data = update_response.json()
+    assert "metadata_entries" in updated_entity_data
+    assert any(
+        entry["key"] == "media_type" and entry["value"] == "book"
+        for entry in updated_entity_data["metadata_entries"]
     )

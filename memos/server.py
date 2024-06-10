@@ -20,6 +20,8 @@ from .schemas import (
     UpdateEntityParam,
     NewPluginParam,
     NewLibraryPluginParam,
+    UpdateEntityTagsParam,
+    UpdateEntityMetadataParam,
 )
 
 engine = create_engine(f"sqlite:///{get_database_path()}")
@@ -216,6 +218,46 @@ async def update_entity(
     if trigger_webhooks_flag:
         await trigger_webhooks(library, entity, request)
     return entity
+
+
+@app.patch("/libraries/{library_id}/entities/{entity_id}/tags", response_model=Entity)
+@app.put("/libraries/{library_id}/entities/{entity_id}/tags", response_model=Entity)
+def patch_entity_tags(
+    library_id: int,
+    entity_id: int,
+    update_tags: UpdateEntityTagsParam,
+    db: Session = Depends(get_db)
+):
+    entity = crud.get_entity_by_id(entity_id, db)
+    if entity is None or entity.library_id != library_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Entity not found in the specified library",
+        )
+
+    # Use the CRUD function to update the tags
+    entity = crud.update_entity_tags(entity_id, update_tags.tags, db)
+    return entity
+
+
+@app.patch("/libraries/{library_id}/entities/{entity_id}/metadata", response_model=Entity)
+def patch_entity_metadata(
+    library_id: int,
+    entity_id: int,
+    update_metadata: UpdateEntityMetadataParam,
+    db: Session = Depends(get_db)
+):
+    entity = crud.get_entity_by_id(entity_id, db)
+    if entity is None or entity.library_id != library_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Entity not found in the specified library",
+        )
+
+    # Use the CRUD function to update the metadata entries
+    entity = crud.update_entity_metadata_entries(entity_id, update_metadata.metadata_entries, db)
+    return entity
+
 
 
 @app.delete(

@@ -12,6 +12,7 @@ from .schemas import (
     UpdateEntityParam,
     NewFolderParam,
     MetadataSource,
+    EntityMetadataParam,
 )
 from .models import (
     LibraryModel,
@@ -186,11 +187,80 @@ def update_entity(
                 key=attr.key,
                 value=attr.value,
                 source=attr.source if attr.source is not None else None,
-                source_type=MetadataSource.PLUGIN_GENERATED if attr.source is not None else None,
+                source_type=(
+                    MetadataSource.PLUGIN_GENERATED if attr.source is not None else None
+                ),
                 data_type=attr.data_type,
             )
             db.add(entity_metadata)
             db_entity.attrs.append(entity_metadata)
+
+    db.commit()
+    db.refresh(db_entity)
+    return Entity(**db_entity.__dict__)
+
+
+def update_entity_tags(entity_id: int, tags: List[str], db: Session) -> Entity:
+    db_entity = get_entity_by_id(entity_id, db)
+    db_entity.tags = []
+    for tag_name in tags:
+        tag = db.query(TagModel).filter(TagModel.name == tag_name).first()
+        if not tag:
+            tag = TagModel(name=tag_name)
+            db.add(tag)
+            db.commit()
+            db.refresh(tag)
+        entity_tag = EntityTagModel(
+            entity_id=db_entity.id,
+            tag_id=tag.id,
+            source=MetadataSource.PLUGIN_GENERATED,
+        )
+        db.add(entity_tag)
+
+
+def update_entity_metadata_entries(
+    entity_id: int, updated_metadata: List[EntityMetadataParam], db: Session
+) -> Entity:
+    db_entity = get_entity_by_id(entity_id, db)
+
+    existing_metadata_entries = (
+        db.query(EntityMetadataModel)
+        .filter(EntityMetadataModel.entity_id == db_entity.id)
+        .all()
+    )
+
+    existing_metadata_dict = {entry.key: entry for entry in existing_metadata_entries}
+
+    for metadata in updated_metadata:
+        if metadata.key in existing_metadata_dict:
+            existing_metadata = existing_metadata_dict[metadata.key]
+            existing_metadata.value = metadata.value
+            existing_metadata.source = (
+                metadata.source
+                if metadata.source is not None
+                else existing_metadata.source
+            )
+            existing_metadata.source_type = (
+                MetadataSource.PLUGIN_GENERATED
+                if metadata.source is not None
+                else existing_metadata.source_type
+            )
+            existing_metadata.data_type = metadata.data_type
+        else:
+            entity_metadata = EntityMetadataModel(
+                entity_id=db_entity.id,
+                key=metadata.key,
+                value=metadata.value,
+                source=metadata.source if metadata.source is not None else None,
+                source_type=(
+                    MetadataSource.PLUGIN_GENERATED
+                    if metadata.source is not None
+                    else None
+                ),
+                data_type=metadata.data_type,
+            )
+            db.add(entity_metadata)
+            db_entity.metadata_entries.append(entity_metadata)
 
     db.commit()
     db.refresh(db_entity)
