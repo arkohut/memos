@@ -199,7 +199,7 @@ def test_update_entity(client):
         file_type="text/markdown",
     )
     update_response = client.put(
-        f"/libraries/{library_id}/entities/{entity_id}",
+        f"/entities/{entity_id}",
         json=updated_entity.model_dump(mode="json"),
     )
 
@@ -216,22 +216,12 @@ def test_update_entity(client):
 
     # Test for entity not found
     invalid_update_response = client.put(
-        f"/libraries/{library_id}/entities/9999",
+        f"/entities/9999",
         json=updated_entity.model_dump(mode="json"),
     )
     assert invalid_update_response.status_code == 404
     assert invalid_update_response.json() == {
-        "detail": "Entity not found in the specified library"
-    }
-
-    # Test for library not found
-    invalid_update_response = client.put(
-        f"/libraries/9999/entities/{entity_id}",
-        json=updated_entity.model_dump(mode="json"),
-    )
-    assert invalid_update_response.status_code == 404
-    assert invalid_update_response.json() == {
-        "detail": "Entity not found in the specified library"
+        "detail": "Entity not found"
     }
 
 
@@ -461,7 +451,7 @@ def test_update_entity_with_tags(client):
 
     # Make a PUT request to the /libraries/{library_id}/entities/{entity_id} endpoint
     update_response = client.put(
-        f"/libraries/{library_id}/entities/{entity_id}",
+        f"/entities/{entity_id}",
         json=update_entity_param.model_dump(mode="json"),
     )
 
@@ -490,7 +480,7 @@ def test_add_metadata_entry_to_entity_success(client):
 
     # Make a PUT request to the /libraries/{library_id}/entities/{entity_id} endpoint
     update_response = client.put(
-        f"/libraries/{library_id}/entities/{entity_id}",
+        f"/entities/{entity_id}",
         json=update_entity_param.model_dump(mode="json"),
     )
 
@@ -516,7 +506,7 @@ def test_update_entity_tags(client):
 
     # Make a PUT request to the /libraries/{library_id}/entities/{entity_id} endpoint
     update_response = client.put(
-        f"/libraries/{library_id}/entities/{entity_id}",
+        f"/entities/{entity_id}",
         json=update_entity_param.model_dump(mode="json"),
     )
 
@@ -555,7 +545,7 @@ def test_patch_entity_metadata_entries(client):
 
     # Make a PUT request to the /libraries/{library_id}/entities/{entity_id} endpoint
     patch_response = client.put(
-        f"/libraries/{library_id}/entities/{entity_id}",
+        f"/entities/{entity_id}",
         json=update_entity_param.model_dump(mode="json"),
     )
 
@@ -584,7 +574,7 @@ def test_patch_entity_metadata_entries(client):
 
     # Make a PATCH request to the /libraries/{library_id}/entities/{entity_id}/metadata endpoint
     update_response = client.patch(
-        f"/libraries/{library_id}/entities/{entity_id}/metadata",
+        f"/entities/{entity_id}/metadata",
         json=update_entity_param.model_dump(mode="json"),
     )
 
@@ -616,7 +606,7 @@ def test_patch_entity_metadata_entries(client):
 
     # Make a PATCH request to the /libraries/{library_id}/entities/{entity_id}/metadata endpoint
     update_response = client.patch(
-        f"/libraries/{library_id}/entities/{entity_id}/metadata",
+        f"/entities/{entity_id}/metadata",
         json=update_entity_param.model_dump(mode="json"),
     )
 

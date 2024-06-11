@@ -105,7 +105,7 @@ async def trigger_webhooks(library, entity, request):
             if plugin.webhook_url:
                 location = str(
                     request.url_for(
-                        "get_entity_by_id", library_id=library.id, entity_id=entity.id
+                        "get_entity_by_id", entity_id=entity.id
                     )
                 )
                 task = client.post(
@@ -182,8 +182,18 @@ def get_entity_by_filepath(
     return entity
 
 
+@app.get("/entities/{entity_id}", response_model=Entity)
+def get_entity_by_id(entity_id: int, db: Session = Depends(get_db)):
+    entity = crud.get_entity_by_id(entity_id, db)
+    if entity is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found"
+        )
+    return entity
+
+
 @app.get("/libraries/{library_id}/entities/{entity_id}", response_model=Entity)
-def get_entity_by_id(library_id: int, entity_id: int, db: Session = Depends(get_db)):
+def get_entity_by_id_in_library(library_id: int, entity_id: int, db: Session = Depends(get_db)):
     entity = crud.get_entity_by_id(entity_id, db)
     if entity is None or entity.library_id != library_id:
         raise HTTPException(
@@ -192,9 +202,8 @@ def get_entity_by_id(library_id: int, entity_id: int, db: Session = Depends(get_
     return entity
 
 
-@app.put("/libraries/{library_id}/entities/{entity_id}", response_model=Entity)
+@app.put("/entities/{entity_id}", response_model=Entity)
 async def update_entity(
-    library_id: int,
     entity_id: int,
     updated_entity: UpdateEntityParam,
     request: Request,
@@ -202,37 +211,35 @@ async def update_entity(
     trigger_webhooks_flag: bool = False,
 ):
     entity = crud.get_entity_by_id(entity_id, db)
-    if entity is None or entity.library_id != library_id:
+    if entity is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Entity not found in the specified library",
-        )
-
-    library = crud.get_library_by_id(library_id, db)
-    if library is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Library not found"
+            detail="Entity not found",
         )
 
     entity = crud.update_entity(entity_id, updated_entity, db)
     if trigger_webhooks_flag:
+        library = crud.get_library_by_id(entity.library_id, db)
+        if library is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Library not found"
+            )
         await trigger_webhooks(library, entity, request)
     return entity
 
 
-@app.patch("/libraries/{library_id}/entities/{entity_id}/tags", response_model=Entity)
-@app.put("/libraries/{library_id}/entities/{entity_id}/tags", response_model=Entity)
+@app.patch("/entities/{entity_id}/tags", response_model=Entity)
+@app.put("/entities/{entity_id}/tags", response_model=Entity)
 def patch_entity_tags(
-    library_id: int,
     entity_id: int,
     update_tags: UpdateEntityTagsParam,
     db: Session = Depends(get_db)
 ):
     entity = crud.get_entity_by_id(entity_id, db)
-    if entity is None or entity.library_id != library_id:
+    if entity is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Entity not found in the specified library",
+            detail="Entity not found",
         )
 
     # Use the CRUD function to update the tags
@@ -240,18 +247,17 @@ def patch_entity_tags(
     return entity
 
 
-@app.patch("/libraries/{library_id}/entities/{entity_id}/metadata", response_model=Entity)
+@app.patch("/entities/{entity_id}/metadata", response_model=Entity)
 def patch_entity_metadata(
-    library_id: int,
     entity_id: int,
     update_metadata: UpdateEntityMetadataParam,
     db: Session = Depends(get_db)
 ):
     entity = crud.get_entity_by_id(entity_id, db)
-    if entity is None or entity.library_id != library_id:
+    if entity is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Entity not found in the specified library",
+            detail="Entity not found",
         )
 
     # Use the CRUD function to update the metadata entries
