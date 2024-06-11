@@ -98,7 +98,7 @@ def new_folder(
     return crud.add_folder(library_id=library.id, folder=folder, db=db)
 
 
-async def trigger_webhooks(library, entity, request):
+async def trigger_webhooks(library: Library, entity: Entity, request: Request):
     async with httpx.AsyncClient() as client:
         tasks = []
         for plugin in library.plugins:
@@ -110,7 +110,7 @@ async def trigger_webhooks(library, entity, request):
                 )
                 task = client.post(
                     plugin.webhook_url,
-                    json={"entity": entity.model_dump(mode="json")},
+                    json=entity.model_dump(mode="json"),
                     headers={"Location": location},
                     timeout=10.0,  # Adding a timeout of 10 seconds
                 )

@@ -10,7 +10,7 @@
     "library_id": 1,
     "metadata_entries": [
         {
-            "data_type": "attribute",
+            "data_type": "text",
             "entity_id": 1,
             "id": 1,
             "key": "author",
@@ -18,7 +18,7 @@
             "value": "Jane Smith"
         },
         {
-            "data_type": "attribute",
+            "data_type": "text",
             "entity_id": 1,
             "id": 2,
             "key": "year",

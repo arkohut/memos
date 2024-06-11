@@ -474,7 +474,7 @@ def test_add_metadata_entry_to_entity_success(client):
         key="author",
         value="John Doe",
         source="plugin_generated",
-        data_type=MetadataType.ATTRIBUTE,
+        data_type=MetadataType.TEXT_DATA,
     )
     update_entity_param = UpdateEntityParam(attrs=[metadata_entry])
 
@@ -530,13 +530,13 @@ def test_patch_entity_metadata_entries(client):
             "key": "author",
             "value": "Jane Smith",
             "source": "user_generated",
-            "data_type": MetadataType.ATTRIBUTE.value,
+            "data_type": MetadataType.TEXT_DATA.value,
         },
         {
             "key": "year",
             "value": "2023",
             "source": "user_generated",
-            "data_type": MetadataType.ATTRIBUTE.value,
+            "data_type": MetadataType.TEXT_DATA.value,
         },
     ]
     update_entity_param = UpdateEntityParam(
@@ -563,7 +563,7 @@ def test_patch_entity_metadata_entries(client):
             "key": "author",
             "value": "John Doe",
             "source": "user_generated",
-            "data_type": MetadataType.ATTRIBUTE.value,
+            "data_type": MetadataType.TEXT_DATA.value,
         }
     ]
     update_entity_param = UpdateEntityMetadataParam(
@@ -594,7 +594,7 @@ def test_patch_entity_metadata_entries(client):
         "key": "media_type",
         "value": "book",
         "source": "user_generated",
-        "data_type": MetadataType.ATTRIBUTE.value,
+        "data_type": MetadataType.TEXT_DATA.value,
     }
     updated_metadata_entries.append(new_metadata_entry)
 

@@ -11,8 +11,8 @@ class MetadataSource(Enum):
 
 
 class MetadataType(Enum):
-    EXTRACONTENT = "extra_content"
-    ATTRIBUTE = "attribute"
+    JSON_DATA = "json"
+    TEXT_DATA = "text"
 
 
 class NewLibraryParam(BaseModel):
