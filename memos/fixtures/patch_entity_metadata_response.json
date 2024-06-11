@@ -1,0 +1,31 @@
+{
+    "file_created_at": "2023-01-01T00:00:00",
+    "file_last_modified_at": "2023-01-01T00:00:00",
+    "file_type": "text/plain",
+    "filename": "metadata_test_file.txt",
+    "filepath": "/tmp/metadata_folder/metadata_test_file.txt",
+    "folder_id": 1,
+    "id": 1,
+    "last_scan_at": null,
+    "library_id": 1,
+    "metadata_entries": [
+        {
+            "data_type": "attribute",
+            "entity_id": 1,
+            "id": 1,
+            "key": "author",
+            "source": "user_generated",
+            "value": "Jane Smith"
+        },
+        {
+            "data_type": "attribute",
+            "entity_id": 1,
+            "id": 2,
+            "key": "year",
+            "source": "user_generated",
+            "value": "2023"
+        }
+    ],
+    "size": 5678,
+    "tags": []
+}

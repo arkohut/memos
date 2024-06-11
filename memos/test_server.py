@@ -1,3 +1,5 @@
+import json
+import os
 import pytest
 
 from fastapi.testclient import TestClient
@@ -9,7 +11,6 @@ from pathlib import Path
 
 from memos.server import app, get_db
 from memos.schemas import (
-    Library,
     NewPluginParam,
     NewLibraryParam,
     NewEntityParam,
@@ -28,6 +29,47 @@ engine = create_engine(
     poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def load_fixture(filename):
+    with open(Path(__file__).parent / "fixtures" / filename, "r") as file:
+        return json.load(file)
+
+
+def setup_library_with_entity(client):
+    # Create a new library
+    new_library = NewLibraryParam(name="Test Library for Metadata")
+    library_response = client.post(
+        "/libraries", json=new_library.model_dump(mode="json")
+    )
+    assert library_response.status_code == 200
+    library_id = library_response.json()["id"]
+
+    # Create a new folder in the library
+    new_folder = NewFolderParam(path="/tmp")
+    folder_response = client.post(
+        f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
+    )
+    assert folder_response.status_code == 200
+    folder_id = folder_response.json()["id"]
+
+    # Create a new entity in the folder
+    new_entity = NewEntityParam(
+        filename="metadata_test_file.txt",
+        filepath="/tmp/metadata_folder/metadata_test_file.txt",
+        size=5678,
+        file_created_at="2023-01-01T00:00:00",
+        file_last_modified_at="2023-01-01T00:00:00",
+        file_type="text/plain",
+        folder_id=folder_id,
+    )
+    entity_response = client.post(
+        f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json")
+    )
+    assert entity_response.status_code == 200
+    entity_id = entity_response.json()["id"]
+
+    return library_id, folder_id, entity_id
 
 
 def override_get_db():
@@ -148,26 +190,7 @@ def test_new_entity(client):
 
 
 def test_update_entity(client):
-    # Setup data: Create a new library and entity
-    new_library = NewLibraryParam(name="Library for Update Test", folders=["/tmp"])
-    library_response = client.post(
-        "/libraries", json=new_library.model_dump(mode="json")
-    )
-    library_id = library_response.json()["id"]
-
-    new_entity = NewEntityParam(
-        filename="test.txt",
-        filepath="test.txt",
-        size=100,
-        file_created_at="2023-01-01T00:00:00",
-        file_last_modified_at="2023-01-01T00:00:00",
-        file_type="text/plain",
-        folder_id=1,
-    )
-    entity_response = client.post(
-        f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json")
-    )
-    entity_id = entity_response.json()["id"]
+    library_id, _, entity_id = setup_library_with_entity(client)
 
     # Update the entity
     updated_entity = UpdateEntityParam(
@@ -326,34 +349,7 @@ def test_list_entities_in_folder(client):
 
 
 def test_remove_entity(client):
-    # Create a new library
-    new_library = NewLibraryParam(name="Test Library")
-    library_response = client.post(
-        "/libraries", json=new_library.model_dump(mode="json")
-    )
-    library_id = library_response.json()["id"]
-
-    # Create a new folder in the library
-    new_folder = NewFolderParam(path="/tmp")
-    folder_response = client.post(
-        f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
-    )
-    folder_id = folder_response.json()["id"]
-
-    # Create a new entity to be deleted
-    new_entity = NewEntityParam(
-        filename="test_delete.txt",
-        filepath="test_delete.txt",
-        size=100,
-        file_created_at="2023-01-01T00:00:00",
-        file_last_modified_at="2023-01-01T00:00:00",
-        file_type="text/plain",
-        folder_id=folder_id,
-    )
-    entity_response = client.post(
-        f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json")
-    )
-    entity_id = entity_response.json()["id"]
+    library_id, _, entity_id = setup_library_with_entity(client)
 
     # Delete the entity
     delete_response = client.delete(f"/libraries/{library_id}/entities/{entity_id}")
@@ -373,9 +369,6 @@ def test_remove_entity(client):
 
 
 def test_add_folder_to_library(client):
-
-    import os
-
     # Prepare tmp folders for the test
     tmp_folder_path = "/tmp/new_folder"
     if not os.path.exists(tmp_folder_path):
@@ -461,37 +454,7 @@ def test_new_plugin(client):
 
 
 def test_update_entity_with_tags(client):
-    # Create a new library
-    new_library = NewLibraryParam(name="Test Library")
-    library_response = client.post(
-        "/libraries", json=new_library.model_dump(mode="json")
-    )
-    assert library_response.status_code == 200
-    library_id = library_response.json()["id"]
-
-    # Create a new folder in the library
-    new_folder = NewFolderParam(path="/tmp/new_folder")
-    folder_response = client.post(
-        f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
-    )
-    assert folder_response.status_code == 200
-    folder_id = folder_response.json()["id"]
-
-    # Create a new entity in the folder
-    new_entity = NewEntityParam(
-        filename="test_file.txt",
-        filepath="/tmp/new_folder/test_file.txt",
-        size=1234,
-        file_created_at="2023-01-01T00:00:00",
-        file_last_modified_at="2023-01-01T00:00:00",
-        file_type="text/plain",
-        folder_id=folder_id,
-    )
-    entity_response = client.post(
-        f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json")
-    )
-    assert entity_response.status_code == 200
-    entity_id = entity_response.json()["id"]
+    library_id, _, entity_id = setup_library_with_entity(client)
 
     # Update the entity with tags
     update_entity_param = UpdateEntityParam(tags=["tag1", "tag2"])
@@ -513,44 +476,7 @@ def test_update_entity_with_tags(client):
     assert "tag2" in [tag["name"] for tag in updated_entity_data["tags"]]
 
 
-def setup_library_with_entity(client):
-    # Create a new library
-    new_library = NewLibraryParam(name="Test Library for Metadata")
-    library_response = client.post(
-        "/libraries", json=new_library.model_dump(mode="json")
-    )
-    assert library_response.status_code == 200
-    library_id = library_response.json()["id"]
-
-    # Create a new folder in the library
-    new_folder = NewFolderParam(path="/tmp")
-    folder_response = client.post(
-        f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
-    )
-    assert folder_response.status_code == 200
-    folder_id = folder_response.json()["id"]
-
-    # Create a new entity in the folder
-    new_entity = NewEntityParam(
-        filename="metadata_test_file.txt",
-        filepath="/tmp/metadata_folder/metadata_test_file.txt",
-        size=5678,
-        file_created_at="2023-01-01T00:00:00",
-        file_last_modified_at="2023-01-01T00:00:00",
-        file_type="text/plain",
-        folder_id=folder_id,
-    )
-    entity_response = client.post(
-        f"/libraries/{library_id}/entities", json=new_entity.model_dump(mode="json")
-    )
-    assert entity_response.status_code == 200
-    entity_id = entity_response.json()["id"]
-
-    return library_id, folder_id, entity_id
-
-
 def test_add_metadata_entry_to_entity_success(client):
-
     library_id, _, entity_id = setup_library_with_entity(client)
 
     # Add metadata entry to the entity
@@ -573,15 +499,12 @@ def test_add_metadata_entry_to_entity_success(client):
 
     # Check the response data
     updated_entity_data = update_response.json()
+    expected_metadata_entry = load_fixture(
+        "add_metadata_entry_to_entity_sucess_response.json"
+    )
     assert "metadata_entries" in updated_entity_data
     assert len(updated_entity_data["metadata_entries"]) == 1
-    assert updated_entity_data["metadata_entries"][0]["key"] == "author"
-    assert updated_entity_data["metadata_entries"][0]["value"] == "John Doe"
-    assert updated_entity_data["metadata_entries"][0]["source"] == "plugin_generated"
-    assert (
-        updated_entity_data["metadata_entries"][0]["data_type"]
-        == MetadataType.ATTRIBUTE.value
-    )
+    assert updated_entity_data["metadata_entries"][0] == expected_metadata_entry
 
 
 def test_update_entity_tags(client):
@@ -627,9 +550,7 @@ def test_patch_entity_metadata_entries(client):
         },
     ]
     update_entity_param = UpdateEntityParam(
-        attrs=[
-            EntityMetadataParam(**entry) for entry in patch_metadata_entries
-        ]
+        attrs=[EntityMetadataParam(**entry) for entry in patch_metadata_entries]
     )
 
     # Make a PUT request to the /libraries/{library_id}/entities/{entity_id} endpoint
@@ -643,22 +564,8 @@ def test_patch_entity_metadata_entries(client):
 
     # Check the response data
     patched_entity_data = patch_response.json()
-    assert "metadata_entries" in patched_entity_data
-    assert len(patched_entity_data["metadata_entries"]) == 2
-    assert patched_entity_data["metadata_entries"][0]["key"] == "author"
-    assert patched_entity_data["metadata_entries"][0]["value"] == "Jane Smith"
-    assert patched_entity_data["metadata_entries"][0]["source"] == "user_generated"
-    assert (
-        patched_entity_data["metadata_entries"][0]["data_type"]
-        == MetadataType.ATTRIBUTE.value
-    )
-    assert patched_entity_data["metadata_entries"][1]["key"] == "year"
-    assert patched_entity_data["metadata_entries"][1]["value"] == "2023"
-    assert patched_entity_data["metadata_entries"][1]["source"] == "user_generated"
-    assert (
-        patched_entity_data["metadata_entries"][1]["data_type"]
-        == MetadataType.ATTRIBUTE.value
-    )
+    expected_data = load_fixture("patch_entity_metadata_response.json")
+    assert patched_entity_data == expected_data
 
     # Update the "author" attribute of the entity
     updated_metadata_entries = [

@@ -1,0 +1,8 @@
+{
+    "data_type": "attribute",
+    "entity_id": 1,
+    "id": 1,
+    "key": "author",
+    "source": "plugin_generated",
+    "value": "John Doe"
+}
