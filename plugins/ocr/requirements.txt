@@ -1,0 +1,3 @@
+rapidocr_onnxruntime
+httpx
+fastapi
