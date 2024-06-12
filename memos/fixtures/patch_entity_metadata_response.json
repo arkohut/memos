@@ -1,7 +1,8 @@
 {
     "file_created_at": "2023-01-01T00:00:00",
     "file_last_modified_at": "2023-01-01T00:00:00",
-    "file_type": "text/plain",
+    "file_type": "txt",
+    "file_type_group": "text",
     "filename": "metadata_test_file.txt",
     "filepath": "/tmp/metadata_folder/metadata_test_file.txt",
     "folder_id": 1,

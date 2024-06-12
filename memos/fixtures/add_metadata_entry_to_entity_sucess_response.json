@@ -1,5 +1,5 @@
 {
-    "data_type": "attribute",
+    "data_type": "text",
     "entity_id": 1,
     "id": 1,
     "key": "author",

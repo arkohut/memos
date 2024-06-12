@@ -58,6 +58,7 @@ class EntityModel(Base):
     file_created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     file_last_modified_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     file_type: Mapped[str] = mapped_column(String, nullable=False)
+    file_type_group: Mapped[str] = mapped_column(String, nullable=False)
     last_scan_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     library_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("libraries.id"), nullable=False

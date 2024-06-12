@@ -60,7 +60,8 @@ def setup_library_with_entity(client):
         size=5678,
         file_created_at="2023-01-01T00:00:00",
         file_last_modified_at="2023-01-01T00:00:00",
-        file_type="text/plain",
+        file_type="txt",
+        file_type_group="text",
         folder_id=folder_id,
     )
     entity_response = client.post(
@@ -161,7 +162,8 @@ def test_new_entity(client):
         size=150,
         file_created_at="2023-01-01T00:00:00",
         file_last_modified_at="2023-01-01T00:00:00",
-        file_type="text/plain",
+        file_type="txt",
+        file_type_group="text",
         folder_id=folder_id,
     )
     entity_response = client.post(
@@ -178,7 +180,8 @@ def test_new_entity(client):
     assert entity_data["size"] == 150
     assert entity_data["file_created_at"] == "2023-01-01T00:00:00"
     assert entity_data["file_last_modified_at"] == "2023-01-01T00:00:00"
-    assert entity_data["file_type"] == "text/plain"
+    assert entity_data["file_type"] == "txt"
+    assert entity_data["file_type_group"] == "text"
     assert entity_data["folder_id"] == 1
 
     # Test for library not found
@@ -196,7 +199,8 @@ def test_update_entity(client):
     updated_entity = UpdateEntityParam(
         size=200,
         file_created_at="2023-01-02T00:00:00",
-        file_type="text/markdown",
+        file_type="markdown",
+        file_type_group="text",
     )
     update_response = client.put(
         f"/entities/{entity_id}",
@@ -212,7 +216,8 @@ def test_update_entity(client):
     assert updated_data["size"] == 200
     assert updated_data["file_created_at"] == "2023-01-02T00:00:00"
     assert updated_data["file_last_modified_at"] == "2023-01-01T00:00:00"
-    assert updated_data["file_type"] == "text/markdown"
+    assert updated_data["file_type"] == "markdown"
+    assert updated_data["file_type_group"] == "text"
 
     # Test for entity not found
     invalid_update_response = client.put(
@@ -240,7 +245,8 @@ def test_get_entity_by_filepath(client):
         size=100,
         file_created_at="2023-01-01T00:00:00",
         file_last_modified_at="2023-01-01T00:00:00",
-        file_type="text/plain",
+        file_type="txt",
+        file_type_group="text",
         folder_id=1,
     )
     entity_response = client.post(
@@ -263,6 +269,7 @@ def test_get_entity_by_filepath(client):
     assert entity_data["filename"] == new_entity.filename
     assert entity_data["size"] == new_entity.size
     assert entity_data["file_type"] == new_entity.file_type
+    assert entity_data["file_type_group"] == new_entity.file_type_group
 
     # Test for entity not found
     invalid_get_response = client.get(
@@ -302,7 +309,8 @@ def test_list_entities_in_folder(client):
         size=100,
         file_created_at="2023-01-01T00:00:00",
         file_last_modified_at="2023-01-01T00:00:00",
-        file_type="text/plain",
+        file_type="txt",
+        file_type_group="text",
         folder_id=folder_id,
     )
     entity_response = client.post(
@@ -324,6 +332,7 @@ def test_list_entities_in_folder(client):
     assert entities_data[0]["filename"] == new_entity.filename
     assert entities_data[0]["size"] == new_entity.size
     assert entities_data[0]["file_type"] == new_entity.file_type
+    assert entities_data[0]["file_type_group"] == new_entity.file_type_group
 
     # Test for folder not found
     invalid_list_response = client.get(f"/libraries/{library_id}/folders/9999/entities")

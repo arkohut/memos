@@ -18,7 +18,8 @@ setup(
         'httpx',
         'pydantic',
         'sqlalchemy',
-        'typer'
+        'typer',
+        'magika'
     ],
     entry_points={
         'console_scripts': [

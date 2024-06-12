@@ -1,4 +1,3 @@
-import mimetypes
 import os
 import time
 from datetime import datetime, timezone
@@ -10,13 +9,15 @@ import typer
 from memos.server import run_server
 from tabulate import tabulate
 from tqdm import tqdm
-from gitignore_parser import parse_gitignore
+from magika import Magika
 
 app = typer.Typer()
 lib_app = typer.Typer()
 plugin_app = typer.Typer()
 app.add_typer(plugin_app, name="plugin")
 app.add_typer(lib_app, name="lib")
+
+file_detector = Magika()
 
 BASE_URL = "http://localhost:8080"
 
@@ -30,6 +31,11 @@ def format_timestamp(timestamp):
         .replace(tzinfo=None)
         .isoformat()
     )
+
+
+def get_file_type(file_path):
+    file_result = file_detector.identify_path(file_path)
+    return file_result.output.ct_label, file_result.output.group
 
 
 def display_libraries(libraries):
@@ -130,9 +136,7 @@ def scan(library_id: int):
                         str(absolute_file_path)
                     )  # Add to scanned files set
                     file_stat = file_path.stat()
-                    file_type = (
-                        mimetypes.guess_type(file_path)[0] or "application/octet-stream"
-                    )
+                    file_type, file_type_group = get_file_type(absolute_file_path)
                     new_entity = {
                         "filename": file_path.name,
                         "filepath": str(absolute_file_path),  # Save absolute path
@@ -140,6 +144,7 @@ def scan(library_id: int):
                         "file_created_at": format_timestamp(file_stat.st_ctime),
                         "file_last_modified_at": format_timestamp(file_stat.st_mtime),
                         "file_type": file_type,
+                        "file_type_group": file_type_group,
                         "folder_id": folder["id"],
                     }
                     # Check if the entity already exists

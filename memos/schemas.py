@@ -31,6 +31,7 @@ class NewEntityParam(BaseModel):
     file_created_at: datetime
     file_last_modified_at: datetime
     file_type: str
+    file_type_group: str
     folder_id: int
 
 
@@ -46,6 +47,7 @@ class UpdateEntityParam(BaseModel):
     file_created_at: datetime | None = None
     file_last_modified_at: datetime | None = None
     file_type: str | None = None
+    file_type_group: str | None = None
     tags: List[str] = []
     attrs: List[EntityMetadataParam] = []
 
@@ -128,6 +130,7 @@ class Entity(BaseModel):
     file_created_at: datetime
     file_last_modified_at: datetime
     file_type: str
+    file_type_group: str
     last_scan_at: datetime | None
     folder_id: int
     library_id: int
