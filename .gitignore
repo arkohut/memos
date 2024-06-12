@@ -4,3 +4,4 @@ memos.egg-info/
 build/
 *.pyc
 typesense-data/
+test-data/
