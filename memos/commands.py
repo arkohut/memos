@@ -10,6 +10,7 @@ import typer
 from memos.server import run_server
 from tabulate import tabulate
 from tqdm import tqdm
+from gitignore_parser import parse_gitignore
 
 app = typer.Typer()
 lib_app = typer.Typer()
@@ -19,6 +20,7 @@ app.add_typer(lib_app, name="lib")
 
 BASE_URL = "http://localhost:8080"
 
+ignore_files = [".DS_Store"]
 
 def format_timestamp(timestamp):
     if isinstance(timestamp, str):
@@ -122,6 +124,8 @@ def scan(library_id: int):
                     pbar.update(1)
                     file_path = Path(root) / file
                     absolute_file_path = file_path.resolve()  # Get absolute path
+                    if file in ignore_files:
+                        continue
                     scanned_files.add(
                         str(absolute_file_path)
                     )  # Add to scanned files set
