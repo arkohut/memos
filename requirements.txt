@@ -6,3 +6,4 @@ sqlalchemy
 typer
 tabulate
 magika
+pydantic-settings
