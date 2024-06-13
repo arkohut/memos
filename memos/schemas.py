@@ -13,6 +13,7 @@ class MetadataSource(Enum):
 class MetadataType(Enum):
     JSON_DATA = "json"
     TEXT_DATA = "text"
+    NUMBER_DATA = "number"
 
 
 class NewLibraryParam(BaseModel):
@@ -48,8 +49,8 @@ class UpdateEntityParam(BaseModel):
     file_last_modified_at: datetime | None = None
     file_type: str | None = None
     file_type_group: str | None = None
-    tags: List[str] = []
-    attrs: List[EntityMetadataParam] = []
+    tags: List[str] | None = None
+    metadata_entries: List[EntityMetadataParam] | None = None
 
 
 class UpdateTagParam(BaseModel):

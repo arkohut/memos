@@ -485,7 +485,7 @@ def test_add_metadata_entry_to_entity_success(client):
         source="plugin_generated",
         data_type=MetadataType.TEXT_DATA,
     )
-    update_entity_param = UpdateEntityParam(attrs=[metadata_entry])
+    update_entity_param = UpdateEntityParam(metadata_entries=[metadata_entry])
 
     # Make a PUT request to the /libraries/{library_id}/entities/{entity_id} endpoint
     update_response = client.put(
@@ -549,7 +549,7 @@ def test_patch_entity_metadata_entries(client):
         },
     ]
     update_entity_param = UpdateEntityParam(
-        attrs=[EntityMetadataParam(**entry) for entry in patch_metadata_entries]
+        metadata_entries=[EntityMetadataParam(**entry) for entry in patch_metadata_entries]
     )
 
     # Make a PUT request to the /libraries/{library_id}/entities/{entity_id} endpoint
