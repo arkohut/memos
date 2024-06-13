@@ -64,7 +64,7 @@ def root():
     return {"healthy": True}
 
 
-@app.post("/libraries", response_model=Library)
+@app.post("/libraries", response_model=Library, tags=["library"])
 def new_library(library_param: NewLibraryParam, db: Session = Depends(get_db)):
     # Check if a library with the same name (case insensitive) already exists
     existing_library = crud.get_library_by_name(library_param.name, db)
@@ -81,13 +81,13 @@ def new_library(library_param: NewLibraryParam, db: Session = Depends(get_db)):
     return library
 
 
-@app.get("/libraries", response_model=List[Library])
+@app.get("/libraries", response_model=List[Library], tags=["library"])
 def list_libraries(db: Session = Depends(get_db)):
     libraries = crud.get_libraries(db)
     return libraries
 
 
-@app.get("/libraries/{library_id}", response_model=Library)
+@app.get("/libraries/{library_id}", response_model=Library, tags=["library"])
 def get_library_by_id(library_id: int, db: Session = Depends(get_db)):
     library = crud.get_library_by_id(library_id, db)
     if library is None:
@@ -97,7 +97,7 @@ def get_library_by_id(library_id: int, db: Session = Depends(get_db)):
     return library
 
 
-@app.post("/libraries/{library_id}/folders", response_model=Folder)
+@app.post("/libraries/{library_id}/folders", response_model=Folder, tags=["library"])
 def new_folder(
     library_id: int,
     folder: NewFolderParam,
@@ -144,7 +144,7 @@ async def trigger_webhooks(library: Library, entity: Entity, request: Request):
                 )
 
 
-@app.post("/libraries/{library_id}/entities", response_model=Entity)
+@app.post("/libraries/{library_id}/entities", response_model=Entity, tags=["entity"])
 async def new_entity(
     new_entity: NewEntityParam,
     library_id: int,
@@ -163,7 +163,9 @@ async def new_entity(
 
 
 @app.get(
-    "/libraries/{library_id}/folders/{folder_id}/entities", response_model=List[Entity]
+    "/libraries/{library_id}/folders/{folder_id}/entities",
+    response_model=List[Entity],
+    tags=["entity"],
 )
 def list_entities_in_folder(
     library_id: int,
@@ -187,7 +189,11 @@ def list_entities_in_folder(
     return crud.get_entities_of_folder(library_id, folder_id, db, limit, offset)
 
 
-@app.get("/libraries/{library_id}/entities/by-filepath", response_model=Entity)
+@app.get(
+    "/libraries/{library_id}/entities/by-filepath",
+    response_model=Entity,
+    tags=["entity"],
+)
 def get_entity_by_filepath(
     library_id: int, filepath: str, db: Session = Depends(get_db)
 ):
@@ -199,7 +205,7 @@ def get_entity_by_filepath(
     return entity
 
 
-@app.get("/entities/{entity_id}", response_model=Entity)
+@app.get("/entities/{entity_id}", response_model=Entity, tags=["entity"])
 def get_entity_by_id(entity_id: int, db: Session = Depends(get_db)):
     entity = crud.get_entity_by_id(entity_id, db)
     if entity is None:
@@ -209,7 +215,11 @@ def get_entity_by_id(entity_id: int, db: Session = Depends(get_db)):
     return entity
 
 
-@app.get("/libraries/{library_id}/entities/{entity_id}", response_model=Entity)
+@app.get(
+    "/libraries/{library_id}/entities/{entity_id}",
+    response_model=Entity,
+    tags=["entity"],
+)
 def get_entity_by_id_in_library(
     library_id: int, entity_id: int, db: Session = Depends(get_db)
 ):
@@ -221,7 +231,7 @@ def get_entity_by_id_in_library(
     return entity
 
 
-@app.put("/entities/{entity_id}", response_model=Entity)
+@app.put("/entities/{entity_id}", response_model=Entity, tags=["entity"])
 async def update_entity(
     entity_id: int,
     updated_entity: UpdateEntityParam,
@@ -247,8 +257,11 @@ async def update_entity(
     return entity
 
 
-
-@app.post("/entities/{entity_id}/index", status_code=status.HTTP_204_NO_CONTENT)
+@app.post(
+    "/entities/{entity_id}/index",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["entity"],
+)
 async def sync_entity_to_typesense(entity_id: int, db: Session = Depends(get_db)):
     entity = crud.get_entity_by_id(entity_id, db)
     if entity is None:
@@ -257,7 +270,7 @@ async def sync_entity_to_typesense(entity_id: int, db: Session = Depends(get_db)
             detail="Entity not found",
         )
 
-    try: 
+    try:
         indexing.upsert(client, entity)
     except Exception as e:
         raise HTTPException(
@@ -267,8 +280,8 @@ async def sync_entity_to_typesense(entity_id: int, db: Session = Depends(get_db)
     return None
 
 
-@app.patch("/entities/{entity_id}/tags", response_model=Entity)
-@app.put("/entities/{entity_id}/tags", response_model=Entity)
+@app.patch("/entities/{entity_id}/tags", response_model=Entity, tags=["entity"])
+@app.put("/entities/{entity_id}/tags", response_model=Entity, tags=["entity"])
 def patch_entity_tags(
     entity_id: int, update_tags: UpdateEntityTagsParam, db: Session = Depends(get_db)
 ):
@@ -284,7 +297,7 @@ def patch_entity_tags(
     return entity
 
 
-@app.patch("/entities/{entity_id}/metadata", response_model=Entity)
+@app.patch("/entities/{entity_id}/metadata", response_model=Entity, tags=["entity"])
 def patch_entity_metadata(
     entity_id: int,
     update_metadata: UpdateEntityMetadataParam,
@@ -307,6 +320,7 @@ def patch_entity_metadata(
 @app.delete(
     "/libraries/{library_id}/entities/{entity_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    tags=["entity"],
 )
 def remove_entity(library_id: int, entity_id: int, db: Session = Depends(get_db)):
     entity = crud.get_entity_by_id(entity_id, db)
@@ -319,7 +333,7 @@ def remove_entity(library_id: int, entity_id: int, db: Session = Depends(get_db)
     crud.remove_entity(entity_id, db)
 
 
-@app.post("/plugins", response_model=Plugin)
+@app.post("/plugins", response_model=Plugin, tags=["plugin"])
 def new_plugin(new_plugin: NewPluginParam, db: Session = Depends(get_db)):
     existing_plugin = crud.get_plugin_by_name(new_plugin.name, db)
     if existing_plugin:
@@ -331,13 +345,17 @@ def new_plugin(new_plugin: NewPluginParam, db: Session = Depends(get_db)):
     return plugin
 
 
-@app.get("/plugins", response_model=List[Plugin])
+@app.get("/plugins", response_model=List[Plugin], tags=["plugin"])
 def list_plugins(db: Session = Depends(get_db)):
     plugins = crud.get_plugins(db)
     return plugins
 
 
-@app.post("/libraries/{library_id}/plugins", status_code=status.HTTP_204_NO_CONTENT)
+@app.post(
+    "/libraries/{library_id}/plugins",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["plugin"],
+)
 def add_library_plugin(
     library_id: int, new_plugin: NewLibraryPluginParam, db: Session = Depends(get_db)
 ):
