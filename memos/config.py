@@ -8,6 +8,11 @@ class Settings(BaseSettings):
 
     base_dir: str = str(Path.home() / ".memos")
     database_path: str = os.path.join(base_dir, "database.db")
+    typesense_host: str = "localhost"
+    typesense_port: str = "8108"
+    typesense_protocol: str = "http"
+    typesense_api_key: str = "xyz"
+    typesense_connection_timeout_seconds: int = 2
 
 
 settings = Settings()

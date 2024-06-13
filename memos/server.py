@@ -6,9 +6,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from typing import List, Annotated
 import asyncio
+import json
+
+import typesense
+from memos.config import settings
 
 from .config import get_database_path
 import memos.crud as crud
+import memos.indexing as indexing
 from .schemas import (
     Library,
     Folder,
@@ -22,10 +27,26 @@ from .schemas import (
     NewLibraryPluginParam,
     UpdateEntityTagsParam,
     UpdateEntityMetadataParam,
+    MetadataType,
 )
 
 engine = create_engine(f"sqlite:///{get_database_path()}")
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Initialize Typesense client
+client = typesense.Client(
+    {
+        "nodes": [
+            {
+                "host": settings.typesense_host,
+                "port": settings.typesense_port,
+                "protocol": settings.typesense_protocol,
+            }
+        ],
+        "api_key": settings.typesense_api_key,
+        "connection_timeout_seconds": settings.typesense_connection_timeout_seconds,
+    }
+)
 
 app = FastAPI()
 
@@ -103,11 +124,7 @@ async def trigger_webhooks(library: Library, entity: Entity, request: Request):
         tasks = []
         for plugin in library.plugins:
             if plugin.webhook_url:
-                location = str(
-                    request.url_for(
-                        "get_entity_by_id", entity_id=entity.id
-                    )
-                )
+                location = str(request.url_for("get_entity_by_id", entity_id=entity.id))
                 task = client.post(
                     plugin.webhook_url,
                     json=entity.model_dump(mode="json"),
@@ -193,7 +210,9 @@ def get_entity_by_id(entity_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/libraries/{library_id}/entities/{entity_id}", response_model=Entity)
-def get_entity_by_id_in_library(library_id: int, entity_id: int, db: Session = Depends(get_db)):
+def get_entity_by_id_in_library(
+    library_id: int, entity_id: int, db: Session = Depends(get_db)
+):
     entity = crud.get_entity_by_id(entity_id, db)
     if entity is None or entity.library_id != library_id:
         raise HTTPException(
@@ -228,12 +247,30 @@ async def update_entity(
     return entity
 
 
+
+@app.post("/entities/{entity_id}/index", status_code=status.HTTP_204_NO_CONTENT)
+async def sync_entity_to_typesense(entity_id: int, db: Session = Depends(get_db)):
+    entity = crud.get_entity_by_id(entity_id, db)
+    if entity is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Entity not found",
+        )
+
+    try: 
+        indexing.upsert(client, entity)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    return None
+
+
 @app.patch("/entities/{entity_id}/tags", response_model=Entity)
 @app.put("/entities/{entity_id}/tags", response_model=Entity)
 def patch_entity_tags(
-    entity_id: int,
-    update_tags: UpdateEntityTagsParam,
-    db: Session = Depends(get_db)
+    entity_id: int, update_tags: UpdateEntityTagsParam, db: Session = Depends(get_db)
 ):
     entity = crud.get_entity_by_id(entity_id, db)
     if entity is None:
@@ -251,7 +288,7 @@ def patch_entity_tags(
 def patch_entity_metadata(
     entity_id: int,
     update_metadata: UpdateEntityMetadataParam,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     entity = crud.get_entity_by_id(entity_id, db)
     if entity is None:
@@ -261,9 +298,10 @@ def patch_entity_metadata(
         )
 
     # Use the CRUD function to update the metadata entries
-    entity = crud.update_entity_metadata_entries(entity_id, update_metadata.metadata_entries, db)
+    entity = crud.update_entity_metadata_entries(
+        entity_id, update_metadata.metadata_entries, db
+    )
     return entity
-
 
 
 @app.delete(

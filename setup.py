@@ -20,7 +20,8 @@ setup(
         'sqlalchemy',
         'typer',
         'magika',
-        'pydantic-settings'
+        'pydantic-settings',
+        'typesense',
     ],
     entry_points={
         'console_scripts': [
