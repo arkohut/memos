@@ -1,5 +1,5 @@
-from pydantic import BaseModel, ConfigDict, DirectoryPath, HttpUrl
-from typing import List
+from pydantic import BaseModel, ConfigDict, DirectoryPath, HttpUrl, Field
+from typing import List, Optional, Any
 from datetime import datetime
 from enum import Enum
 
@@ -140,3 +140,25 @@ class Entity(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class MetadataIndexItem(BaseModel):
+    key: str
+    value: Any
+    source: str
+
+
+class EntityIndexItem(BaseModel):
+    id: str
+    filepath: str
+    filename: str
+    size: int
+    file_created_at: int = Field(..., description="Unix timestamp")
+    file_last_modified_at: int = Field(..., description="Unix timestamp")
+    file_type: str
+    file_type_group: str
+    last_scan_at: Optional[int] = Field(None, description="Unix timestamp")
+    library_id: int
+    folder_id: int
+    tags: List[str]
+    metadata_entries: List[MetadataIndexItem]
+    metadata_text: str

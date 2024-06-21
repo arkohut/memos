@@ -28,6 +28,8 @@ from .schemas import (
     UpdateEntityTagsParam,
     UpdateEntityMetadataParam,
     MetadataType,
+    EntityIndexItem,
+    MetadataIndexItem,
 )
 
 engine = create_engine(f"sqlite:///{get_database_path()}")
@@ -278,6 +280,55 @@ async def sync_entity_to_typesense(entity_id: int, db: Session = Depends(get_db)
             detail=str(e),
         )
     return None
+
+
+@app.delete(
+    "/entities/{entity_id}/index",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["entity"],
+)
+async def remove_entity_from_typesense(entity_id: int, db: Session = Depends(get_db)):
+    entity = crud.get_entity_by_id(entity_id, db)
+    if entity is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Entity not found",
+        )
+
+    try:
+        indexing.remove_entity_by_id(client, entity_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    return None
+
+@app.get(
+    "/libraries/{library_id}/folders/{folder_id}/index",
+    response_model=List[EntityIndexItem],
+    tags=["entity"],
+)
+def list_entities_in_folder(
+    library_id: int,
+    folder_id: int,
+    limit: Annotated[int, Query(ge=1, le=200)] = 10,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+):
+    library = crud.get_library_by_id(library_id, db)
+    if library is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Library not found"
+        )
+
+    if folder_id not in [folder.id for folder in library.folders]:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Folder not found in the specified library",
+        )
+
+    return indexing.list_all_entities(client, library_id, folder_id, limit, offset)
 
 
 @app.patch("/entities/{entity_id}/tags", response_model=Entity, tags=["entity"])

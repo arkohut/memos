@@ -23,6 +23,7 @@ BASE_URL = "http://localhost:8080"
 
 ignore_files = [".DS_Store"]
 
+
 def format_timestamp(timestamp):
     if isinstance(timestamp, str):
         return timestamp
@@ -55,7 +56,9 @@ def display_libraries(libraries):
             ]
         )
 
-    print(tabulate(table, headers=["ID", "Name", "Folders", "Plugins"], tablefmt="plain"))
+    print(
+        tabulate(table, headers=["ID", "Name", "Folders", "Plugins"], tablefmt="plain")
+    )
 
 
 @app.command()
@@ -251,6 +254,91 @@ def scan(library_id: int):
     print(f"Total files added: {total_files_added}")
     print(f"Total files updated: {total_files_updated}")
     print(f"Total files deleted: {total_files_deleted}")
+
+
+@lib_app.command("index")
+def index(library_id: int):
+    print(f"Indexing library {library_id}")
+
+    # Get the library
+    response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
+    if response.status_code != 200:
+        print(f"Failed to get library: {response.status_code} - {response.text}")
+        return
+
+    library = response.json()
+    scanned_entities = set()
+
+    # Iterate through folders
+    for folder in library["folders"]:
+        tqdm.write(f"Processing folder: {folder['id']}")
+
+        # List all entities in the folder
+        offset = 0
+        while True:
+            entities_response = httpx.get(
+                f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
+                params={"limit": 200, "offset": offset},
+            )
+            if entities_response.status_code != 200:
+                tqdm.write(
+                    f"Failed to get entities: {entities_response.status_code} - {entities_response.text}"
+                )
+                break
+
+            entities = entities_response.json()
+            if not entities:
+                break
+
+            # Index each entity
+            for entity in tqdm(entities, desc="Indexing entities", leave=False):
+                index_response = httpx.post(f"{BASE_URL}/entities/{entity['id']}/index")
+                if index_response.status_code == 204:
+                    tqdm.write(f"Indexed entity: {entity['id']}")
+                else:
+                    tqdm.write(
+                        f"Failed to index entity {entity['id']}: {index_response.status_code} - {index_response.text}"
+                    )
+
+                scanned_entities.add(str(entity["id"]))
+
+            offset += 200
+
+        # List all indexed entities in the folder
+        offset = 0
+        while True:
+            index_response = httpx.get(
+                f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/index",
+                params={"limit": 200, "offset": offset},
+            )
+            if index_response.status_code != 200:
+                tqdm.write(
+                    f"Failed to get indexed entities: {index_response.status_code} - {index_response.text}"
+                )
+                break
+
+            indexed_entities = index_response.json()
+            if not indexed_entities:
+                break
+
+            # Delete indexes for entities not in scanned_entities
+            for indexed_entity in tqdm(
+                indexed_entities, desc="Cleaning up indexes", leave=False
+            ):
+                if indexed_entity["id"] not in scanned_entities:
+                    delete_response = httpx.delete(
+                        f"{BASE_URL}/entities/{indexed_entity['id']}/index"
+                    )
+                    if delete_response.status_code == 204:
+                        tqdm.write(f"Deleted index for entity: {indexed_entity['id']}")
+                    else:
+                        tqdm.write(
+                            f"Failed to delete index for entity {indexed_entity['id']}: {delete_response.status_code} - {delete_response.text}"
+                        )
+
+            offset += 200
+
+    print("Indexing completed")
 
 
 def display_plugins(plugins):
