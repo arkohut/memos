@@ -162,3 +162,19 @@ class EntityIndexItem(BaseModel):
     tags: List[str]
     metadata_entries: List[MetadataIndexItem]
     metadata_text: str
+
+
+class EntitySearchResult(BaseModel):
+    id: str
+    filepath: str
+    filename: str
+    size: int
+    file_created_at: int = Field(..., description="Unix timestamp")
+    file_last_modified_at: int = Field(..., description="Unix timestamp")
+    file_type: str
+    file_type_group: str
+    last_scan_at: Optional[int] = Field(None, description="Unix timestamp")
+    library_id: int
+    folder_id: int
+    tags: List[str]
+    metadata_entries: List[MetadataIndexItem]

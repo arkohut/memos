@@ -1,10 +1,13 @@
 import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, status, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from typing import List, Annotated
+from fastapi.responses import FileResponse
+from pathlib import Path
 import asyncio
 import json
 
@@ -30,6 +33,7 @@ from .schemas import (
     MetadataType,
     EntityIndexItem,
     MetadataIndexItem,
+    EntitySearchResult,
 )
 
 engine = create_engine(f"sqlite:///{get_database_path()}")
@@ -51,6 +55,15 @@ client = typesense.Client(
 )
 
 app = FastAPI()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust this as needed
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_db():
@@ -304,6 +317,7 @@ async def remove_entity_from_typesense(entity_id: int, db: Session = Depends(get
         )
     return None
 
+
 @app.get(
     "/libraries/{library_id}/folders/{folder_id}/index",
     response_model=List[EntityIndexItem],
@@ -329,6 +343,24 @@ def list_entities_in_folder(
         )
 
     return indexing.list_all_entities(client, library_id, folder_id, limit, offset)
+
+
+@app.get("/search", response_model=List[EntitySearchResult], tags=["search"])
+async def search_entities(
+    q: str,
+    library_id: int = None,
+    folder_id: int = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 10,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+):
+    try:
+        return indexing.search_entities(client, q, library_id, folder_id, limit, offset)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
 
 
 @app.patch("/entities/{entity_id}/tags", response_model=Entity, tags=["entity"])
@@ -417,6 +449,16 @@ def add_library_plugin(
             detail="Plugin already exists in the library",
         )
     crud.add_plugin_to_library(library_id, new_plugin.plugin_id, db)
+
+
+@app.get("/files/{file_path:path}", tags=["files"])
+async def get_file(file_path: str):
+    full_path = Path("/") / file_path.strip("/")
+    # Check if the file exists and is a file
+    if full_path.is_file():
+        return FileResponse(full_path)
+    else:
+        raise HTTPException(status_code=404, detail="File not found")
 
 
 def run_server():
