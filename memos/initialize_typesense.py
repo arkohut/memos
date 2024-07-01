@@ -45,6 +45,15 @@ schema = {
             "locale": "zh",
         },
         {"name": "metadata_text", "type": "string", "optional": True, "locale": "zh"},
+        {
+            "name": "embedding",
+            "type": "float[]",
+            "embed": {
+                "from": ["filepath", "filename", "metadata_text"],
+                "model_config": {"model_name": "ts/multilingual-e5-small"},
+            },
+            "optional": True,
+        },
     ],
     "token_separators": [":", "/", ".", " ", "-", "\\"],
 }
