@@ -2,6 +2,8 @@ import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, status, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -65,6 +67,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/_app", StaticFiles(directory="static/_app", html=True))
+
+
+@app.get("/favicon.png", response_class=FileResponse)
+async def favicon_png():
+    return FileResponse("static/favicon.png")
+
+
+@app.get("/favicon.ico", response_class=FileResponse)
+async def favicon_ico():
+    return FileResponse("static/favicon.png")
+
+
+@app.get("/")
+async def serve_spa():
+    return FileResponse("static/app.html")
+
 
 def get_db():
     db = SessionLocal()
@@ -72,11 +91,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-@app.get("/")
-def root():
-    return {"healthy": True}
 
 
 @app.post("/libraries", response_model=Library, tags=["library"])
