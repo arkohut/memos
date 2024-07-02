@@ -33,7 +33,7 @@ async def read_root():
 
 @app.post("/")
 async def ocr(entity: Entity, request: Request):
-    if not entity.file_type.startswith("image/"):
+    if not entity.file_type_group == "image":
         return {METADATA_FIELD_NAME: "{}"}
 
     # Get the URL to patch the entity's metadata from the "Location" header
