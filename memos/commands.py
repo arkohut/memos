@@ -98,7 +98,7 @@ def show(library_id: int):
 
 
 @lib_app.command("scan")
-def scan(library_id: int):
+def scan(library_id: int, force: bool = False):
 
     response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
     if response.status_code != 200:
@@ -171,7 +171,8 @@ def scan(library_id: int):
                         )
 
                         if (
-                            existing_created_at != new_created_at
+                            force
+                            or existing_created_at != new_created_at
                             or existing_modified_at != new_modified_at
                         ):
                             # Show the difference before update
@@ -184,7 +185,7 @@ def scan(library_id: int):
                             )
                             # Update the existing entity
                             update_response = httpx.put(
-                                f"{BASE_URL}/libraries/{library_id}/entities/{existing_entity['id']}",
+                                f"{BASE_URL}/entities/{existing_entity['id']}",
                                 json=new_entity,
                                 params={"trigger_webhooks_flag": "true"},
                             )
