@@ -123,7 +123,7 @@ def search_entities(
     q: str,
     library_id: int = None,
     folder_id: int = None,
-    limit: int = 10,
+    limit: int = 48,
     offset: int = 0,
 ) -> List[EntitySearchResult]:
     try:

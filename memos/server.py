@@ -364,7 +364,7 @@ async def search_entities(
     q: str,
     library_id: int = None,
     folder_id: int = None,
-    limit: Annotated[int, Query(ge=1, le=200)] = 10,
+    limit: Annotated[int, Query(ge=1, le=200)] = 48,
     offset: int = 0,
     db: Session = Depends(get_db),
 ):
