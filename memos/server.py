@@ -1,3 +1,4 @@
+import os
 import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, status, Query, Request
@@ -11,7 +12,6 @@ from typing import List, Annotated
 from fastapi.responses import FileResponse
 from pathlib import Path
 import asyncio
-import json
 
 import typesense
 from memos.config import settings
@@ -67,22 +67,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/_app", StaticFiles(directory="static/_app", html=True))
+
+current_dir = os.path.dirname(__file__)
+
+app.mount(
+    "/_app", StaticFiles(directory=os.path.join(current_dir, "static/_app"), html=True)
+)
 
 
 @app.get("/favicon.png", response_class=FileResponse)
 async def favicon_png():
-    return FileResponse("static/favicon.png")
+    return FileResponse(os.path.join(current_dir, "static/favicon.png"))
 
 
 @app.get("/favicon.ico", response_class=FileResponse)
 async def favicon_ico():
-    return FileResponse("static/favicon.png")
+    return FileResponse(os.path.join(current_dir, "static/favicon.png"))
 
 
 @app.get("/")
 async def serve_spa():
-    return FileResponse("static/app.html")
+    return FileResponse(os.path.join(current_dir, "static/app.html"))
 
 
 def get_db():
