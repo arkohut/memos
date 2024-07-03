@@ -17,10 +17,22 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.10"
-    - name: Build
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    - name: Install dependencies
       run: |
         pip install setuptools wheel twine
+        npm install
+    - name: Build Python package
+      run: |
         python setup.py sdist bdist_wheel
+    - name: Build web assets
+      run: |
+        cd web
+        npm install
+        npm run build
     - uses: actions/upload-artifact@v4
       with:
         name: dist
