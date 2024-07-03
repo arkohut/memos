@@ -6,7 +6,7 @@ from typing import List
 
 import httpx
 import typer
-from memos.server import run_server
+from .server import run_server
 from tabulate import tabulate
 from tqdm import tqdm
 from magika import Magika

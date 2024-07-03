@@ -14,11 +14,10 @@ from pathlib import Path
 import asyncio
 
 import typesense
-from memos.config import settings
 
-from .config import get_database_path
-import memos.crud as crud
-import memos.indexing as indexing
+from .config import get_database_path, settings
+from . import crud
+from . import indexing
 from .schemas import (
     Library,
     Folder,

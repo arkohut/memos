@@ -1,5 +1,5 @@
 import typesense
-from memos.config import settings
+from .config import settings
 
 # Initialize Typesense client
 client = typesense.Client(
