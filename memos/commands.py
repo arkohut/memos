@@ -188,6 +188,7 @@ def scan(library_id: int, force: bool = False):
                                 f"{BASE_URL}/entities/{existing_entity['id']}",
                                 json=new_entity,
                                 params={"trigger_webhooks_flag": "true"},
+                                timeout=30
                             )
                             if 200 <= update_response.status_code < 300:
                                 tqdm.write(f"Updated file in library: {file_path}")
