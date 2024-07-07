@@ -124,7 +124,7 @@
 					<figure class="px-5 pt-5">
 						<img
 							class="w-full h-48 object-cover"
-							src={`http://localhost:8080/files/${item.filepath}`}
+							src={`${apiEndpoint}/files/${item.filepath}`}
 							alt=""
 						/>
 					</figure>
