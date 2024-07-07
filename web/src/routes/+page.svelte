@@ -13,6 +13,8 @@
 	let selectedImage = 0;
 
 	const debounceDelay = 300;
+	const apiEndpoint =
+		typeof PUBLIC_API_ENDPOINT !== 'undefined' ? PUBLIC_API_ENDPOINT : window.location.origin;
 
 	/**
 	 * @param {string} query
@@ -21,7 +23,6 @@
 		isLoading = true;
 
 		try {
-			const apiEndpoint = typeof PUBLIC_API_ENDPOINT !== 'undefined' ? PUBLIC_API_ENDPOINT : window.location.origin;
 			const response = await fetch(`${apiEndpoint}/search?q=${encodeURIComponent(query)}`);
 			if (!response.ok) {
 				throw new Error('Network response was not ok');
@@ -141,7 +142,7 @@
 
 {#if searchResults.length && showModal}
 	<Figure
-		image={`http://localhost:8080/files/${searchResults[selectedImage].filepath}`}
+		image={`${apiEndpoint}/files/${searchResults[selectedImage].filepath}`}
 		title={filename(searchResults[selectedImage].filepath)}
 		tags={searchResults[selectedImage].tags}
 		metadata_entries={searchResults[selectedImage].metadata_entries}
