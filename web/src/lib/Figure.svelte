@@ -33,7 +33,7 @@
 
 <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="my-modal">
 	<div
-		class="relative top-10 mx-auto p-10 border w-11/12 max-w-14xl shadow-lg rounded-md bg-white group"
+		class="relative top-10 mx-auto p-10 border w-11/12 max-w-10xl shadow-lg rounded-md bg-white group h-5/6"
 	>
 		<!-- Button container -->
 		<div class="group">
@@ -51,13 +51,13 @@
 			</button>
 			<!-- Your modal content goes here -->
 		</div>
-		<div class="flex">
+		<div class="flex flex-col md:flex-row h-full">
 			<!-- Image container -->
-			<div class="flex-none w-full md:w-1/2 h-96 md:h-auto">
-				<img class="h-full w-full object-cover" src={image} alt={title} />
+			<div class="flex-none w-full md:w-1/2 h-full">
+				<img class="w-full h-full object-contain" src={image} alt={title} />
 			</div>
 			<!-- Description container -->
-			<div class="mt-4 md:mt-0 md:ml-6 overflow-y-auto h-96 md:h-auto">
+			<div class="mt-4 md:mt-0 md:ml-6 overflow-y-auto max-h-full">
 				<div class="uppercase tracking-wide text-sm text-indigo-600 font-bold">Image Title</div>
 				<p class="block mt-1 text-lg leading-tight font-medium text-black hover:underline">
 					{title}
