@@ -1,6 +1,7 @@
 <!-- Modal.svelte -->
 <script>
 	import OCRTable from './OCRTable.svelte';
+	import { marked } from 'marked';
 	/**
 	 * @type {any}
 	 */
@@ -113,7 +114,10 @@
 									)}</pre>
 								{/if}
 							{:else}
-								{entry.value}
+								<!-- Render markdown content -->
+								<div class="prose">
+									{@html marked(entry.value)}
+								</div>
 							{/if}
 							<span class="text-sm text-gray-500">({entry.source})</span>
 						</div>
