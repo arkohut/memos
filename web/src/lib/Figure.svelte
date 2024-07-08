@@ -1,5 +1,6 @@
 <!-- Modal.svelte -->
 <script>
+	import OCRTable from './OCRTable.svelte';
 	/**
 	 * @type {any}
 	 */
@@ -29,6 +30,34 @@
 	 * @type {any}
 	 */
 	export let onPrevious;
+
+	/**
+	 * @param {any} data
+	 * @returns {boolean}
+	 */
+	function isValidOCRDataStructure(data) {
+		if (!Array.isArray(data)) return false;
+
+		for (const item of data) {
+			if (
+				!item.hasOwnProperty('dt_boxes') ||
+				!item.hasOwnProperty('rec_txt') ||
+				!item.hasOwnProperty('score')
+			) {
+				return false;
+			}
+
+			if (
+				!Array.isArray(item.dt_boxes) ||
+				typeof item.rec_txt !== 'string' ||
+				typeof item.score !== 'number'
+			) {
+				return false;
+			}
+		}
+
+		return true;
+	}
 </script>
 
 <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="my-modal">
@@ -74,7 +103,15 @@
 						<div class="mb-2">
 							<span class="font-bold">{entry.key}:</span>
 							{#if typeof entry.value === 'object'}
-								<pre class="bg-gray-100 p-2 rounded overflow-y-auto max-h-96">{JSON.stringify(entry.value, null, 2)}</pre>
+								{#if isValidOCRDataStructure(entry.value)}
+									<OCRTable ocrData={entry.value} />
+								{:else}
+									<pre class="bg-gray-100 p-2 rounded overflow-y-auto max-h-96">{JSON.stringify(
+										entry.value,
+										null,
+										2
+									)}</pre>
+								{/if}
 							{:else}
 								{entry.value}
 							{/if}
