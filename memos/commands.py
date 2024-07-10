@@ -207,6 +207,7 @@ def scan(library_id: int, force: bool = False):
                     post_response = httpx.post(
                         f"{BASE_URL}/libraries/{library_id}/entities",
                         json=new_entity,
+                        timeout=30
                     )
                     if 200 <= post_response.status_code < 300:
                         tqdm.write(f"Added file to library: {file_path}")
