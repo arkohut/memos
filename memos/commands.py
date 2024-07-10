@@ -98,7 +98,7 @@ def show(library_id: int):
 
 
 @lib_app.command("scan")
-def scan(library_id: int, force: bool = False):
+def scan(library_id: int, force: bool = False, plugins: List[int] = typer.Option(None, "--plugin", "-p")):
 
     response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
     if response.status_code != 200:
@@ -187,7 +187,7 @@ def scan(library_id: int, force: bool = False):
                             update_response = httpx.put(
                                 f"{BASE_URL}/entities/{existing_entity['id']}",
                                 json=new_entity,
-                                params={"trigger_webhooks_flag": "true"},
+                                params={"trigger_webhooks_flag": "true", **({"plugins": plugins} if plugins else {})},
                                 timeout=30
                             )
                             if 200 <= update_response.status_code < 300:
@@ -207,6 +207,7 @@ def scan(library_id: int, force: bool = False):
                     post_response = httpx.post(
                         f"{BASE_URL}/libraries/{library_id}/entities",
                         json=new_entity,
+                        params={"plugins": plugins} if plugins else {},
                         timeout=30
                     )
                     if 200 <= post_response.status_code < 300:

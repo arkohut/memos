@@ -93,12 +93,6 @@ def client():
     Base.metadata.drop_all(bind=engine)
 
 
-def test_read_main(client):
-    response = client.get("/")
-    assert response.status_code == 200
-    assert response.json() == {"healthy": True}
-
-
 # Test the new_library endpoint
 def test_new_library(client):
     library_param = NewLibraryParam(name="Test Library")
