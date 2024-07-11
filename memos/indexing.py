@@ -137,7 +137,8 @@ def search_entities(
 
         search_parameters = {
             "q": q,
-            "query_by": "tags,metadata_entries,filepath,filename,embedding",
+            "query_by": "filename,filepath,tags,metadata_entries,embedding",
+            "infix": "always,always,off,off,off",
             "filter_by": f"{filter_by_str} && file_type_group:=image" if filter_by_str else "file_type_group:=image",
             "per_page": limit,
             "page": offset // limit + 1,
@@ -173,4 +174,33 @@ def search_entities(
     except Exception as e:
         raise Exception(
             f"Failed to search entities: {str(e)}",
+        )
+
+
+def fetch_entity_by_id(client, id: str) -> EntityIndexItem:
+    try:
+        document = client.collections["entities"].documents[id].retrieve()
+        return EntitySearchResult(
+            id=document["id"],
+            filepath=document["filepath"],
+            filename=document["filename"],
+            size=document["size"],
+            file_created_at=document["file_created_at"],
+            file_last_modified_at=document["file_last_modified_at"],
+            file_type=document["file_type"],
+            file_type_group=document["file_type_group"],
+            last_scan_at=document.get("last_scan_at"),
+            library_id=document["library_id"],
+            folder_id=document["folder_id"],
+            tags=document["tags"],
+            metadata_entries=[
+                MetadataIndexItem(
+                    key=entry["key"], value=entry["value"], source=entry["source"]
+                )
+                for entry in document["metadata_entries"]
+            ],
+        )
+    except Exception as e:
+        raise Exception(
+            f"Failed to fetch document by id: {str(e)}",
         )

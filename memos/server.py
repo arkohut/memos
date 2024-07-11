@@ -317,6 +317,23 @@ async def sync_entity_to_typesense(entity_id: int, db: Session = Depends(get_db)
     return None
 
 
+@app.get(
+    "/entities/{entity_id}/index",
+    response_model=EntitySearchResult,
+    tags=["entity"],
+)
+async def get_entity_index(entity_id: int) -> EntityIndexItem:
+    try:
+        entity_index_item = indexing.fetch_entity_by_id(client, entity_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+    return entity_index_item
+
+
 @app.delete(
     "/entities/{entity_id}/index",
     status_code=status.HTTP_204_NO_CONTENT,

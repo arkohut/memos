@@ -21,8 +21,8 @@ schema = {
     "name": "entities",
     "enable_nested_fields": True,
     "fields": [
-        {"name": "filepath", "type": "string"},
-        {"name": "filename", "type": "string"},
+        {"name": "filepath", "type": "string", "infix": True},
+        {"name": "filename", "type": "string", "infix": True},
         {"name": "size", "type": "int32"},
         {"name": "file_created_at", "type": "int64", "facet": False},
         {"name": "file_last_modified_at", "type": "int64", "facet": False},
@@ -55,7 +55,7 @@ schema = {
             "optional": True,
         },
     ],
-    "token_separators": [":", "/", ".", " ", "-", "\\"],
+    "token_separators": [":", "/", " ", "\\"],
 }
 
 
