@@ -146,8 +146,11 @@ def add_plugin_to_library(library_id: int, plugin_id: int, db: Session):
     db.refresh(library_plugin)
 
 
-def get_entity_by_id(entity_id: int, db: Session) -> Entity | None:
-    return db.query(EntityModel).filter(EntityModel.id == entity_id).first()
+def find_entity_by_id(entity_id: int, db: Session) -> Entity | None:
+    db_entity = db.query(EntityModel).filter(EntityModel.id == entity_id).first()
+    if db_entity is None:
+        return None
+    return Entity(**db_entity.__dict__)
 
 
 def update_entity(

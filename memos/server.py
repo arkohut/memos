@@ -270,20 +270,22 @@ def get_entity_by_id_in_library(
 @app.put("/entities/{entity_id}", response_model=Entity, tags=["entity"])
 async def update_entity(
     entity_id: int,
-    updated_entity: UpdateEntityParam,
     request: Request,
+    updated_entity: UpdateEntityParam = None,
     db: Session = Depends(get_db),
     trigger_webhooks_flag: bool = False,
     plugins: Annotated[List[int] | None, Query()] = None,
 ):
-    entity = crud.get_entity_by_id(entity_id, db)
+    entity = crud.find_entity_by_id(entity_id, db)
     if entity is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Entity not found",
         )
 
-    entity = crud.update_entity(entity_id, updated_entity, db)
+    if updated_entity:
+        entity = crud.update_entity(entity_id, updated_entity, db)
+    
     if trigger_webhooks_flag:
         library = crud.get_library_by_id(entity.library_id, db)
         if library is None:

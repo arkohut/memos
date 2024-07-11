@@ -12,8 +12,10 @@ from tqdm import tqdm
 from magika import Magika
 
 app = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
+
 lib_app = typer.Typer()
 plugin_app = typer.Typer()
+
 app.add_typer(plugin_app, name="plugin")
 app.add_typer(lib_app, name="lib")
 
