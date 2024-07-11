@@ -2,12 +2,17 @@
 <script>
 	import OCRTable from './OCRTable.svelte';
 	import { marked } from 'marked';
+	
+	/**
+	 * @type {string}
+	 */
+	export let id;
 	/**
 	 * @type {any}
 	 */
 	export let image;
 	/**
-	 * @type {any}
+	 * @type {string}
 	 */
 	export let title;
 	/**
@@ -88,6 +93,12 @@
 			</div>
 			<!-- Description container -->
 			<div class="mt-4 md:mt-0 md:ml-6 overflow-y-auto max-h-full">
+				<div class="mb-2 mr-2 pb-2 border-b border-gray-300">
+					<span class="uppercase tracking-wide text-sm text-indigo-600 font-bold">ID</span>
+					<span class="mt-1 text-sm leading-tight font-medium text-gray-500 font-mono">
+						{id}
+					</span>
+				</div>
 				<div class="uppercase tracking-wide text-sm text-indigo-600 font-bold">Image Title</div>
 				<p class="block mt-1 text-lg leading-tight font-medium text-black hover:underline">
 					{title}

@@ -142,11 +142,11 @@
 
 {#if searchResults.length && showModal}
 	<Figure
+		id={searchResults[selectedImage].id}
 		image={`${apiEndpoint}/files/${searchResults[selectedImage].filepath}`}
 		title={filename(searchResults[selectedImage].filepath)}
 		tags={searchResults[selectedImage].tags}
 		metadata_entries={searchResults[selectedImage].metadata_entries}
-		content={''}
 		onClose={closeModal}
 		onNext={() => openModal((selectedImage + 1) % searchResults.length)}
 		onPrevious={() => openModal((selectedImage - 1 + searchResults.length) % searchResults.length)}
