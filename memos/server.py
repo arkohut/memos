@@ -24,7 +24,7 @@ from .schemas import (
     Entity,
     Plugin,
     NewLibraryParam,
-    NewFolderParam,
+    NewFoldersParam,
     NewEntityParam,
     UpdateEntityParam,
     NewPluginParam,
@@ -130,10 +130,10 @@ def get_library_by_id(library_id: int, db: Session = Depends(get_db)):
     return library
 
 
-@app.post("/libraries/{library_id}/folders", response_model=Folder, tags=["library"])
-def new_folder(
+@app.post("/libraries/{library_id}/folders", response_model=Library, tags=["library"])
+def new_folders(
     library_id: int,
-    folder: NewFolderParam,
+    folders: NewFoldersParam,
     db: Session = Depends(get_db),
 ):
     library = crud.get_library_by_id(library_id, db)
@@ -143,13 +143,13 @@ def new_folder(
         )
 
     existing_folders = [folder.path for folder in library.folders]
-    if str(folder.path) in existing_folders:
+    if any(str(folder) in existing_folders for folder in folders.folders):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Folder already exists in the library",
         )
 
-    return crud.add_folder(library_id=library.id, folder=folder, db=db)
+    return crud.add_folders(library_id=library.id, folders=folders, db=db)
 
 
 async def trigger_webhooks(library: Library, entity: Entity, request: Request, plugins: List[int] = None):

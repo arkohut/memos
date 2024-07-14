@@ -25,6 +25,10 @@ class NewFolderParam(BaseModel):
     path: DirectoryPath
 
 
+class NewFoldersParam(BaseModel):
+    folders: List[DirectoryPath] = []
+
+
 class NewEntityParam(BaseModel):
     filename: str
     filepath: str

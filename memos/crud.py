@@ -10,7 +10,7 @@ from .schemas import (
     Plugin,
     NewPluginParam,
     UpdateEntityParam,
-    NewFolderParam,
+    NewFoldersParam,
     MetadataSource,
     EntityMetadataParam,
 )
@@ -65,12 +65,17 @@ def get_library_by_name(library_name: str, db: Session) -> Library | None:
     )
 
 
-def add_folder(library_id: int, folder: NewFolderParam, db: Session) -> Folder:
-    db_folder = FolderModel(path=str(folder.path), library_id=library_id)
-    db.add(db_folder)
-    db.commit()
-    db.refresh(db_folder)
-    return Folder(id=db_folder.id, path=db_folder.path)
+def add_folders(library_id: int, folders: NewFoldersParam, db: Session) -> Library:
+    db_folders = []
+    for folder_path in folders.folders:
+        db_folder = FolderModel(path=str(folder_path), library_id=library_id)
+        db.add(db_folder)
+        db.commit()
+        db.refresh(db_folder)
+        db_folders.append(Folder(id=db_folder.id, path=db_folder.path))
+    
+    db_library = db.query(LibraryModel).filter(LibraryModel.id == library_id).first()
+    return Library(**db_library.__dict__)
 
 
 def create_entity(library_id: int, entity: NewEntityParam, db: Session) -> Entity:

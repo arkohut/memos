@@ -15,7 +15,7 @@ from memos.schemas import (
     NewLibraryParam,
     NewEntityParam,
     UpdateEntityParam,
-    NewFolderParam,
+    NewFoldersParam,
     EntityMetadataParam,
     MetadataType,
     UpdateEntityMetadataParam,
@@ -46,12 +46,12 @@ def setup_library_with_entity(client):
     library_id = library_response.json()["id"]
 
     # Create a new folder in the library
-    new_folder = NewFolderParam(path="/tmp")
+    new_folder = NewFoldersParam(folders=["/tmp"])
     folder_response = client.post(
         f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
     )
     assert folder_response.status_code == 200
-    folder_id = folder_response.json()["id"]
+    folder_id = folder_response.json()["folders"][0]["id"]
 
     # Create a new entity in the folder
     new_entity = NewEntityParam(
@@ -290,11 +290,11 @@ def test_list_entities_in_folder(client):
     )
     library_id = library_response.json()["id"]
 
-    new_folder = NewFolderParam(path="/tmp")
+    new_folder = NewFoldersParam(folders=["/tmp"])
     folder_response = client.post(
         f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
     )
-    folder_id = folder_response.json()["id"]
+    folder_id = folder_response.json()["folders"][0]["id"]
 
     # Create a new entity in the folder
     new_entity = NewEntityParam(
@@ -368,30 +368,30 @@ def test_add_folder_to_library(client):
         os.makedirs(tmp_folder_path)
 
     # Create a new library
-    new_library = NewLibraryParam(name="Test Library")
+    new_library = NewLibraryParam(name="Test Library", folders=[])
     library_response = client.post(
         "/libraries", json=new_library.model_dump(mode="json")
     )
     library_id = library_response.json()["id"]
 
     # Add a new folder to the library
-    new_folder = NewFolderParam(path="/tmp/new_folder")
+    new_folders = NewFoldersParam(folders=[tmp_folder_path])
     folder_response = client.post(
-        f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
+        f"/libraries/{library_id}/folders", json=new_folders.model_dump(mode="json")
     )
     assert folder_response.status_code == 200
-    assert folder_response.json()["path"] == "/tmp/new_folder"
+    assert any(folder["path"] == tmp_folder_path for folder in folder_response.json()["folders"])
 
     # Verify the folder is added
     library_response = client.get(f"/libraries/{library_id}")
     assert library_response.status_code == 200
     library_data = library_response.json()
     folder_paths = [folder["path"] for folder in library_data["folders"]]
-    assert "/tmp/new_folder" in folder_paths
+    assert tmp_folder_path in folder_paths
 
     # Test for adding a folder that already exists
     duplicate_folder_response = client.post(
-        f"/libraries/{library_id}/folders", json=new_folder.model_dump(mode="json")
+        f"/libraries/{library_id}/folders", json=new_folders.model_dump(mode="json")
     )
     assert duplicate_folder_response.status_code == 400
     assert duplicate_folder_response.json() == {
@@ -400,7 +400,7 @@ def test_add_folder_to_library(client):
 
     # Test for adding a folder to a non-existent library
     invalid_folder_response = client.post(
-        f"/libraries/9999/folders", json=new_folder.model_dump(mode="json")
+        f"/libraries/9999/folders", json=new_folders.model_dump(mode="json")
     )
     assert invalid_folder_response.status_code == 404
     assert invalid_folder_response.json() == {"detail": "Library not found"}
