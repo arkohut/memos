@@ -73,7 +73,7 @@ def add_folders(library_id: int, folders: NewFoldersParam, db: Session) -> Libra
         db.commit()
         db.refresh(db_folder)
         db_folders.append(Folder(id=db_folder.id, path=db_folder.path))
-    
+
     db_library = db.query(LibraryModel).filter(LibraryModel.id == library_id).first()
     return Library(**db_library.__dict__)
 
@@ -229,6 +229,32 @@ def update_entity_tags(entity_id: int, tags: List[str], db: Session) -> Entity:
     db.commit()
 
     for tag_name in tags:
+        tag = db.query(TagModel).filter(TagModel.name == tag_name).first()
+        if not tag:
+            tag = TagModel(name=tag_name)
+            db.add(tag)
+            db.commit()
+            db.refresh(tag)
+        entity_tag = EntityTagModel(
+            entity_id=db_entity.id,
+            tag_id=tag.id,
+            source=MetadataSource.PLUGIN_GENERATED,
+        )
+        db.add(entity_tag)
+    db.commit()
+    db.refresh(db_entity)
+    return Entity(**db_entity.__dict__)
+
+
+def add_new_tags(entity_id: int, tags: List[str], db: Session) -> Entity:
+    db_entity = get_entity_by_id(entity_id, db)
+    if not db_entity:
+        raise ValueError(f"Entity with id {entity_id} not found")
+
+    existing_tags = set(tag.name for tag in db_entity.tags)
+    new_tags = set(tags) - existing_tags
+
+    for tag_name in new_tags:
         tag = db.query(TagModel).filter(TagModel.name == tag_name).first()
         if not tag:
             tag = TagModel(name=tag_name)

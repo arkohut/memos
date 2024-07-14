@@ -18,6 +18,7 @@ from memos.schemas import (
     NewFoldersParam,
     EntityMetadataParam,
     MetadataType,
+    UpdateEntityTagsParam,
     UpdateEntityMetadataParam,
 )
 from memos.models import Base
@@ -219,9 +220,7 @@ def test_update_entity(client):
         json=updated_entity.model_dump(mode="json"),
     )
     assert invalid_update_response.status_code == 404
-    assert invalid_update_response.json() == {
-        "detail": "Entity not found"
-    }
+    assert invalid_update_response.json() == {"detail": "Entity not found"}
 
 
 # Test for getting an entity by filepath
@@ -380,7 +379,10 @@ def test_add_folder_to_library(client):
         f"/libraries/{library_id}/folders", json=new_folders.model_dump(mode="json")
     )
     assert folder_response.status_code == 200
-    assert any(folder["path"] == tmp_folder_path for folder in folder_response.json()["folders"])
+    assert any(
+        folder["path"] == tmp_folder_path
+        for folder in folder_response.json()["folders"]
+    )
 
     # Verify the folder is added
     library_response = client.get(f"/libraries/{library_id}")
@@ -469,6 +471,59 @@ def test_update_entity_with_tags(client):
     assert "tag2" in [tag["name"] for tag in updated_entity_data["tags"]]
 
 
+def test_patch_tags_to_entity(client):
+    library_id, _, entity_id = setup_library_with_entity(client)
+
+    # Initial tags
+    initial_tags = ["tag1", "tag2"]
+    update_entity_param = UpdateEntityTagsParam(tags=initial_tags)
+
+    # Make a PUT request to add initial tags
+    initial_update_response = client.put(
+        f"/entities/{entity_id}/tags",
+        json=update_entity_param.model_dump(mode="json"),
+    )
+
+    # Check that the initial update is successful
+    assert initial_update_response.status_code == 200
+    initial_entity_data = initial_update_response.json()
+    assert len(initial_entity_data["tags"]) == 2
+    assert set([tag["name"] for tag in initial_entity_data["tags"]]) == set(
+        initial_tags
+    )
+
+    # New tags to patch
+    new_tags = ["tag3", "tag4"]
+    patch_entity_param = UpdateEntityTagsParam(tags=new_tags)
+
+    # Make a PATCH request to add new tags
+    patch_response = client.patch(
+        f"/entities/{entity_id}/tags",
+        json=patch_entity_param.model_dump(mode="json"),
+    )
+
+    # Check that the patch response is successful
+    assert patch_response.status_code == 200
+
+    # Check the response data
+    patched_entity_data = patch_response.json()
+    assert "tags" in patched_entity_data
+    assert len(patched_entity_data["tags"]) == 4
+    assert set([tag["name"] for tag in patched_entity_data["tags"]]) == set(
+        initial_tags + new_tags
+    )
+
+    # Verify that the tags were actually added by making a GET request
+    get_response = client.get(f"/libraries/{library_id}/entities/{entity_id}")
+    assert get_response.status_code == 200
+    get_entity_data = get_response.json()
+    assert "tags" in get_entity_data
+    assert len(get_entity_data["tags"]) == 4
+    assert set([tag["name"] for tag in get_entity_data["tags"]]) == set(
+        initial_tags + new_tags
+    )
+
+
 def test_add_metadata_entry_to_entity_success(client):
     library_id, _, entity_id = setup_library_with_entity(client)
 
@@ -543,7 +598,9 @@ def test_patch_entity_metadata_entries(client):
         },
     ]
     update_entity_param = UpdateEntityParam(
-        metadata_entries=[EntityMetadataParam(**entry) for entry in patch_metadata_entries]
+        metadata_entries=[
+            EntityMetadataParam(**entry) for entry in patch_metadata_entries
+        ]
     )
 
     # Make a PUT request to the /libraries/{library_id}/entities/{entity_id} endpoint

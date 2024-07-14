@@ -152,13 +152,17 @@ def new_folders(
     return crud.add_folders(library_id=library.id, folders=folders, db=db)
 
 
-async def trigger_webhooks(library: Library, entity: Entity, request: Request, plugins: List[int] = None):
+async def trigger_webhooks(
+    library: Library, entity: Entity, request: Request, plugins: List[int] = None
+):
     async with httpx.AsyncClient() as client:
         tasks = []
         for plugin in library.plugins:
             if plugins is None or plugin.id in plugins:
                 if plugin.webhook_url:
-                    location = str(request.url_for("get_entity_by_id", entity_id=entity.id))
+                    location = str(
+                        request.url_for("get_entity_by_id", entity_id=entity.id)
+                    )
                     task = client.post(
                         plugin.webhook_url,
                         json=entity.model_dump(mode="json"),
@@ -172,7 +176,9 @@ async def trigger_webhooks(library: Library, entity: Entity, request: Request, p
         for plugin, response in zip(library.plugins, responses):
             if plugins is None or plugin.id in plugins:
                 if isinstance(response, Exception):
-                    print(f"Error triggering webhook for plugin {plugin.id}: {response}")
+                    print(
+                        f"Error triggering webhook for plugin {plugin.id}: {response}"
+                    )
                 elif response.status_code >= 400:
                     print(
                         f"Error triggering webhook for plugin {plugin.id}: {response.status_code} - {response.text}"
@@ -285,7 +291,7 @@ async def update_entity(
 
     if updated_entity:
         entity = crud.update_entity(entity_id, updated_entity, db)
-    
+
     if trigger_webhooks_flag:
         library = crud.get_library_by_id(entity.library_id, db)
         if library is None:
@@ -404,8 +410,21 @@ async def search_entities(
         )
 
 
-@app.patch("/entities/{entity_id}/tags", response_model=Entity, tags=["entity"])
 @app.put("/entities/{entity_id}/tags", response_model=Entity, tags=["entity"])
+def replace_entity_tags(
+    entity_id: int, update_tags: UpdateEntityTagsParam, db: Session = Depends(get_db)
+):
+    entity = crud.get_entity_by_id(entity_id, db)
+    if entity is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Entity not found",
+        )
+
+    return crud.update_entity_tags(entity_id, update_tags.tags, db)
+
+
+@app.patch("/entities/{entity_id}/tags", response_model=Entity, tags=["entity"])
 def patch_entity_tags(
     entity_id: int, update_tags: UpdateEntityTagsParam, db: Session = Depends(get_db)
 ):
@@ -416,9 +435,7 @@ def patch_entity_tags(
             detail="Entity not found",
         )
 
-    # Use the CRUD function to update the tags
-    entity = crud.update_entity_tags(entity_id, update_tags.tags, db)
-    return entity
+    return crud.add_new_tags(entity_id, update_tags.tags, db)
 
 
 @app.patch("/entities/{entity_id}/metadata", response_model=Entity, tags=["entity"])
