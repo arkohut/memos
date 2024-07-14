@@ -89,6 +89,19 @@ def add(name: str, folders: List[str]):
         print(f"Failed to create library: {response.status_code} - {response.text}")
 
 
+@lib_app.command("add-folder")
+def add_folder(library_id: int, folders: List[str]):
+    absolute_folders = [str(Path(folder).resolve()) for folder in folders]
+    response = httpx.post(
+        f"{BASE_URL}/libraries/{library_id}/folders",
+        json={"folders": absolute_folders},
+    )
+    if 200 <= response.status_code < 300:
+        print("Folders added successfully")
+    else:
+        print(f"Failed to add folders: {response.status_code} - {response.text}")
+
+
 @lib_app.command("show")
 def show(library_id: int):
     response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
@@ -100,7 +113,12 @@ def show(library_id: int):
 
 
 @lib_app.command("scan")
-def scan(library_id: int, force: bool = False, plugins: List[int] = typer.Option(None, "--plugin", "-p")):
+def scan(
+    library_id: int,
+    force: bool = False,
+    plugins: List[int] = typer.Option(None, "--plugin", "-p"),
+    folders: List[int] = typer.Option(None, "--folder", "-f"),
+):
 
     response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
     if response.status_code != 200:
@@ -112,7 +130,15 @@ def scan(library_id: int, force: bool = False, plugins: List[int] = typer.Option
     total_files_updated = 0
     total_files_deleted = 0
 
-    for folder in library["folders"]:
+    # Filter folders if the folders parameter is provided
+    if folders:
+        library_folders = [
+            folder for folder in library["folders"] if folder["id"] in folders
+        ]
+    else:
+        library_folders = library["folders"]
+
+    for folder in library_folders:
         folder_path = Path(folder["path"])
         if not folder_path.exists() or not folder_path.is_dir():
             tqdm.write(f"Folder does not exist or is not a directory: {folder_path}")
@@ -189,8 +215,11 @@ def scan(library_id: int, force: bool = False, plugins: List[int] = typer.Option
                             update_response = httpx.put(
                                 f"{BASE_URL}/entities/{existing_entity['id']}",
                                 json=new_entity,
-                                params={"trigger_webhooks_flag": "true", **({"plugins": plugins} if plugins else {})},
-                                timeout=30
+                                params={
+                                    "trigger_webhooks_flag": "true",
+                                    **({"plugins": plugins} if plugins else {}),
+                                },
+                                timeout=30,
                             )
                             if 200 <= update_response.status_code < 300:
                                 tqdm.write(f"Updated file in library: {file_path}")
@@ -210,7 +239,7 @@ def scan(library_id: int, force: bool = False, plugins: List[int] = typer.Option
                         f"{BASE_URL}/libraries/{library_id}/entities",
                         json=new_entity,
                         params={"plugins": plugins} if plugins else {},
-                        timeout=30
+                        timeout=30,
                     )
                     if 200 <= post_response.status_code < 300:
                         tqdm.write(f"Added file to library: {file_path}")
