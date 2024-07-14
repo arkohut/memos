@@ -143,7 +143,10 @@
 {#if searchResults.length && showModal}
 	<Figure
 		id={searchResults[selectedImage].id}
+		library_id={searchResults[selectedImage].library_id}
+		folder_id={searchResults[selectedImage].folder_id}
 		image={`${apiEndpoint}/files/${searchResults[selectedImage].filepath}`}
+		filepath={searchResults[selectedImage].filepath}
 		title={filename(searchResults[selectedImage].filepath)}
 		tags={searchResults[selectedImage].tags}
 		metadata_entries={searchResults[selectedImage].metadata_entries}

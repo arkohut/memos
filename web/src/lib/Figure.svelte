@@ -2,15 +2,27 @@
 <script>
 	import OCRTable from './OCRTable.svelte';
 	import { marked } from 'marked';
-	
+
 	/**
 	 * @type {string}
 	 */
 	export let id;
 	/**
+	 * @type {number}
+	 */
+	export let library_id;
+	/**
+	 * @type {number}
+	 */
+	export let folder_id;
+	/**
 	 * @type {any}
 	 */
 	export let image;
+	/**
+	 * @type {string}
+	 */
+	export let filepath;
 	/**
 	 * @type {string}
 	 */
@@ -98,6 +110,23 @@
 					<span class="mt-1 text-sm leading-tight font-medium text-gray-500 font-mono">
 						{id}
 					</span>
+					<span class="uppercase tracking-wide text-sm text-indigo-600 font-bold ml-4"
+						>Library ID</span
+					>
+					<span class="mt-1 text-sm leading-tight font-medium text-gray-500 font-mono">
+						{library_id}
+					</span>
+					<span class="uppercase tracking-wide text-sm text-indigo-600 font-bold ml-4"
+						>Folder ID</span
+					>
+					<span class="mt-1 text-sm leading-tight font-medium text-gray-500 font-mono">
+						{folder_id}
+					</span>
+					<div>
+						<span class="mt-1 text-xs leading-tight font-xs text-gray-500 font-mono">
+							{filepath}
+						</span>
+					</div>
 				</div>
 				<div class="uppercase tracking-wide text-sm text-indigo-600 font-bold">Image Title</div>
 				<p class="block mt-1 text-lg leading-tight font-medium text-black hover:underline">
@@ -119,10 +148,10 @@
 									<OCRTable ocrData={entry.value} />
 								{:else}
 									<pre class="bg-gray-100 p-2 rounded overflow-y-auto max-h-96">{JSON.stringify(
-										entry.value,
-										null,
-										2
-									)}</pre>
+											entry.value,
+											null,
+											2
+										)}</pre>
 								{/if}
 							{:else}
 								<!-- Render markdown content -->
