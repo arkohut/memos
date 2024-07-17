@@ -7,6 +7,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     func,
+    Index,
 )
 from datetime import datetime
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
@@ -74,6 +75,14 @@ class EntityModel(Base):
     )
     tags: Mapped[List["TagModel"]] = relationship("TagModel", secondary="entity_tags", lazy="joined")
 
+        # 添加索引
+    __table_args__ = (
+        Index('idx_filepath', 'filepath'),
+        Index('idx_filename', 'filename'),
+        Index('idx_file_type', 'file_type'),
+        Index('idx_library_id', 'library_id'),
+        Index('idx_folder_id', 'folder_id'),
+    )
 
 
 class TagModel(Base):

@@ -6,3 +6,4 @@ build/
 typesense-data/
 test-data/
 static/
+db/
