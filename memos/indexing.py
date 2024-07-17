@@ -134,16 +134,15 @@ def search_entities(
             filter_by.append(f"folder_id:={folder_id}")
 
         filter_by_str = " && ".join(filter_by) if filter_by else ""
-
         search_parameters = {
             "q": q,
-            "query_by": "filename,filepath,tags,metadata_entries,embedding",
-            "infix": "always,always,off,off,off",
+            "query_by": "tags,metadata_text,embedding,filename,filepath",
+            "infix": "off,off,off,always,always",
             "filter_by": f"{filter_by_str} && file_type_group:=image" if filter_by_str else "file_type_group:=image",
-            "per_page": limit,
-            "page": offset // limit + 1,
-            "exclude_fields": "embedding,metadata_text",
-            "sort_by": "_text_match:desc,_vector_distance:asc",
+            "limit": limit,
+            "offset": offset,
+            "exclude_fields": "metadata_text,embedding",
+            "sort_by": "_text_match:desc",
         }
         search_results = client.collections["entities"].documents.search(
             search_parameters
