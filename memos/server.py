@@ -404,6 +404,7 @@ async def search_entities(
     try:
         return indexing.search_entities(client, q, library_id, folder_id, limit, offset)
     except Exception as e:
+        print(f"Error searching entities: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
@@ -520,4 +521,8 @@ async def get_file(file_path: str):
 
 
 def run_server():
+    print("Database path:", get_database_path())
+    print(
+        f"Typesense connection info: Host: {settings.typesense_host}, Port: {settings.typesense_port}, Protocol: {settings.typesense_protocol}"
+    )
     uvicorn.run("memos.server:app", host="0.0.0.0", port=8080, reload=True)
