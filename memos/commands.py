@@ -219,7 +219,7 @@ def scan(
                                     "trigger_webhooks_flag": "true",
                                     **({"plugins": plugins} if plugins else {}),
                                 },
-                                timeout=30,
+                                timeout=60,
                             )
                             if 200 <= update_response.status_code < 300:
                                 tqdm.write(f"Updated file in library: {file_path}")
@@ -239,7 +239,7 @@ def scan(
                         f"{BASE_URL}/libraries/{library_id}/entities",
                         json=new_entity,
                         params={"plugins": plugins} if plugins else {},
-                        timeout=30,
+                        timeout=60,
                     )
                     if 200 <= post_response.status_code < 300:
                         tqdm.write(f"Added file to library: {file_path}")
