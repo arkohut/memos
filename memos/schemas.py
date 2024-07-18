@@ -144,6 +144,21 @@ class Entity(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+    def get_metadata_by_key(self, key: str) -> Optional[EntityMetadata]:
+        """
+        Get EntityMetadata by key.
+        
+        Args:
+            key (str): The key to search for in metadata entries.
+        
+        Returns:
+            Optional[EntityMetadata]: The EntityMetadata if found, None otherwise.
+        """
+        for metadata in self.metadata_entries:
+            if metadata.key == key:
+                return metadata
+        return None
+
 
 class MetadataIndexItem(BaseModel):
     key: str
