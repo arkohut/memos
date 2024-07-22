@@ -4,14 +4,14 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, status, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from typing import List, Annotated
-from fastapi.responses import FileResponse
 from pathlib import Path
 import asyncio
+import logging  # Import logging module
 
 import typesense
 
@@ -35,6 +35,15 @@ from .schemas import (
     EntityIndexItem,
     MetadataIndexItem,
     EntitySearchResult,
+)
+
+# Import the logging configuration
+from .logging_config import LOGGING_CONFIG
+
+# Configure logging to include datetime
+logging.basicConfig(
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    level=logging.INFO
 )
 
 engine = create_engine(f"sqlite:///{get_database_path()}")
@@ -167,7 +176,7 @@ async def trigger_webhooks(
                         plugin.webhook_url,
                         json=entity.model_dump(mode="json"),
                         headers={"Location": location},
-                        timeout=10.0,  # Adding a timeout of 10 seconds
+                        timeout=60.0,
                     )
                     tasks.append(task)
 
@@ -525,4 +534,4 @@ def run_server():
     print(
         f"Typesense connection info: Host: {settings.typesense_host}, Port: {settings.typesense_port}, Protocol: {settings.typesense_protocol}"
     )
-    uvicorn.run("memos.server:app", host="0.0.0.0", port=8080, reload=True)
+    uvicorn.run("memos.server:app", host="0.0.0.0", port=8080, reload=False, log_config=LOGGING_CONFIG)
