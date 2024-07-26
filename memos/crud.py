@@ -102,16 +102,20 @@ def get_entities_of_folder(
         return [], 0
 
     query = db.query(EntityModel).filter(EntityModel.folder_id == folder_id)
-    
+
     total_count = query.count()
-    
+
     entities = query.limit(limit).offset(offset).all()
-    
+
     return entities, total_count
 
 
 def get_entity_by_filepath(filepath: str, db: Session) -> Entity | None:
     return db.query(EntityModel).filter(EntityModel.filepath == filepath).first()
+
+
+def get_entities_by_filepaths(filepaths: List[str], db: Session) -> List[Entity]:
+    return db.query(EntityModel).filter(EntityModel.filepath.in_(filepaths)).all()
 
 
 def remove_entity(entity_id: int, db: Session):
