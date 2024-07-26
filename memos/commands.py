@@ -269,39 +269,49 @@ def scan(
         # Check for deleted files
         limit = 200
         offset = 0
-        while True:
-            existing_files_response = httpx.get(
-                f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
-                params={"limit": limit, "offset": offset},
-                timeout=60,
-            )
-            if existing_files_response.status_code != 200:
-                tqdm.write(
-                    f"Failed to retrieve existing files: {existing_files_response.status_code} - {existing_files_response.text}"
+        total_files = float('inf')  # We'll update this after the first request
+        with tqdm(total=total_files, desc="Checking for deleted files", unit="file") as pbar:
+            while True:
+                existing_files_response = httpx.get(
+                    f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
+                    params={"limit": limit, "offset": offset},
+                    timeout=60,
                 )
-                break
-
-            existing_files = existing_files_response.json()
-            if not existing_files:
-                break
-
-            for existing_file in existing_files:
-                if existing_file["filepath"] not in scanned_files:
-                    # File has been deleted
-                    delete_response = httpx.delete(
-                        f"{BASE_URL}/libraries/{library_id}/entities/{existing_file['id']}"
+                if existing_files_response.status_code != 200:
+                    tqdm.write(
+                        f"Failed to retrieve existing files: {existing_files_response.status_code} - {existing_files_response.text}"
                     )
-                    if 200 <= delete_response.status_code < 300:
-                        tqdm.write(
-                            f"Deleted file from library: {existing_file['filepath']}"
-                        )
-                        total_files_deleted += 1
-                    else:
-                        tqdm.write(
-                            f"Failed to delete file: {delete_response.status_code} - {delete_response.text}"
-                        )
+                    break
 
-            offset += limit
+                existing_files = existing_files_response.json()
+                if not existing_files:
+                    break
+
+                # Update total if this is the first request
+                if offset == 0:
+                    total_files = int(existing_files_response.headers.get('X-Total-Count', total_files))
+                    pbar.total = total_files
+                    pbar.refresh()
+
+                for existing_file in existing_files:
+                    if existing_file["filepath"] not in scanned_files:
+                        # File has been deleted
+                        delete_response = httpx.delete(
+                            f"{BASE_URL}/libraries/{library_id}/entities/{existing_file['id']}"
+                        )
+                        if 200 <= delete_response.status_code < 300:
+                            tqdm.write(
+                                f"Deleted file from library: {existing_file['filepath']}"
+                            )
+                            total_files_deleted += 1
+                        else:
+                            tqdm.write(
+                                f"Failed to delete file: {delete_response.status_code} - {delete_response.text}"
+                            )
+                    pbar.update(1)
+                    pbar.refresh()
+                    
+                offset += limit
 
     print(f"Total files added: {total_files_added}")
     print(f"Total files updated: {total_files_updated}")
