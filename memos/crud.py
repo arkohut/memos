@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from .schemas import (
@@ -92,23 +92,22 @@ def get_entity_by_id(entity_id: int, db: Session) -> Entity | None:
 
 def get_entities_of_folder(
     library_id: int, folder_id: int, db: Session, limit: int = 10, offset: int = 0
-) -> List[Entity]:
+) -> Tuple[List[Entity], int]:
     folder = (
         db.query(FolderModel)
         .filter(FolderModel.id == folder_id, FolderModel.library_id == library_id)
         .first()
     )
     if folder is None:
-        return []
+        return [], 0
 
-    entities = (
-        db.query(EntityModel)
-        .filter(EntityModel.folder_id == folder_id)
-        .limit(limit)
-        .offset(offset)
-        .all()
-    )
-    return entities
+    query = db.query(EntityModel).filter(EntityModel.folder_id == folder_id)
+    
+    total_count = query.count()
+    
+    entities = query.limit(limit).offset(offset).all()
+    
+    return entities, total_count
 
 
 def get_entity_by_filepath(filepath: str, db: Session) -> Entity | None:

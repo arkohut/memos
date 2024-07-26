@@ -4,7 +4,8 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, status, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse, FileResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -221,7 +222,7 @@ async def new_entity(
 def list_entities_in_folder(
     library_id: int,
     folder_id: int,
-    limit: Annotated[int, Query(ge=1, le=200)] = 10,
+    limit: Annotated[int, Query(ge=1, le=400)] = 10,
     offset: int = 0,
     db: Session = Depends(get_db),
 ):
@@ -237,7 +238,11 @@ def list_entities_in_folder(
             detail="Folder not found in the specified library",
         )
 
-    return crud.get_entities_of_folder(library_id, folder_id, db, limit, offset)
+    entities, total_count = crud.get_entities_of_folder(library_id, folder_id, db, limit, offset)
+    return JSONResponse(
+        content=jsonable_encoder(entities),
+        headers={"X-Total-Count": str(total_count)}
+    )
 
 
 @app.get(
