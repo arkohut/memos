@@ -352,7 +352,10 @@ async def update_entity(
 
 
 @lib_app.command("index")
-def index(library_id: int):
+def index(
+    library_id: int,
+    folders: List[int] = typer.Option(None, "--folder", "-f"),
+):
     print(f"Indexing library {library_id}")
 
     # Get the library
@@ -364,8 +367,16 @@ def index(library_id: int):
     library = response.json()
     scanned_entities = set()
 
+    # Filter folders if the folders parameter is provided
+    if folders:
+        library_folders = [
+            folder for folder in library["folders"] if folder["id"] in folders
+        ]
+    else:
+        library_folders = library["folders"]
+
     # Iterate through folders
-    for folder in library["folders"]:
+    for folder in library_folders:
         tqdm.write(f"Processing folder: {folder['id']}")
 
         # List all entities in the folder
