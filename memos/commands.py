@@ -447,36 +447,50 @@ def index(
         tqdm.write(f"Processing folder: {folder['id']}")
 
         # List all entities in the folder
+        limit = 200
         offset = 0
-        while True:
-            entities_response = httpx.get(
-                f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
-                params={"limit": 200, "offset": offset},
-                timeout=60,
-            )
-            if entities_response.status_code != 200:
-                tqdm.write(
-                    f"Failed to get entities: {entities_response.status_code} - {entities_response.text}"
+        total_entities = 0  # We'll update this after the first request
+        with tqdm(
+            total=total_entities, desc="Indexing entities", leave=True
+        ) as pbar:
+            while True:
+                entities_response = httpx.get(
+                    f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
+                    params={"limit": limit, "offset": offset},
+                    timeout=60,
                 )
-                break
-
-            entities = entities_response.json()
-            if not entities:
-                break
-
-            # Index each entity
-            for entity in tqdm(entities, desc="Indexing entities", leave=False):
-                index_response = httpx.post(f"{BASE_URL}/entities/{entity['id']}/index")
-                if index_response.status_code == 204:
-                    tqdm.write(f"Indexed entity: {entity['id']}")
-                else:
-                    tqdm.write(
-                        f"Failed to index entity {entity['id']}: {index_response.status_code} - {index_response.text}"
+                if entities_response.status_code != 200:
+                    pbar.write(
+                        f"Failed to get entities: {entities_response.status_code} - {entities_response.text}"
                     )
+                    break
 
-                scanned_entities.add(str(entity["id"]))
+                entities = entities_response.json()
+                if not entities:
+                    break
 
-            offset += 200
+                # Update total if this is the first request
+                if offset == 0:
+                    total_entities = int(
+                        entities_response.headers.get("X-Total-Count", total_entities)
+                    )
+                    pbar.total = total_entities
+                    pbar.refresh()
+
+                # Index each entity
+                for entity in entities:
+                    index_response = httpx.post(f"{BASE_URL}/entities/{entity['id']}/index")
+                    if index_response.status_code == 204:
+                        pbar.write(f"Indexed entity: {entity['id']}")
+                    else:
+                        pbar.write(
+                            f"Failed to index entity {entity['id']}: {index_response.status_code} - {index_response.text}"
+                        )
+
+                    scanned_entities.add(str(entity["id"]))
+                    pbar.update(1)
+
+                offset += limit
 
         # List all indexed entities in the folder
         offset = 0
