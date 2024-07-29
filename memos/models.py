@@ -60,7 +60,7 @@ class EntityModel(Base):
     file_last_modified_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     file_type: Mapped[str] = mapped_column(String, nullable=False)
     file_type_group: Mapped[str] = mapped_column(String, nullable=False)
-    last_scan_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_scan_at: Mapped[datetime | None] = mapped_column(DateTime, onupdate=func.now(), nullable=True)
     library_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("libraries.id"), nullable=False
     )
@@ -75,7 +75,7 @@ class EntityModel(Base):
     )
     tags: Mapped[List["TagModel"]] = relationship("TagModel", secondary="entity_tags", lazy="joined")
 
-        # 添加索引
+    # 添加索引
     __table_args__ = (
         Index('idx_filepath', 'filepath'),
         Index('idx_filename', 'filename'),
