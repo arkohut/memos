@@ -357,16 +357,33 @@ async def add_entity(
     new_entity,
 ) -> Tuple[FileStatus, bool, httpx.Response]:
     async with semaphore:
-        post_response = await client.post(
-            f"{BASE_URL}/libraries/{library_id}/entities",
-            json=new_entity,
-            params={"plugins": plugins} if plugins else {},
-            timeout=60,
-        )
-        if 200 <= post_response.status_code < 300:
-            return new_entity["filepath"], FileStatus.ADDED, True, post_response
-        else:
-            return new_entity["filepath"], FileStatus.ADDED, False, post_response
+        MAX_RETRIES = 3
+        RETRY_DELAY = 2.0
+        for attempt in range(MAX_RETRIES):
+            try:
+                post_response = await client.post(
+                    f"{BASE_URL}/libraries/{library_id}/entities",
+                    json=new_entity,
+                    params={"plugins": plugins} if plugins else {},
+                    timeout=60,
+                )
+                if 200 <= post_response.status_code < 300:
+                    return new_entity["filepath"], FileStatus.ADDED, True, post_response
+                else:
+                    return (
+                        new_entity["filepath"],
+                        FileStatus.ADDED,
+                        False,
+                        post_response,
+                    )
+            except Exception as e:
+                logging.error(
+                    f"Error while adding entity (attempt {attempt + 1}/{MAX_RETRIES}): {e}"
+                )
+                if attempt < MAX_RETRIES - 1:
+                    await asyncio.sleep(RETRY_DELAY)
+                else:
+                    return new_entity["filepath"], FileStatus.ADDED, False, None
 
 
 async def update_entity(
