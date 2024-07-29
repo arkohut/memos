@@ -255,7 +255,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                         f"Failed to update file: {response.status_code} - {response.text}"
                     )
 
-    return added_file_count, updated_file_count, scanned_files
+        return added_file_count, updated_file_count, scanned_files
 
 
 @lib_app.command("scan")
@@ -300,7 +300,9 @@ def scan(
         limit = 100
         offset = 0
         total_entities = 0  # We'll update this after the first request
-        with tqdm(total=total_entities, desc="Checking for deleted files", leave=True) as pbar2:
+        with tqdm(
+            total=total_entities, desc="Checking for deleted files", leave=True
+        ) as pbar2:
             while True:
                 existing_files_response = httpx.get(
                     f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
@@ -378,20 +380,42 @@ async def update_entity(
     new_entity,
     existing_entity,
 ) -> Tuple[FileStatus, bool, httpx.Response]:
+    MAX_RETRIES = 3
+    RETRY_DELAY = 2.0
     async with semaphore:
-        update_response = await client.put(
-            f"{BASE_URL}/entities/{existing_entity['id']}",
-            json=new_entity,
-            params={
-                "trigger_webhooks_flag": "true",
-                **({"plugins": plugins} if plugins else {}),
-            },
-            timeout=60,
-        )
-        if 200 <= update_response.status_code < 300:
-            return new_entity["filepath"], FileStatus.UPDATED, True, update_response
-        else:
-            return new_entity["filepath"], FileStatus.UPDATED, False, update_response
+        for attempt in range(MAX_RETRIES):
+            try:
+                update_response = await client.put(
+                    f"{BASE_URL}/entities/{existing_entity['id']}",
+                    json=new_entity,
+                    params={
+                        "trigger_webhooks_flag": "true",
+                        **({"plugins": plugins} if plugins else {}),
+                    },
+                    timeout=60,
+                )
+                if 200 <= update_response.status_code < 300:
+                    return (
+                        new_entity["filepath"],
+                        FileStatus.UPDATED,
+                        True,
+                        update_response,
+                    )
+                else:
+                    return (
+                        new_entity["filepath"],
+                        FileStatus.UPDATED,
+                        False,
+                        update_response,
+                    )
+            except Exception as e:
+                logging.error(
+                    f"Error while updating entity {existing_entity['id']} (attempt {attempt + 1}/{MAX_RETRIES}): {e}"
+                )
+                if attempt < MAX_RETRIES - 1:
+                    await asyncio.sleep(RETRY_DELAY)
+                else:
+                    return new_entity["filepath"], FileStatus.UPDATED, False, None
 
 
 @lib_app.command("index")
