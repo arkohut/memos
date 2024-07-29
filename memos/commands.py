@@ -48,7 +48,7 @@ def format_timestamp(timestamp):
     if isinstance(timestamp, str):
         return timestamp
     return (
-        datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        datetime.fromtimestamp(timestamp)
         .replace(tzinfo=None)
         .isoformat()
     )
