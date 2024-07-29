@@ -146,6 +146,7 @@
 		library_id={searchResults[selectedImage].library_id}
 		folder_id={searchResults[selectedImage].folder_id}
 		image={`${apiEndpoint}/files/${searchResults[selectedImage].filepath}`}
+		created_at={searchResults[selectedImage].file_created_at}
 		filepath={searchResults[selectedImage].filepath}
 		title={filename(searchResults[selectedImage].filepath)}
 		tags={searchResults[selectedImage].tags}

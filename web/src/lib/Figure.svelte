@@ -14,6 +14,10 @@
 	/**
 	 * @type {number}
 	 */
+	export let created_at;
+	/**
+	 * @type {number}
+	 */
 	export let folder_id;
 	/**
 	 * @type {any}
@@ -101,7 +105,9 @@
 		<div class="flex flex-col md:flex-row h-full">
 			<!-- Image container -->
 			<div class="flex-none w-full md:w-1/2 h-full">
-				<img class="w-full h-full object-contain" src={image} alt={title} />
+				<a href={image} target="_blank" rel="noopener noreferrer">
+					<img class="w-full h-full object-contain" src={image} alt={title} />
+				</a>
 			</div>
 			<!-- Description container -->
 			<div class="mt-4 md:mt-0 md:ml-6 overflow-y-auto max-h-full">
@@ -121,6 +127,12 @@
 					>
 					<span class="mt-1 text-sm leading-tight font-medium text-gray-500 font-mono">
 						{folder_id}
+					</span>
+					<span class="uppercase tracking-wide text-sm text-indigo-600 font-bold ml-4"
+						>DATETIME</span
+					>
+					<span class="mt-1 text-xs leading-tight font-xs text-gray-500 font-mono">
+						{new Date(created_at * 1000).toLocaleString()}
 					</span>
 					<div>
 						<span class="mt-1 text-xs leading-tight font-xs text-gray-500 font-mono">
