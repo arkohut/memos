@@ -22,6 +22,55 @@ def convert_metadata_value(metadata: EntityMetadata):
         return metadata.value
 
 
+def bulk_upsert(client, entities):
+    documents = [
+        EntityIndexItem(
+            id=str(entity.id),
+            filepath=entity.filepath,
+            filename=entity.filename,
+            size=entity.size,
+            file_created_at=int(entity.file_created_at.timestamp()),
+            file_last_modified_at=int(entity.file_last_modified_at.timestamp()),
+            file_type=entity.file_type,
+            file_type_group=entity.file_type_group,
+            last_scan_at=(
+                int(entity.last_scan_at.timestamp()) if entity.last_scan_at else None
+            ),
+            library_id=entity.library_id,
+            folder_id=entity.folder_id,
+            tags=[tag.name for tag in entity.tags],
+            metadata_entries=[
+                MetadataIndexItem(
+                    key=metadata.key,
+                    value=convert_metadata_value(metadata),
+                    source=metadata.source,
+                )
+                for metadata in entity.metadata_entries
+            ],
+            metadata_text="\n\n".join(
+                [
+                    (
+                        f"key: {metadata.key}\nvalue:\n{json.dumps(json.loads(metadata.value), indent=2)}"
+                        if metadata.data_type == MetadataType.JSON_DATA
+                        else f"key: {metadata.key}\nvalue:\n{metadata.value}"
+                    )
+                    for metadata in entity.metadata_entries
+                ]
+            ),
+        ).model_dump(mode='json')
+        for entity in entities
+    ]
+
+    # Sync the entity data to Typesense
+    try:
+        response = client.collections["entities"].documents.import_(documents, {'action': 'upsert'})
+        return response
+    except Exception as e:
+        raise Exception(
+            f"Failed to sync entities to Typesense: {str(e)}",
+        )
+
+
 def upsert(client, entity):
     entity_data = EntityIndexItem(
         id=str(entity.id),
@@ -138,7 +187,11 @@ def search_entities(
             "q": q,
             "query_by": "tags,metadata_text,embedding,filename,filepath",
             "infix": "off,off,off,always,always",
-            "filter_by": f"{filter_by_str} && file_type_group:=image" if filter_by_str else "file_type_group:=image",
+            "filter_by": (
+                f"{filter_by_str} && file_type_group:=image"
+                if filter_by_str
+                else "file_type_group:=image"
+            ),
             "limit": limit,
             "offset": offset,
             "exclude_fields": "metadata_text,embedding",

@@ -161,6 +161,11 @@ def find_entity_by_id(entity_id: int, db: Session) -> Entity | None:
     return Entity(**db_entity.__dict__)
 
 
+def find_entities_by_ids(entity_ids: List[int], db: Session) -> List[Entity]:
+    db_entities = db.query(EntityModel).filter(EntityModel.id.in_(entity_ids)).all()
+    return [Entity(**entity.__dict__) for entity in db_entities]
+
+
 def update_entity(
     entity_id: int, updated_entity: UpdateEntityParam, db: Session
 ) -> Entity:

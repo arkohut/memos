@@ -47,11 +47,7 @@ class FileStatus(Enum):
 def format_timestamp(timestamp):
     if isinstance(timestamp, str):
         return timestamp
-    return (
-        datetime.fromtimestamp(timestamp)
-        .replace(tzinfo=None)
-        .isoformat()
-    )
+    return datetime.fromtimestamp(timestamp).replace(tzinfo=None).isoformat()
 
 
 def get_file_type(file_path):
@@ -450,9 +446,7 @@ def index(
         limit = 200
         offset = 0
         total_entities = 0  # We'll update this after the first request
-        with tqdm(
-            total=total_entities, desc="Indexing entities", leave=True
-        ) as pbar:
+        with tqdm(total=total_entities, desc="Indexing entities", leave=True) as pbar:
             while True:
                 entities_response = httpx.get(
                     f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
@@ -478,17 +472,22 @@ def index(
                     pbar.refresh()
 
                 # Index each entity
-                for entity in entities:
-                    index_response = httpx.post(f"{BASE_URL}/entities/{entity['id']}/index")
+                batch_size = 40
+                for i in range(0, len(entities), batch_size):
+                    batch = entities[i : i + batch_size]
+                    entity_ids = [entity["id"] for entity in batch]
+                    index_response = httpx.post(
+                        f"{BASE_URL}/entities/batch-index", json=entity_ids
+                    )
                     if index_response.status_code == 204:
-                        pbar.write(f"Indexed entity: {entity['id']}")
+                        pbar.write(f"Indexed batch of {len(batch)} entities")
                     else:
                         pbar.write(
-                            f"Failed to index entity {entity['id']}: {index_response.status_code} - {index_response.text}"
+                            f"Failed to index batch: {index_response.status_code} - {index_response.text}"
                         )
 
-                    scanned_entities.add(str(entity["id"]))
-                    pbar.update(1)
+                    scanned_entities.update(str(entity["id"]) for entity in batch)
+                    pbar.update(len(batch))
 
                 offset += limit
 

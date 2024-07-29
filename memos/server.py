@@ -351,6 +351,31 @@ async def sync_entity_to_typesense(entity_id: int, db: Session = Depends(get_db)
     return None
 
 
+@app.post(
+    "/entities/batch-index",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["entity"],
+)
+async def batch_sync_entities_to_typesense(
+    entity_ids: List[int], db: Session = Depends(get_db)
+):
+    entities = crud.find_entities_by_ids(entity_ids, db)
+    if not entities:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No entities found",
+        )
+
+    try:
+        indexing.bulk_upsert(client, entities)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+    return None
+
+
 @app.get(
     "/entities/{entity_id}/index",
     response_model=EntitySearchResult,
@@ -396,7 +421,7 @@ async def remove_entity_from_typesense(entity_id: int, db: Session = Depends(get
     response_model=List[EntityIndexItem],
     tags=["entity"],
 )
-def list_entities_in_folder(
+def list_entitiy_indices_in_folder(
     library_id: int,
     folder_id: int,
     limit: Annotated[int, Query(ge=1, le=200)] = 10,
