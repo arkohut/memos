@@ -80,6 +80,18 @@
 
 		return true;
 	}
+
+	/**
+	 * Copy text to clipboard
+	 * @param {string} text
+	 */
+	 function copyToClipboard(text) {
+		navigator.clipboard.writeText(text).then(() => {
+			console.log('Text copied to clipboard');
+		}).catch(err => {
+			console.error('Failed to copy text: ', err);
+		});
+	}
 </script>
 
 <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="my-modal">
@@ -154,7 +166,15 @@
 				<div class="mt-2 text-gray-600">
 					{#each metadata_entries as entry}
 						<div class="mb-2">
-							<span class="font-bold">{entry.key}:</span>
+							<span class="font-bold flex items-center">
+								{entry.key}
+								<button class="ml-2 flex items-center" on:click={() => copyToClipboard(entry.value)}>
+									<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" style="margin-top: -4px;">
+										<path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+										<path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+									</svg>
+								</button>
+							</span>
 							{#if typeof entry.value === 'object'}
 								{#if isValidOCRDataStructure(entry.value)}
 									<OCRTable ocrData={entry.value} />
