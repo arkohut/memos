@@ -450,10 +450,14 @@ async def search_entities(
     folder_id: int = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 48,
     offset: int = 0,
+    start: int = None,
+    end: int = None,
     db: Session = Depends(get_db),
 ):
     try:
-        return indexing.search_entities(client, q, library_id, folder_id, limit, offset)
+        return indexing.search_entities(
+            client, q, library_id, folder_id, limit, offset, start, end
+        )
     except Exception as e:
         print(f"Error searching entities: {e}")
         raise HTTPException(

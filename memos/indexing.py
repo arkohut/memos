@@ -174,6 +174,8 @@ def search_entities(
     folder_id: int = None,
     limit: int = 48,
     offset: int = 0,
+    start: int = None,
+    end: int = None,
 ) -> List[EntitySearchResult]:
     try:
         filter_by = []
@@ -181,6 +183,8 @@ def search_entities(
             filter_by.append(f"library_id:={library_id}")
         if folder_id is not None:
             filter_by.append(f"folder_id:={folder_id}")
+        if start is not None and end is not None:
+            filter_by.append(f"file_created_at:={start}..{end}")
 
         filter_by_str = " && ".join(filter_by) if filter_by else ""
         search_parameters = {
