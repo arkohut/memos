@@ -11,16 +11,38 @@
     import { Button } from "$lib/components/ui/button/index.js";
     import { RangeCalendar } from "$lib/components/ui/range-calendar/index.js";
     import * as Popover from "$lib/components/ui/popover/index.js";
-   
+    import { onMount } from "svelte";
+
     const df = new DateFormatter("en-US", {
       dateStyle: "medium"
     });
+
+    export let startTimestamp: number;
+    export let endTimestamp: number;
    
-    let value: DateRange | undefined = {
-      start: new CalendarDate(2022, 1, 20),
-      end: new CalendarDate(2022, 1, 20).add({ days: 20 })
-    };
-   
+    let value: DateRange | undefined;
+    let initialized = false; // Flag to control reactive updates
+    let userSelected = false; // New flag to track user selection
+    
+    onMount(() => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth() + 1; // getMonth() returns 0-11
+      const date = now.getDate();
+      value = {
+        start: new CalendarDate(year, month, date).subtract({ days: 30 }),
+        end: new CalendarDate(year, month, date)
+      };
+      console.log(initialized);
+      initialized = true;
+    });
+
+    $: if (initialized && value && value.start && value.end && !userSelected) {
+      userSelected = true; // Set flag when user selects a range
+      startTimestamp = value.start.toDate(getLocalTimeZone()).getTime() / 1000;
+      endTimestamp = value.end.toDate(getLocalTimeZone()).getTime() / 1000;
+    }
+    
     let startValue: DateValue | undefined = undefined;
   </script>
    
@@ -30,13 +52,15 @@
         <Button
           variant="outline"
           class={cn(
-            "w-[300px] justify-start text-left font-normal",
-            !value && "text-muted-foreground"
+            "w-[220px] justify-start text-center font-normal text-xs",
+            (startTimestamp === -1 && endTimestamp === -1) && "text-muted-foreground"
           )}
           builders={[builder]}
         >
           <Calendar class="mr-2 h-4 w-4" />
-          {#if value && value.start}
+          {#if startTimestamp === -1 && endTimestamp === -1}
+            不限时间
+          {:else if value && value.start}
             {#if value.end}
               {df.format(value.start.toDate(getLocalTimeZone()))} - {df.format(
                 value.end.toDate(getLocalTimeZone())

@@ -1,5 +1,6 @@
 <script>
 	import Figure from '$lib/Figure.svelte';
+	import TimeFilter from '$lib/components/TimeFilter.svelte';
 	import { Input } from "$lib/components/ui/input";
 	import { PUBLIC_API_ENDPOINT } from '$env/static/public';
 
@@ -12,8 +13,9 @@
 	let debounceTimer;
 	let showModal = false;
 	let selectedImage = 0;
-	let datetimeFilterStart = '';
-	let datetimeFilterEnd = '';
+	
+	let startTimestamp = -1;
+	let endTimestamp = -1;
 
 	const debounceDelay = 300;
 	const apiEndpoint =
@@ -22,11 +24,18 @@
 	/**
 	 * @param {string} query
 	 */
-	async function searchItems(query) {
+	async function searchItems(query, start, end) {
 		isLoading = true;
 
 		try {
-			const response = await fetch(`${apiEndpoint}/search?q=${encodeURIComponent(query)}`);
+			let url = `${apiEndpoint}/search?q=${encodeURIComponent(query)}`;
+			if (start > 0) {
+				url += `&start=${Math.floor(start / 1000)}`;
+			}
+			if (end > 0) {
+				url += `&end=${Math.floor(end / 1000)}`;
+			}
+			const response = await fetch(url);
 			if (!response.ok) {
 				throw new Error('Network response was not ok');
 			}
@@ -41,10 +50,10 @@
 	/**
 	 * @param {string} query
 	 */
-	function debounceSearch(query) {
+	function debounceSearch(query, start, end) {
 		clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(() => {
-			searchItems(query);
+			searchItems(query, start, end);
 		}, debounceDelay);
 	}
 
@@ -95,9 +104,13 @@
 	};
 
 	$: if (searchString.trim()) {
-		debounceSearch(searchString);
+		debounceSearch(searchString, startTimestamp, endTimestamp);
 	} else {
 		searchResults = [];
+	}
+
+	$: if ((startTimestamp !== -1 || endTimestamp !== -1) && searchString.trim()) {
+		debounceSearch(searchString, startTimestamp, endTimestamp);
 	}
 </script>
 
@@ -110,6 +123,7 @@
 		bind:value={searchString}
 		placeholder="Type to search..."
 	/>
+	<TimeFilter bind:start={startTimestamp} bind:end={endTimestamp} />
 </div>
 
 <div class="container mx-auto">

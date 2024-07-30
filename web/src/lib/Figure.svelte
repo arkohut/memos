@@ -1,7 +1,7 @@
 <!-- Modal.svelte -->
 <script>
 	import { ScrollArea } from "$lib/components/ui/scroll-area";
-	import CopyToClipboard from "$lib/components/copy-to-clipboard.svelte"
+	import CopyToClipboard from "$lib/components/CopyToClipboard.svelte"
 	import OCRTable from './OCRTable.svelte';
 	import { marked } from 'marked';
 
