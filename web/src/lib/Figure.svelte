@@ -1,5 +1,7 @@
 <!-- Modal.svelte -->
 <script>
+	import { ScrollArea } from "$lib/components/ui/scroll-area";
+	import CopyToClipboard from "$lib/components/copy-to-clipboard.svelte"
 	import OCRTable from './OCRTable.svelte';
 	import { marked } from 'marked';
 
@@ -80,18 +82,6 @@
 
 		return true;
 	}
-
-	/**
-	 * Copy text to clipboard
-	 * @param {string} text
-	 */
-	 function copyToClipboard(text) {
-		navigator.clipboard.writeText(text).then(() => {
-			console.log('Text copied to clipboard');
-		}).catch(err => {
-			console.error('Failed to copy text: ', err);
-		});
-	}
 </script>
 
 <div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="my-modal">
@@ -122,7 +112,7 @@
 				</a>
 			</div>
 			<!-- Description container -->
-			<div class="mt-4 md:mt-0 md:ml-6 overflow-y-auto max-h-full">
+			<ScrollArea class="mt-4 md:mt-0 md:ml-6 overflow-y-auto max-h-full">
 				<div class="mb-2 mr-2 pb-2 border-b border-gray-300">
 					<span class="uppercase tracking-wide text-sm text-indigo-600 font-bold">ID</span>
 					<span class="mt-1 text-sm leading-tight font-medium text-gray-500 font-mono">
@@ -168,12 +158,7 @@
 						<div class="mb-2">
 							<span class="font-bold flex items-center">
 								{entry.key}
-								<button class="ml-2 flex items-center" on:click={() => copyToClipboard(entry.value)}>
-									<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" style="margin-top: -4px;">
-										<path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-										<path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
-									</svg>
-								</button>
+								<CopyToClipboard text={entry.value} />
 							</span>
 							{#if typeof entry.value === 'object'}
 								{#if isValidOCRDataStructure(entry.value)}
@@ -195,7 +180,7 @@
 						</div>
 					{/each}
 				</div>
-			</div>
+			</ScrollArea>
 		</div>
 		<div class="absolute top-0 right-0 pt-4 pr-4">
 			<button class="text-gray-400 hover:text-gray-600" on:click={onClose}>

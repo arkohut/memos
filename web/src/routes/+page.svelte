@@ -1,5 +1,6 @@
 <script>
 	import Figure from '$lib/Figure.svelte';
+	import { Input } from "$lib/components/ui/input";
 	import { PUBLIC_API_ENDPOINT } from '$env/static/public';
 
 	let searchString = '';
@@ -11,6 +12,8 @@
 	let debounceTimer;
 	let showModal = false;
 	let selectedImage = 0;
+	let datetimeFilterStart = '';
+	let datetimeFilterEnd = '';
 
 	const debounceDelay = 300;
 	const apiEndpoint =
@@ -101,9 +104,9 @@
 <svelte:window on:keydown={handleKeydown} />
 
 <div class="container mx-auto my-10">
-	<input
+	<Input
 		type="text"
-		class="input input-bordered w-full my-4 p-2 text-lg border border-gray-500"
+		class="w-full my-4 p-2 text-lg border-gray-500"
 		bind:value={searchString}
 		placeholder="Type to search..."
 	/>
