@@ -446,17 +446,19 @@ def list_entitiy_indices_in_folder(
 @app.get("/search", response_model=List[EntitySearchResult], tags=["search"])
 async def search_entities(
     q: str,
-    library_id: int = None,
-    folder_id: int = None,
+    library_ids: str = Query(None, description="Comma-separated list of library IDs"),
+    folder_ids: str = Query(None, description="Comma-separated list of folder IDs"),
     limit: Annotated[int, Query(ge=1, le=200)] = 48,
     offset: int = 0,
     start: int = None,
     end: int = None,
     db: Session = Depends(get_db),
 ):
+    library_ids = [int(id) for id in library_ids.split(",") if id] if library_ids else None
+    folder_ids = [int(id) for id in folder_ids.split(",") if id] if folder_ids else None
     try:
         return indexing.search_entities(
-            client, q, library_id, folder_id, limit, offset, start, end
+            client, q, library_ids, folder_ids, limit, offset, start, end
         )
     except Exception as e:
         print(f"Error searching entities: {e}")

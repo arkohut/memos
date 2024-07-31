@@ -170,8 +170,8 @@ def list_all_entities(
 def search_entities(
     client,
     q: str,
-    library_id: int = None,
-    folder_id: int = None,
+    library_ids: List[int] = None,
+    folder_ids: List[int] = None,
     limit: int = 48,
     offset: int = 0,
     start: int = None,
@@ -179,10 +179,10 @@ def search_entities(
 ) -> List[EntitySearchResult]:
     try:
         filter_by = []
-        if library_id is not None:
-            filter_by.append(f"library_id:={library_id}")
-        if folder_id is not None:
-            filter_by.append(f"folder_id:={folder_id}")
+        if library_ids:
+            filter_by.append(f"library_id:[{','.join(map(str, library_ids))}]")
+        if folder_ids:
+            filter_by.append(f"folder_id:[{','.join(map(str, folder_ids))}]")
         if start is not None and end is not None:
             filter_by.append(f"file_created_at:={start}..{end}")
 
