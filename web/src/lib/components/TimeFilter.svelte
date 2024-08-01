@@ -93,7 +93,7 @@
 				<span class="truncate">{displayText}</span>
 			</Button>
 		</DropdownMenu.Trigger>
-		<DropdownMenu.Content class="w-56">
+		<DropdownMenu.Content class="w-56" align="start" side="bottom">
 			<DropdownMenu.Label>时间筛选</DropdownMenu.Label>
 			<DropdownMenu.Separator />
 			<DropdownMenu.RadioGroup bind:value={timeFilter}>
