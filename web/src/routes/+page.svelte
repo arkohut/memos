@@ -1,7 +1,8 @@
 <script>
 	import Figure from '$lib/Figure.svelte';
 	import TimeFilter from '$lib/components/TimeFilter.svelte';
-	import { Input } from "$lib/components/ui/input";
+	import LibraryFilter from '$lib/components/LibraryFilter.svelte';
+	import { Input } from '$lib/components/ui/input';
 	import { PUBLIC_API_ENDPOINT } from '$env/static/public';
 
 	let searchString = '';
@@ -13,9 +14,11 @@
 	let debounceTimer;
 	let showModal = false;
 	let selectedImage = 0;
-	
+
 	let startTimestamp = -1;
 	let endTimestamp = -1;
+
+	let selectedLibraries = [];
 
 	const debounceDelay = 300;
 	const apiEndpoint =
@@ -24,7 +27,7 @@
 	/**
 	 * @param {string} query
 	 */
-	async function searchItems(query, start, end) {
+	async function searchItems(query, start, end, selectedLibraries) {
 		isLoading = true;
 
 		try {
@@ -34,6 +37,9 @@
 			}
 			if (end > 0) {
 				url += `&end=${Math.floor(end / 1000)}`;
+			}
+			if (selectedLibraries.length > 0) {
+				url += `&library_ids=${selectedLibraries.join(',')}`;
 			}
 			const response = await fetch(url);
 			if (!response.ok) {
@@ -50,10 +56,10 @@
 	/**
 	 * @param {string} query
 	 */
-	function debounceSearch(query, start, end) {
+	function debounceSearch(query, start, end, selectedLibraries) {
 		clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(() => {
-			searchItems(query, start, end);
+			searchItems(query, start, end, selectedLibraries);
 		}, debounceDelay);
 	}
 
@@ -103,14 +109,22 @@
 		document.body.style.overflow = '';
 	};
 
-	$: if (searchString.trim()) {
-		debounceSearch(searchString, startTimestamp, endTimestamp);
-	} else {
-		searchResults = [];
-	}
+	// $: if (searchString.trim()) {
+	// 	debounceSearch(searchString, startTimestamp, endTimestamp, selectedLibraries);
+	// } else {
+	// 	searchResults = [];
+	// }
 
-	$: if ((startTimestamp !== -1 || endTimestamp !== -1) && searchString.trim()) {
-		debounceSearch(searchString, startTimestamp, endTimestamp);
+	// $: if ((startTimestamp !== -1 || endTimestamp !== -1) && searchString.trim()) {
+	// 	debounceSearch(searchString, startTimestamp, endTimestamp, selectedLibraries);
+	// }
+
+	$: {
+		if (searchString.trim()) {
+			debounceSearch(searchString, startTimestamp, endTimestamp, selectedLibraries);
+		} else {
+			searchResults = [];
+		}
 	}
 </script>
 
@@ -123,7 +137,10 @@
 		bind:value={searchString}
 		placeholder="Type to search..."
 	/>
-	<TimeFilter bind:start={startTimestamp} bind:end={endTimestamp} />
+	<div class="flex">
+		<LibraryFilter bind:selectedLibraryIds={selectedLibraries} />
+		<TimeFilter bind:start={startTimestamp} bind:end={endTimestamp} />
+	</div>
 </div>
 
 <div class="container mx-auto">
