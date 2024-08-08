@@ -60,7 +60,9 @@ class EntityModel(Base):
     file_last_modified_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     file_type: Mapped[str] = mapped_column(String, nullable=False)
     file_type_group: Mapped[str] = mapped_column(String, nullable=False)
-    last_scan_at: Mapped[datetime | None] = mapped_column(DateTime, onupdate=func.now(), nullable=True)
+    last_scan_at: Mapped[datetime | None] = mapped_column(
+        DateTime, server_default=func.now(), onupdate=func.now(), nullable=True
+    )
     library_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("libraries.id"), nullable=False
     )
@@ -73,15 +75,17 @@ class EntityModel(Base):
     metadata_entries: Mapped[List["EntityMetadataModel"]] = relationship(
         "EntityMetadataModel", lazy="joined"
     )
-    tags: Mapped[List["TagModel"]] = relationship("TagModel", secondary="entity_tags", lazy="joined")
+    tags: Mapped[List["TagModel"]] = relationship(
+        "TagModel", secondary="entity_tags", lazy="joined"
+    )
 
     # 添加索引
     __table_args__ = (
-        Index('idx_filepath', 'filepath'),
-        Index('idx_filename', 'filename'),
-        Index('idx_file_type', 'file_type'),
-        Index('idx_library_id', 'library_id'),
-        Index('idx_folder_id', 'folder_id'),
+        Index("idx_filepath", "filepath"),
+        Index("idx_filename", "filename"),
+        Index("idx_file_type", "file_type"),
+        Index("idx_library_id", "library_id"),
+        Index("idx_folder_id", "folder_id"),
     )
 
 

@@ -131,13 +131,13 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
     added_file_count = 0
     scanned_files = set()
     semaphore = asyncio.Semaphore(8)
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=60) as client:
         tasks = []
         for root, _, files in os.walk(folder_path):
             with tqdm(
                 total=len(files), desc=f"Scanning {folder_path}", leave=False
             ) as pbar:
-                condidate_files = []
+                candidate_files = []
                 for file in files:
                     file_path = Path(root) / file
                     absolute_file_path = file_path.resolve()  # Get absolute path
@@ -145,11 +145,11 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                         continue
 
                     scanned_files.add(str(absolute_file_path))
-                    condidate_files.append(str(absolute_file_path))
+                    candidate_files.append(str(absolute_file_path))
 
-                batching = 200
-                for i in range(0, len(condidate_files), batching):
-                    batch = condidate_files[i : i + batching]
+                batching = 100
+                for i in range(0, len(candidate_files), batching):
+                    batch = candidate_files[i : i + batching]
 
                     # Get batch of entities
                     get_response = await client.post(
@@ -208,7 +208,6 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                                 or existing_created_at != new_created_at
                                 or existing_modified_at != new_modified_at
                             ):
-                                # Update the existing entity
                                 tasks.append(
                                     update_entity(
                                         client,
@@ -219,7 +218,6 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                                     )
                                 )
                         else:
-                            # Add the new entity
                             tasks.append(
                                 add_entity(
                                     client, semaphore, library_id, plugins, new_entity
@@ -227,6 +225,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                             )
                     pbar.update(len(batch))
 
+        # Process all tasks after they've been created
         for future in tqdm(
             asyncio.as_completed(tasks),
             desc=f"Processing {folder_path}",
@@ -248,9 +247,9 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                     tqdm.write(f"Updated file in library: {file_path}")
                 else:
                     error_message = "Failed to update file"
-                    if hasattr(response, 'status_code'):
+                    if hasattr(response, "status_code"):
                         error_message += f": {response.status_code}"
-                    elif hasattr(response, 'text'):
+                    elif hasattr(response, "text"):
                         error_message += f" - {response.text}"
                     else:
                         error_message += f" - Unknown error occurred"
@@ -499,7 +498,9 @@ def index(
                     batch = entities[i : i + batch_size]
                     entity_ids = [entity["id"] for entity in batch]
                     index_response = httpx.post(
-                        f"{BASE_URL}/entities/batch-index", json=entity_ids
+                        f"{BASE_URL}/entities/batch-index",
+                        json=entity_ids,
+                        timeout=60,
                     )
                     if index_response.status_code == 204:
                         pbar.write(f"Indexed batch of {len(batch)} entities")
