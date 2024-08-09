@@ -1,0 +1,4 @@
+Pillow
+piexif
+imagehash
+pyobjc
