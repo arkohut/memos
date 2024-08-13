@@ -5,6 +5,7 @@ import glob
 import subprocess
 from PIL import Image
 import piexif
+from PIL.PngImagePlugin import PngInfo
 
 from multiprocessing import Pool, Manager
 from tqdm import tqdm
@@ -19,25 +20,39 @@ def compress_and_save_image(image_path, order):
     # Open the image
     img = Image.open(image_path)
     
-    # Add order to the image metadata
-    exif_dict = piexif.load(image_path)
-    # Get existing ImageDescription if it exists
-    existing_description = exif_dict["0th"].get(piexif.ImageIFD.ImageDescription, b'{}')
-    try:
-        existing_data = json.loads(existing_description.decode('utf-8'))
-    except json.JSONDecodeError:
-        existing_data = {}
-    # Add or update the "sequence" key
-    existing_data["sequence"] = order
-
-    # Convert back to JSON string and encode
-    updated_description = json.dumps(existing_data).encode('utf-8')
-    exif_dict["0th"][piexif.ImageIFD.ImageDescription] = updated_description
+    if image_path.endswith(('.jpg', '.jpeg', '.tiff')):
+        # Add order to the image metadata for JPEG/TIFF
+        exif_dict = piexif.load(image_path)
+        existing_description = exif_dict["0th"].get(piexif.ImageIFD.ImageDescription, b'{}')
+        try:
+            existing_data = json.loads(existing_description.decode('utf-8'))
+        except json.JSONDecodeError:
+            existing_data = {}
+        existing_data["sequence"] = order
+        existing_data["is_thumbnail"] = True
+        updated_description = json.dumps(existing_data).encode('utf-8')
+        exif_dict["0th"][piexif.ImageIFD.ImageDescription] = updated_description
+        exif_bytes = piexif.dump(exif_dict)
+    elif image_path.endswith('.png'):
+        # Add order to the image metadata for PNG
+        metadata = PngInfo()
+        existing_description = img.info.get("Description", '{}')
+        try:
+            existing_data = json.loads(existing_description)
+        except json.JSONDecodeError:
+            existing_data = {}
+        existing_data["sequence"] = order
+        existing_data["is_thumbnail"] = True
+        updated_description = json.dumps(existing_data)
+        metadata.add_text("Description", updated_description)
+    else:
+        print(f"Skipping unsupported file format: {image_path}")
+        return
 
     # Compress the image
     img = img.convert("RGB")
     if image_path.endswith('.png'):
-        img.save(image_path, "PNG", optimize=True)
+        img.save(image_path, "PNG", optimize=True, pnginfo=metadata)
     else:
         img.save(image_path, "JPEG", quality=30)  # Lower quality for higher compression
     
@@ -45,13 +60,13 @@ def compress_and_save_image(image_path, order):
     max_size = (960, 960)  # Define the maximum size for the thumbnail
     img.thumbnail(max_size)
     if image_path.endswith('.png'):
-        img.save(image_path, "PNG", optimize=True)
+        img.save(image_path, "PNG", optimize=True, pnginfo=metadata)
     else:
         img.save(image_path, "JPEG", quality=30)  # Lower quality for higher compression
     
-    # Insert updated EXIF data
-    exif_bytes = piexif.dump(exif_dict)
-    piexif.insert(exif_bytes, image_path)
+    if image_path.endswith(('.jpg', '.jpeg', '.tiff')):
+        # Insert updated EXIF data for JPEG/TIFF
+        piexif.insert(exif_bytes, image_path)
     
     return image_path
 
