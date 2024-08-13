@@ -4,6 +4,7 @@
 	import CopyToClipboard from "$lib/components/CopyToClipboard.svelte"
 	import OCRTable from './OCRTable.svelte';
 	import { marked } from 'marked';
+	import { ChevronLeft, ChevronRight, X } from 'lucide-svelte';
 
 	/**
 	 * @type {string}
@@ -95,16 +96,16 @@
 		<!-- Button container -->
 		<div class="group">
 			<button
-				class="absolute left-5 top-1/2 transform -translate-y-1/2 text-white bg-gray-300 hover:bg-gray-400 font-bold rounded-full text-2xl w-12 h-12 opacity-0 group-hover:opacity-100"
+				class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white bg-gray-300 hover:bg-gray-400 font-bold rounded-full text-xl w-12 h-12 opacity-0 group-hover:opacity-100 flex items-center justify-center"
 				on:click={onPrevious}
 			>
-				&lt;
+				<ChevronLeft size={40} />
 			</button>
 			<button
-				class="absolute right-5 top-1/2 transform -translate-y-1/2 text-white bg-gray-300 hover:bg-gray-400 font-bold rounded-full text-2xl w-12 h-12 opacity-0 group-hover:opacity-100"
+				class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white bg-gray-300 hover:bg-gray-400 font-bold rounded-full text-xl w-12 h-12 opacity-0 group-hover:opacity-100 flex items-center justify-center"
 				on:click={onNext}
 			>
-				&gt;
+				<ChevronRight size={40} />
 			</button>
 			<!-- Your modal content goes here -->
 		</div>
@@ -190,7 +191,7 @@
 			<button class="text-gray-400 hover:text-gray-600" on:click={onClose}>
 				<!-- svelte-ignore a11y-click-events-have-key-events -->
 				<!-- svelte-ignore a11y-no-static-element-interactions -->
-				<span class="text-2xl">&times;</span>
+				<X size={40} />
 			</button>
 		</div>
 	</div>
