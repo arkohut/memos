@@ -13,6 +13,9 @@ from typing import List, Annotated
 from pathlib import Path
 import asyncio
 import logging  # Import logging module
+import cv2
+from PIL import Image
+from .read_metadata import read_metadata
 
 import typesense
 
@@ -454,7 +457,9 @@ async def search_entities(
     end: int = None,
     db: Session = Depends(get_db),
 ):
-    library_ids = [int(id) for id in library_ids.split(",") if id] if library_ids else None
+    library_ids = (
+        [int(id) for id in library_ids.split(",") if id] if library_ids else None
+    )
     folder_ids = [int(id) for id in folder_ids.split(",") if id] if folder_ids else None
     try:
         return indexing.search_entities(
@@ -565,6 +570,72 @@ def add_library_plugin(
             detail="Plugin already exists in the library",
         )
     crud.add_plugin_to_library(library_id, new_plugin.plugin_id, db)
+
+
+def is_image(file_path: Path) -> bool:
+    return file_path.suffix.lower() in [".png", ".jpg", ".jpeg"]
+
+
+def get_thumbnail_info(metadata: dict) -> tuple:
+    if not metadata:
+        return None, None, None
+
+    meta = metadata.get("exif", {}) or metadata.get("png", {})
+    if not meta.get("sequence"):
+        return None, None, False
+
+    return meta.get("screen_name"), meta.get("sequence"), True
+
+
+def extract_video_frame(video_path: Path, frame_number: int) -> Image.Image:
+    cap = cv2.VideoCapture(str(video_path))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_number)
+    ret, frame = cap.read()
+    cap.release()
+
+    if not ret:
+        return None
+
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    return Image.fromarray(frame_rgb)
+
+
+@app.get("/files/video/{file_path:path}", tags=["files"])
+async def get_video_frame(file_path: str):
+
+    full_path = Path("/") / file_path.strip("/")
+
+    if not full_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    if not is_image(full_path):
+        return FileResponse(full_path)
+
+    metadata = read_metadata(str(full_path))
+    screen, sequence, is_thumbnail = get_thumbnail_info(metadata)
+
+    print(screen, sequence, is_thumbnail)
+
+    if not all([screen, sequence, is_thumbnail]):
+        return FileResponse(full_path)
+
+    video_path = full_path.parent / f"{screen}.mp4"
+    print(video_path)
+    if not video_path.is_file():
+        return FileResponse(full_path)
+
+    frame_image = extract_video_frame(video_path, sequence)
+    if frame_image is None:
+        return FileResponse(full_path)
+
+    temp_dir = Path("/tmp")
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_path = temp_dir / f"temp_{full_path.name}"
+    frame_image.save(temp_path)
+
+    return FileResponse(
+        temp_path, headers={"Content-Disposition": f"inline; filename={full_path.name}"}
+    )
 
 
 @app.get("/files/{file_path:path}", tags=["files"])

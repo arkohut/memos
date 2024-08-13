@@ -28,6 +28,10 @@
 	/**
 	 * @type {string}
 	 */
+	export let video;
+	/**
+	 * @type {string}
+	 */
 	export let filepath;
 	/**
 	 * @type {string}
@@ -107,7 +111,7 @@
 		<div class="flex flex-col md:flex-row h-full">
 			<!-- Image container -->
 			<div class="flex-none w-full md:w-1/2 h-full">
-				<a href={image} target="_blank" rel="noopener noreferrer">
+				<a href={video} target="_blank" rel="noopener noreferrer">
 					<img class="w-full h-full object-contain" src={image} alt={title} />
 				</a>
 			</div>

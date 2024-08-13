@@ -25,6 +25,8 @@ setup(
         'magika',
         'pydantic-settings',
         'typesense',
+        'opencv-python',
+        'pillow',
     ],
     entry_points={
         'console_scripts': [
