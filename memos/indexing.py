@@ -11,12 +11,7 @@ from .schemas import (
 
 
 def convert_metadata_value(metadata: EntityMetadata):
-    if metadata.data_type == MetadataType.NUMBER_DATA:
-        try:
-            return int(metadata.value)
-        except ValueError:
-            return float(metadata.value)
-    elif metadata.data_type == MetadataType.JSON_DATA:
+    if metadata.data_type == MetadataType.JSON_DATA:
         return json.loads(metadata.value)
     else:
         return metadata.value
