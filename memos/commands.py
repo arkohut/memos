@@ -116,6 +116,8 @@ def add_folder(library_id: int, folders: List[str]):
     )
     if 200 <= response.status_code < 300:
         print("Folders added successfully")
+        library = response.json()
+        display_libraries([library])
     else:
         print(f"Failed to add folders: {response.status_code} - {response.text}")
 
