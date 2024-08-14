@@ -29,6 +29,13 @@ class NewFoldersParam(BaseModel):
     folders: List[DirectoryPath] = []
 
 
+class EntityMetadataParam(BaseModel):
+    key: str
+    value: str
+    source: str
+    data_type: MetadataType
+
+
 class NewEntityParam(BaseModel):
     filename: str
     filepath: str
@@ -38,13 +45,8 @@ class NewEntityParam(BaseModel):
     file_type: str
     file_type_group: str
     folder_id: int
-
-
-class EntityMetadataParam(BaseModel):
-    key: str
-    value: str
-    source: str
-    data_type: MetadataType
+    tags: List[str] | None = None
+    metadata_entries: List[EntityMetadataParam] | None = None
 
 
 class UpdateEntityParam(BaseModel):
@@ -147,10 +149,10 @@ class Entity(BaseModel):
     def get_metadata_by_key(self, key: str) -> Optional[EntityMetadata]:
         """
         Get EntityMetadata by key.
-        
+
         Args:
             key (str): The key to search for in metadata entries.
-        
+
         Returns:
             Optional[EntityMetadata]: The EntityMetadata if found, None otherwise.
         """

@@ -579,12 +579,11 @@ def is_image(file_path: Path) -> bool:
 def get_thumbnail_info(metadata: dict) -> tuple:
     if not metadata:
         return None, None, None
-
-    meta = metadata.get("exif", {}) or metadata.get("png", {})
-    if not meta.get("sequence"):
+    
+    if not metadata.get("sequence"):
         return None, None, False
 
-    return meta.get("screen_name"), meta.get("sequence"), True
+    return metadata.get("screen_name"), metadata.get("sequence"), True
 
 
 def extract_video_frame(video_path: Path, frame_number: int) -> Image.Image:

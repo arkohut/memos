@@ -20,16 +20,16 @@ def read_metadata(image_path):
             exif_dict = piexif.load(exif_data)
             metadata_json = exif_dict["0th"].get(piexif.ImageIFD.ImageDescription)
             if metadata_json:
-                metadata["exif"] = json.loads(metadata_json.decode())
-                print("EXIF Metadata:", json.dumps(metadata["exif"], indent=4))
+                metadata = json.loads(metadata_json.decode())
+                print("EXIF Metadata:", json.dumps(metadata, indent=4))
             else:
                 print("No metadata found in the ImageDescription field of EXIF.")
 
         if png_info:
             metadata_json = png_info.get("Description")
             if metadata_json:
-                metadata["png"] = json.loads(metadata_json)
-                print("PNG Metadata:", json.dumps(metadata["png"], indent=4))
+                metadata = json.loads(metadata_json)
+                print("PNG Metadata:", json.dumps(metadata, indent=4))
             else:
                 print("No metadata found in the Description field of PNG.")
 

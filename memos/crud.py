@@ -79,8 +79,47 @@ def add_folders(library_id: int, folders: NewFoldersParam, db: Session) -> Libra
 
 
 def create_entity(library_id: int, entity: NewEntityParam, db: Session) -> Entity:
-    db_entity = EntityModel(**entity.model_dump(), library_id=library_id)
+    tags = entity.tags
+    metadata_entries = entity.metadata_entries
+
+    # Remove tags and metadata_entries from entity
+    entity.tags = None
+    entity.metadata_entries = None
+
+    db_entity = EntityModel(**entity.model_dump(exclude_none=True), library_id=library_id)
     db.add(db_entity)
+    db.commit()
+    db.refresh(db_entity)
+
+    # Handle tags separately
+    if tags:
+        for tag_name in tags:
+            tag = db.query(TagModel).filter(TagModel.name == tag_name).first()
+            if not tag:
+                tag = TagModel(name=tag_name)
+                db.add(tag)
+                db.commit()
+                db.refresh(tag)
+            entity_tag = EntityTagModel(
+                entity_id=db_entity.id,
+                tag_id=tag.id,
+                source=MetadataSource.PLUGIN_GENERATED,
+            )
+            db.add(entity_tag)
+        db.commit()
+
+    # Handle attrs separately
+    if metadata_entries:
+        for attr in metadata_entries:
+            entity_metadata = EntityMetadataModel(
+                entity_id=db_entity.id,
+                key=attr.key,
+                value=attr.value,
+                source=attr.source,
+                source_type=MetadataSource.PLUGIN_GENERATED if attr.source else None,
+                data_type=attr.data_type,
+            )
+            db.add(entity_metadata)
     db.commit()
     db.refresh(db_entity)
     return Entity(**db_entity.__dict__)

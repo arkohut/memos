@@ -9,10 +9,14 @@ from typing import List, Tuple
 import httpx
 import typer
 from .server import run_server
+from .read_metadata import read_metadata
+from .schemas import MetadataSource
 from tabulate import tabulate
 from tqdm import tqdm
 from enum import Enum
 from magika import Magika
+
+IS_THUMBNAIL = "is_thumbnail"
 
 app = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
 
@@ -173,6 +177,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                         absolute_file_path = Path(file_path).resolve()
                         file_stat = absolute_file_path.stat()
                         file_type, file_type_group = get_file_type(absolute_file_path)
+
                         new_entity = {
                             "filename": absolute_file_path.name,
                             "filepath": str(absolute_file_path),
@@ -185,6 +190,22 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                             "file_type_group": file_type_group,
                             "folder_id": folder["id"],
                         }
+
+                        is_thumbnail = False
+
+                        if file_type_group == "image":
+                            metadata = read_metadata(absolute_file_path)
+                            if metadata:
+                                new_entity["metadata_entries"] = [
+                                    {
+                                        "key": key,
+                                        "value": str(value),
+                                        "source": MetadataSource.SYSTEM_GENERATED.value,
+                                        "data_type": "number" if isinstance(value, (int, float)) else "text",
+                                    }
+                                    for key, value in metadata.items() if key != IS_THUMBNAIL
+                                ]
+                                is_thumbnail = metadata.get(IS_THUMBNAIL, False)
 
                         existing_entity = existing_entities_dict.get(
                             str(absolute_file_path)
@@ -203,6 +224,21 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                                 new_entity["file_last_modified_at"]
                             )
 
+                            # Ignore file changes for thumbnails
+                            if is_thumbnail:
+                                new_entity["file_created_at"] = existing_entity["file_created_at"]
+                                new_entity["file_last_modified_at"] = existing_entity["file_last_modified_at"]
+                                new_entity["file_type"] = existing_entity["file_type"]
+                                new_entity["file_type_group"] = existing_entity["file_type_group"]
+                                new_entity["size"] = existing_entity["size"]
+
+                            # Merge existing metadata with new metadata
+                            if new_entity.get("metadata_entries"):
+                                new_metadata_keys = {entry["key"] for entry in new_entity["metadata_entries"]}
+                                for existing_entry in existing_entity["metadata_entries"]:
+                                    if existing_entry["key"] not in new_metadata_keys:
+                                        new_entity["metadata_entries"].append(existing_entry)
+
                             if (
                                 force
                                 or existing_created_at != new_created_at
@@ -217,7 +253,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                                         existing_entity,
                                     )
                                 )
-                        else:
+                        elif not is_thumbnail: # Ignore thumbnails
                             tasks.append(
                                 add_entity(
                                     client, semaphore, library_id, plugins, new_entity
