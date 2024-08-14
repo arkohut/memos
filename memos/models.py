@@ -105,6 +105,11 @@ class EntityTagModel(Base):
     tag_id: Mapped[int] = mapped_column(Integer, ForeignKey("tags.id"), nullable=False)
     source: Mapped[MetadataSource] = mapped_column(Enum(MetadataSource), nullable=False)
 
+    __table_args__ = (
+        Index("idx_entity_tag_entity_id", "entity_id"),
+        Index("idx_entity_tag_tag_id", "tag_id"),
+    )
+
 
 class EntityMetadataModel(Base):
     __tablename__ = "metadata_entries"
@@ -119,6 +124,11 @@ class EntityMetadataModel(Base):
     source: Mapped[str | None] = mapped_column(String, nullable=True)
     data_type: Mapped[MetadataType] = mapped_column(Enum(MetadataType), nullable=False)
     entity = relationship("EntityModel", back_populates="metadata_entries")
+
+    __table_args__ = (
+        Index("idx_metadata_entity_id", "entity_id"),
+        Index("idx_metadata_key", "key"),
+    )
 
 
 class PluginModel(Base):
