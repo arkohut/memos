@@ -21,7 +21,6 @@ def read_metadata(image_path):
             metadata_json = exif_dict["0th"].get(piexif.ImageIFD.ImageDescription)
             if metadata_json:
                 metadata = json.loads(metadata_json.decode())
-                print("EXIF Metadata:", json.dumps(metadata, indent=4))
             else:
                 print("No metadata found in the ImageDescription field of EXIF.")
 
@@ -29,7 +28,6 @@ def read_metadata(image_path):
             metadata_json = png_info.get("Description")
             if metadata_json:
                 metadata = json.loads(metadata_json)
-                print("PNG Metadata:", json.dumps(metadata, indent=4))
             else:
                 print("No metadata found in the Description field of PNG.")
 
@@ -45,7 +43,9 @@ def main():
     parser.add_argument("image_path", type=str, help="Path to the screenshot image")
     args = parser.parse_args()
 
-    read_metadata(args.image_path)
+    metadata = read_metadata(args.image_path)
+    if metadata is not None:
+        print(json.dumps(metadata, indent=4))
 
 
 if __name__ == "__main__":
