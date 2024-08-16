@@ -14,6 +14,9 @@ import imagehash
 import argparse
 from .utils import write_image_metadata
 
+# Define the base directory as a global variable
+BASE_DIR = os.path.expanduser("~/tmp")
+
 
 def get_active_window_title():
     active_app = NSWorkspace.sharedWorkspace().activeApplication()
@@ -32,24 +35,22 @@ def get_active_window_title():
     return app_name  # 如果没有找到窗口标题，则只返回应用名称
 
 
-def load_screen_sequences():
+def load_screen_sequences(date):
     try:
-        with open(".screen_sequences", "r") as f:
+        with open(os.path.join(BASE_DIR, date, ".screen_sequences"), "r") as f:
             return json.load(f)
     except FileNotFoundError:
         return {}
 
 
-def save_screen_sequences(screen_sequences):
-    with open(".screen_sequences", "w") as f:
+def save_screen_sequences(screen_sequences, date):
+    with open(os.path.join(BASE_DIR, date, ".screen_sequences"), "w") as f:
         json.dump(screen_sequences, f)
         f.flush()
         os.fsync(f.fileno())
 
 
-def take_screenshot(previous_hashes, threshold, screen_sequences):
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    date = timestamp.split("-")[0]
+def take_screenshot(previous_hashes, threshold, screen_sequences, date, timestamp):
     screenshots = []
 
     # 获取连接的显示器数量
@@ -59,10 +60,10 @@ def take_screenshot(previous_hashes, threshold, screen_sequences):
     window_title = get_active_window_title()
 
     # 创建日期目录
-    os.makedirs(date, exist_ok=True)
+    os.makedirs(os.path.join(BASE_DIR, date), exist_ok=True)
 
     # 打开 worklog 文件
-    worklog_path = os.path.join(date, "worklog")
+    worklog_path = os.path.join(BASE_DIR, date, "worklog")
     with open(worklog_path, "a") as worklog:
         for display in range(display_count):
             # 获取显示器名称
@@ -73,7 +74,8 @@ def take_screenshot(previous_hashes, threshold, screen_sequences):
 
             # 生成临时 PNG 文件名
             temp_filename = os.path.join(
-                date, f"temp_screenshot-{timestamp}-of-{screen_name}.png"
+                os.path.join(BASE_DIR, date),
+                f"temp_screenshot-{timestamp}-of-{screen_name}.png",
             )
 
             # 使用 screencapture 命令进行截图，-D 选项指定显示器
@@ -85,7 +87,8 @@ def take_screenshot(previous_hashes, threshold, screen_sequences):
             with Image.open(temp_filename) as img:
                 img = img.convert("RGB")
                 jpeg_filename = os.path.join(
-                    date, f"screenshot-{timestamp}-of-{screen_name}.jpg"
+                    os.path.join(BASE_DIR, date),
+                    f"screenshot-{timestamp}-of-{screen_name}.jpg",
                 )
 
                 # 计算当前截图的哈希值
@@ -123,8 +126,7 @@ def take_screenshot(previous_hashes, threshold, screen_sequences):
                 # 使用 write_image_metadata 函数写入元数据
                 img.save(jpeg_filename, format="JPEG", quality=85)
                 write_image_metadata(jpeg_filename, metadata)
-
-                save_screen_sequences(screen_sequences)
+                save_screen_sequences(screen_sequences, date)
 
             # 删除临时 PNG 文件
             os.remove(temp_filename)
@@ -148,18 +150,20 @@ def is_screen_locked():
 def main():
     parser = argparse.ArgumentParser(description="Screen Recorder")
     parser.add_argument(
-        "--threshold", type=int, default=3, help="Threshold for image similarity"
+        "--threshold", type=int, default=4, help="Threshold for image similarity"
     )
     args = parser.parse_args()
 
     previous_hashes = {}
-    screen_sequences = load_screen_sequences()
 
     while True:
         try:
             if not is_screen_locked():
+                date = time.strftime("%Y%m%d")
+                timestamp = time.strftime("%Y%m%d-%H%M%S")
+                screen_sequences = load_screen_sequences(date)
                 screenshot_files = take_screenshot(
-                    previous_hashes, args.threshold, screen_sequences
+                    previous_hashes, args.threshold, screen_sequences, date, timestamp
                 )
                 for screenshot_file in screenshot_files:
                     print(f"Screenshot taken: {screenshot_file}")
@@ -168,7 +172,7 @@ def main():
         except Exception as e:
             print(f"An error occurred: {str(e)}. Skipping this iteration.")
 
-        time.sleep(5)  # 等待 5 秒
+        time.sleep(5)
 
 
 if __name__ == "__main__":
