@@ -1,6 +1,7 @@
 from rapidocr_onnxruntime import RapidOCR
 from PIL import Image
 import numpy as np
+import logging
 from fastapi import FastAPI, Body, HTTPException
 import base64
 import io
@@ -9,6 +10,11 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from pydantic import BaseModel, Field
 from typing import List
+
+# Configure logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 app = FastAPI()
 
@@ -31,6 +37,9 @@ def init_ocr(use_gpu):
 
 
 def convert_ocr_results(results):
+    if results is None:
+        return []
+    
     converted = []
     for result in results:
         item = {"dt_boxes": result[0], "rec_txt": result[1], "score": result[2]}
@@ -94,6 +103,7 @@ async def predict_base64(image_base64: str = Body(..., embed=True)):
         return convert_to_python_type(ocr_result)
 
     except Exception as e:
+        logging.error(f"Error during OCR processing: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
