@@ -276,9 +276,14 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                     added_file_count += 1
                     tqdm.write(f"Added file to library: {file_path}")
                 else:
-                    tqdm.write(
-                        f"Failed to add file: {response.status_code} - {response.text}"
-                    )
+                    error_message = "Failed to add file"
+                    if hasattr(response, "status_code"):
+                        error_message += f": {response.status_code}"
+                    if hasattr(response, "text"):
+                        error_message += f" - {response.text}"
+                    else:
+                        error_message += " - Unknown error occurred"
+                    tqdm.write(error_message)
             elif file_status == FileStatus.UPDATED:
                 if succeeded:
                     updated_file_count += 1
