@@ -23,7 +23,7 @@ jobs:
         node-version: '20'
     - name: Install dependencies
       run: |
-        pip install setuptools wheel twine
+        pip install build
     - name: Build web assets
       run: |
         cd web
@@ -31,14 +31,14 @@ jobs:
         npm run build
     - name: Build Python package
       run: |
-        python setup.py sdist bdist_wheel
+        python -m build
     - uses: actions/upload-artifact@v4
       with:
         name: dist
         path: dist
 
   release:
-    needs:  build
+    needs: build
     name: Upload release to PyPI
     runs-on: ubuntu-latest
     environment:
@@ -53,4 +53,3 @@ jobs:
         path: dist
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-
