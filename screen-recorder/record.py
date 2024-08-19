@@ -14,11 +14,8 @@ import imagehash
 import argparse
 from .utils import write_image_metadata
 
-# Define the base directory as a global variable
-BASE_DIR = os.path.expanduser("~/tmp")
 
-
-def get_active_window_title():
+def get_active_window_info():
     active_app = NSWorkspace.sharedWorkspace().activeApplication()
     app_name = active_app["NSApplicationName"]
     app_pid = active_app["NSApplicationProcessIdentifier"]
@@ -30,40 +27,42 @@ def get_active_window_title():
         if window["kCGWindowOwnerPID"] == app_pid:
             window_title = window.get("kCGWindowName", "")
             if window_title:
-                return f"{app_name} - {window_title}"
+                return app_name, window_title
 
-    return app_name  # 如果没有找到窗口标题，则只返回应用名称
+    return app_name, ""  # 如果没有找到窗口标题，则返回空字符串作为标题
 
 
-def load_screen_sequences(date):
+def load_screen_sequences(base_dir, date):
     try:
-        with open(os.path.join(BASE_DIR, date, ".screen_sequences"), "r") as f:
+        with open(os.path.join(base_dir, date, ".screen_sequences"), "r") as f:
             return json.load(f)
     except FileNotFoundError:
         return {}
 
 
-def save_screen_sequences(screen_sequences, date):
-    with open(os.path.join(BASE_DIR, date, ".screen_sequences"), "w") as f:
+def save_screen_sequences(base_dir, screen_sequences, date):
+    with open(os.path.join(base_dir, date, ".screen_sequences"), "w") as f:
         json.dump(screen_sequences, f)
         f.flush()
         os.fsync(f.fileno())
 
 
-def take_screenshot(previous_hashes, threshold, screen_sequences, date, timestamp):
+def take_screenshot(
+    base_dir, previous_hashes, threshold, screen_sequences, date, timestamp
+):
     screenshots = []
 
     # 获取连接的显示器数量
     result = subprocess.check_output(["system_profiler", "SPDisplaysDataType", "-json"])
     display_count = len(json.loads(result)["SPDisplaysDataType"][0]["spdisplays_ndrvs"])
 
-    window_title = get_active_window_title()
+    app_name, window_title = get_active_window_info()
 
     # 创建日期目录
-    os.makedirs(os.path.join(BASE_DIR, date), exist_ok=True)
+    os.makedirs(os.path.join(base_dir, date), exist_ok=True)
 
     # 打开 worklog 文件
-    worklog_path = os.path.join(BASE_DIR, date, "worklog")
+    worklog_path = os.path.join(base_dir, date, "worklog")
     with open(worklog_path, "a") as worklog:
         for display in range(display_count):
             # 获取显示器名称
@@ -74,7 +73,7 @@ def take_screenshot(previous_hashes, threshold, screen_sequences, date, timestam
 
             # 生成临时 PNG 文件名
             temp_filename = os.path.join(
-                os.path.join(BASE_DIR, date),
+                os.path.join(base_dir, date),
                 f"temp_screenshot-{timestamp}-of-{screen_name}.png",
             )
 
@@ -87,7 +86,7 @@ def take_screenshot(previous_hashes, threshold, screen_sequences, date, timestam
             with Image.open(temp_filename) as img:
                 img = img.convert("RGB")
                 jpeg_filename = os.path.join(
-                    os.path.join(BASE_DIR, date),
+                    os.path.join(base_dir, date),
                     f"screenshot-{timestamp}-of-{screen_name}.jpg",
                 )
 
@@ -118,6 +117,7 @@ def take_screenshot(previous_hashes, threshold, screen_sequences, date, timestam
                 # 准备元数据
                 metadata = {
                     "timestamp": timestamp,
+                    "active_app": app_name,
                     "active_window": window_title,
                     "screen_name": screen_name,
                     "sequence": screen_sequences[screen_name],  # 添加序列号到元数据
@@ -126,7 +126,7 @@ def take_screenshot(previous_hashes, threshold, screen_sequences, date, timestam
                 # 使用 write_image_metadata 函数写入元数据
                 img.save(jpeg_filename, format="JPEG", quality=85)
                 write_image_metadata(jpeg_filename, metadata)
-                save_screen_sequences(screen_sequences, date)
+                save_screen_sequences(base_dir, screen_sequences, date)
 
             # 删除临时 PNG 文件
             os.remove(temp_filename)
@@ -152,7 +152,12 @@ def main():
     parser.add_argument(
         "--threshold", type=int, default=4, help="Threshold for image similarity"
     )
+    parser.add_argument(
+        "--base-dir", type=str, default="~/tmp", help="Base directory for screenshots"
+    )
     args = parser.parse_args()
+
+    base_dir = os.path.expanduser(args.base_dir)
 
     previous_hashes = {}
 
@@ -161,9 +166,14 @@ def main():
             if not is_screen_locked():
                 date = time.strftime("%Y%m%d")
                 timestamp = time.strftime("%Y%m%d-%H%M%S")
-                screen_sequences = load_screen_sequences(date)
+                screen_sequences = load_screen_sequences(base_dir, date)
                 screenshot_files = take_screenshot(
-                    previous_hashes, args.threshold, screen_sequences, date, timestamp
+                    base_dir,
+                    previous_hashes,
+                    args.threshold,
+                    screen_sequences,
+                    date,
+                    timestamp,
                 )
                 for screenshot_file in screenshot_files:
                     print(f"Screenshot taken: {screenshot_file}")
