@@ -198,6 +198,8 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                         if file_type_group == "image":
                             metadata = read_metadata(absolute_file_path)
                             if metadata:
+                                if "active_window" in metadata and "active_app" not in metadata:
+                                    metadata["active_app"] = metadata["active_window"].split(" - ")[0]
                                 new_entity["metadata_entries"] = [
                                     {
                                         "key": key,
