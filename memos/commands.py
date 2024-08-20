@@ -209,6 +209,8 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                                     }
                                     for key, value in metadata.items() if key != IS_THUMBNAIL
                                 ]
+                                if "active_app" in metadata:
+                                    new_entity.setdefault("tags", []).append(metadata["active_app"])
                                 is_thumbnail = metadata.get(IS_THUMBNAIL, False)
 
                         existing_entity = existing_entities_dict.get(
