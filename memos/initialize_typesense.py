@@ -1,5 +1,5 @@
 import typesense
-from .config import settings
+from .config import settings, TYPESENSE_COLLECTION_NAME
 
 # Initialize Typesense client
 client = typesense.Client(
@@ -18,7 +18,7 @@ client = typesense.Client(
 
 # Define the schema for the Typesense collection
 schema = {
-    "name": "entities",
+    "name": TYPESENSE_COLLECTION_NAME,
     "enable_nested_fields": True,
     "fields": [
         {"name": "filepath", "type": "string", "infix": True},
@@ -63,7 +63,7 @@ schema = {
 
 
 def update_collection_fields(client, schema):
-    existing_collection = client.collections["entities"].retrieve()
+    existing_collection = client.collections[TYPESENSE_COLLECTION_NAME].retrieve()
     existing_fields = {field["name"]: field for field in existing_collection["fields"]}
     new_fields = {field["name"]: field for field in schema["fields"]}
 
@@ -80,12 +80,14 @@ def update_collection_fields(client, schema):
                     break
 
     if fields_to_add:
-        client.collections["entities"].update({"fields": fields_to_add})
+        client.collections[TYPESENSE_COLLECTION_NAME].update({"fields": fields_to_add})
         print(
-            f"Added/updated {len(fields_to_add)} fields in the 'entities' collection."
+            f"Added/updated {len(fields_to_add)} fields in the '{TYPESENSE_COLLECTION_NAME}' collection."
         )
     else:
-        print("No new fields to add or update in the 'entities' collection.")
+        print(
+            f"No new fields to add or update in the '{TYPESENSE_COLLECTION_NAME}' collection."
+        )
 
 
 if __name__ == "__main__":
@@ -95,13 +97,17 @@ if __name__ == "__main__":
 
     try:
         # Check if the collection exists
-        existing_collection = client.collections["entities"].retrieve()
+        existing_collection = client.collections[TYPESENSE_COLLECTION_NAME].retrieve()
 
         if force_recreate:
-            client.collections["entities"].delete()
-            print("Existing Typesense collection 'entities' deleted successfully.")
+            client.collections[TYPESENSE_COLLECTION_NAME].delete()
+            print(
+                f"Existing Typesense collection '{TYPESENSE_COLLECTION_NAME}' deleted successfully."
+            )
             client.collections.create(schema)
-            print("Typesense collection 'entities' recreated successfully.")
+            print(
+                f"Typesense collection '{TYPESENSE_COLLECTION_NAME}' recreated successfully."
+            )
         else:
             # Update the fields of the existing collection
             update_collection_fields(client, schema)
@@ -109,7 +115,9 @@ if __name__ == "__main__":
     except typesense.exceptions.ObjectNotFound:
         # Collection doesn't exist, create it
         client.collections.create(schema)
-        print("Typesense collection 'entities' created successfully.")
+        print(
+            f"Typesense collection '{TYPESENSE_COLLECTION_NAME}' created successfully."
+        )
 
     except Exception as e:
         print(f"An error occurred: {str(e)}")

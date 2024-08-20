@@ -13,12 +13,16 @@ class Settings(BaseSettings):
     typesense_protocol: str = "http"
     typesense_api_key: str = "xyz"
     typesense_connection_timeout_seconds: int = 2
+    typesense_collection_name: str = "entities"
 
 
 settings = Settings()
 
 # Define the default database path
 os.makedirs(settings.base_dir, exist_ok=True)
+
+# Global variable for Typesense collection name
+TYPESENSE_COLLECTION_NAME = settings.typesense_collection_name
 
 
 # Function to get the database path from environment variable or default

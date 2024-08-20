@@ -9,6 +9,7 @@ from .schemas import (
     MetadataIndexItem,
     EntitySearchResult,
 )
+from .config import TYPESENSE_COLLECTION_NAME
 
 
 def convert_metadata_value(metadata: EntityMetadata):
@@ -80,7 +81,7 @@ def bulk_upsert(client, entities):
 
     # Sync the entity data to Typesense
     try:
-        response = client.collections["entities"].documents.import_(
+        response = client.collections[TYPESENSE_COLLECTION_NAME].documents.import_(
             documents, {"action": "upsert"}
         )
         return response
@@ -132,7 +133,7 @@ def upsert(client, entity):
 
     # Sync the entity data to Typesense
     try:
-        client.collections["entities"].documents.upsert(entity_data.model_dump_json())
+        client.collections[TYPESENSE_COLLECTION_NAME].documents.upsert(entity_data.model_dump_json())
     except Exception as e:
         raise Exception(
             f"Failed to sync entity to Typesense: {str(e)}",
@@ -141,7 +142,7 @@ def upsert(client, entity):
 
 def remove_entity_by_id(client, entity_id):
     try:
-        client.collections["entities"].documents[entity_id].delete()
+        client.collections[TYPESENSE_COLLECTION_NAME].documents[entity_id].delete()
     except Exception as e:
         raise Exception(
             f"Failed to remove entity from Typesense: {str(e)}",
@@ -152,7 +153,7 @@ def list_all_entities(
     client, library_id: int, folder_id: int, limit=100, offset=0
 ) -> List[EntityIndexItem]:
     try:
-        response = client.collections["entities"].documents.search(
+        response = client.collections[TYPESENSE_COLLECTION_NAME].documents.search(
             {
                 "q": "*",
                 "filter_by": f"library_id:={library_id} && folder_id:={folder_id}",
@@ -227,7 +228,7 @@ def search_entities(
             "exclude_fields": "metadata_text,embedding",
             "sort_by": "_text_match:desc",
         }
-        search_results = client.collections["entities"].documents.search(
+        search_results = client.collections[TYPESENSE_COLLECTION_NAME].documents.search(
             search_parameters
         )
         return [
@@ -264,7 +265,7 @@ def search_entities(
 
 def fetch_entity_by_id(client, id: str) -> EntityIndexItem:
     try:
-        document = client.collections["entities"].documents[id].retrieve()
+        document = client.collections[TYPESENSE_COLLECTION_NAME].documents[id].retrieve()
         return EntitySearchResult(
             id=document["id"],
             filepath=document["filepath"],
