@@ -402,13 +402,6 @@ async def get_entity_index(entity_id: int) -> EntityIndexItem:
     tags=["entity"],
 )
 async def remove_entity_from_typesense(entity_id: int, db: Session = Depends(get_db)):
-    entity = crud.get_entity_by_id(entity_id, db)
-    if entity is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Entity not found",
-        )
-
     try:
         indexing.remove_entity_by_id(client, entity_id)
     except Exception as e:
