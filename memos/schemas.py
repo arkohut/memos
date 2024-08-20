@@ -174,6 +174,9 @@ class EntityIndexItem(BaseModel):
     filename: str
     size: int
     file_created_at: int = Field(..., description="Unix timestamp")
+    created_date: Optional[str] = None
+    created_month: Optional[str] = None
+    created_year: Optional[str] = None
     file_last_modified_at: int = Field(..., description="Unix timestamp")
     file_type: str
     file_type_group: str
@@ -191,6 +194,9 @@ class EntitySearchResult(BaseModel):
     filename: str
     size: int
     file_created_at: int = Field(..., description="Unix timestamp")
+    created_date: Optional[str] = None
+    created_month: Optional[str] = None
+    created_year: Optional[str] = None
     file_last_modified_at: int = Field(..., description="Unix timestamp")
     file_type: str
     file_type_group: str

@@ -1,5 +1,6 @@
 import json
 from typing import List
+from datetime import datetime
 
 from .schemas import (
     MetadataType,
@@ -15,6 +16,26 @@ def convert_metadata_value(metadata: EntityMetadata):
         return json.loads(metadata.value)
     else:
         return metadata.value
+
+
+def parse_date_fields(entity):
+    timestamp_metadata = next(
+        (m for m in entity.metadata_entries if m.key == "timestamp"), None
+    )
+
+    if timestamp_metadata and len(timestamp_metadata.value) == 15:
+        try:
+            dt = datetime.strptime(timestamp_metadata.value, "%Y%m%d-%H%M%S")
+        except ValueError:
+            dt = entity.file_created_at
+    else:
+        dt = entity.file_created_at
+
+    return {
+        "created_date": dt.strftime("%Y-%m-%d"),
+        "created_month": dt.strftime("%Y-%m"),
+        "created_year": dt.strftime("%Y"),
+    }
 
 
 def bulk_upsert(client, entities):
@@ -52,13 +73,16 @@ def bulk_upsert(client, entities):
                     for metadata in entity.metadata_entries
                 ]
             ),
-        ).model_dump(mode='json')
+            **parse_date_fields(entity),
+        ).model_dump(mode="json")
         for entity in entities
     ]
 
     # Sync the entity data to Typesense
     try:
-        response = client.collections["entities"].documents.import_(documents, {'action': 'upsert'})
+        response = client.collections["entities"].documents.import_(
+            documents, {"action": "upsert"}
+        )
         return response
     except Exception as e:
         raise Exception(
@@ -67,6 +91,7 @@ def bulk_upsert(client, entities):
 
 
 def upsert(client, entity):
+    date_fields = parse_date_fields(entity)
     entity_data = EntityIndexItem(
         id=str(entity.id),
         filepath=entity.filepath,
@@ -100,6 +125,9 @@ def upsert(client, entity):
                 for metadata in entity.metadata_entries
             ]
         ),
+        created_date=date_fields.get("created_date"),
+        created_month=date_fields.get("created_month"),
+        created_year=date_fields.get("created_year"),
     )
 
     # Sync the entity data to Typesense
@@ -153,6 +181,9 @@ def list_all_entities(
                     for entry in hit["document"]["metadata_entries"]
                 ],
                 metadata_text=hit["document"]["metadata_text"],
+                created_date=hit["document"].get("created_date"),
+                created_month=hit["document"].get("created_month"),
+                created_year=hit["document"].get("created_year"),
             )
             for hit in response["hits"]
         ]
@@ -219,6 +250,9 @@ def search_entities(
                     )
                     for entry in hit["document"]["metadata_entries"]
                 ],
+                created_date=hit["document"]["created_date"],
+                created_month=hit["document"]["created_month"],
+                created_year=hit["document"]["created_year"],
             )
             for hit in search_results["hits"]
         ]
@@ -250,6 +284,9 @@ def fetch_entity_by_id(client, id: str) -> EntityIndexItem:
                 )
                 for entry in document["metadata_entries"]
             ],
+            created_date=document.get("created_date"),
+            created_month=document.get("created_month"),
+            created_year=document.get("created_year"),
         )
     except Exception as e:
         raise Exception(
