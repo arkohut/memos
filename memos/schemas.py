@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, DirectoryPath, HttpUrl, Field
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from datetime import datetime
 from enum import Enum
 
@@ -205,3 +205,55 @@ class EntitySearchResult(BaseModel):
     folder_id: int
     tags: List[str]
     metadata_entries: List[MetadataIndexItem]
+    facets: Optional[Dict[str, Any]] = None
+
+
+class FacetCount(BaseModel):
+    count: int
+    highlighted: str
+    value: str
+
+class FacetStats(BaseModel):
+    total_values: int
+
+class Facet(BaseModel):
+    counts: List[FacetCount]
+    field_name: str
+    sampled: bool
+    stats: FacetStats
+
+class TextMatchInfo(BaseModel):
+    best_field_score: str
+    best_field_weight: int
+    fields_matched: int
+    num_tokens_dropped: int
+    score: str
+    tokens_matched: int
+    typo_prefix_score: int
+
+class HybridSearchInfo(BaseModel):
+    rank_fusion_score: float
+
+class SearchHit(BaseModel):
+    document: EntitySearchResult
+    highlight: Dict[str, Any] = {}
+    highlights: List[Any] = []
+    hybrid_search_info: HybridSearchInfo
+    text_match: int
+    text_match_info: TextMatchInfo
+
+class RequestParams(BaseModel):
+    collection_name: str
+    first_q: str
+    per_page: int
+    q: str
+
+class SearchResult(BaseModel):
+    facet_counts: List[Facet]
+    found: int
+    hits: List[SearchHit]
+    out_of: int
+    page: int
+    request_params: RequestParams
+    search_cutoff: bool
+    search_time_ms: int

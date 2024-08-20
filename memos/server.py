@@ -39,6 +39,7 @@ from .schemas import (
     EntityIndexItem,
     MetadataIndexItem,
     EntitySearchResult,
+    SearchResult
 )
 
 # Import the logging configuration
@@ -439,24 +440,26 @@ def list_entitiy_indices_in_folder(
     return indexing.list_all_entities(client, library_id, folder_id, limit, offset)
 
 
-@app.get("/search", response_model=List[EntitySearchResult], tags=["search"])
+@app.get("/search", response_model=SearchResult, tags=["search"])
 async def search_entities(
     q: str,
     library_ids: str = Query(None, description="Comma-separated list of library IDs"),
     folder_ids: str = Query(None, description="Comma-separated list of folder IDs"),
+    tags: str = Query(None, description="Comma-separated list of tags"),
+    created_dates: str = Query(None, description="Comma-separated list of created dates in YYYY-MM-DD format"),
     limit: Annotated[int, Query(ge=1, le=200)] = 48,
     offset: int = 0,
     start: int = None,
     end: int = None,
     db: Session = Depends(get_db),
 ):
-    library_ids = (
-        [int(id) for id in library_ids.split(",") if id] if library_ids else None
-    )
-    folder_ids = [int(id) for id in folder_ids.split(",") if id] if folder_ids else None
+    library_ids = [int(id) for id in library_ids.split(",")] if library_ids else None
+    folder_ids = [int(id) for id in folder_ids.split(",")] if folder_ids else None
+    tags = [tag.strip() for tag in tags.split(",")] if tags else None
+    created_dates = [date.strip() for date in created_dates.split(",")] if created_dates else None
     try:
         return indexing.search_entities(
-            client, q, library_ids, folder_ids, limit, offset, start, end
+            client, q, library_ids, folder_ids, tags, created_dates, limit, offset, start, end
         )
     except Exception as e:
         print(f"Error searching entities: {e}")
