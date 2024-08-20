@@ -25,9 +25,9 @@ schema = {
         {"name": "filename", "type": "string", "infix": True},
         {"name": "size", "type": "int32"},
         {"name": "file_created_at", "type": "int64", "facet": False},
-        {"name": "created_date", "type": "string", "facet": True, "optional": True},
-        {"name": "created_month", "type": "string", "facet": True, "optional": True},
-        {"name": "created_year", "type": "string", "facet": True, "optional": True},
+        {"name": "created_date", "type": "string", "facet": True, "optional": True, "sort": True},
+        {"name": "created_month", "type": "string", "facet": True, "optional": True, "sort": True},
+        {"name": "created_year", "type": "string", "facet": True, "optional": True, "sort": True},
         {"name": "file_last_modified_at", "type": "int64", "facet": False},
         {"name": "file_type", "type": "string", "facet": True},
         {"name": "file_type_group", "type": "string", "facet": True},
@@ -40,6 +40,7 @@ schema = {
             "facet": True,
             "optional": True,
             "locale": "zh",
+            "sort": True
         },
         {
             "name": "metadata_entries",
