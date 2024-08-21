@@ -17,6 +17,8 @@ def write_image_metadata(image_path, metadata):
         metadata_info = PngInfo()
         metadata_info.add_text("Description", json.dumps(metadata))
         img.save(image_path, "PNG", pnginfo=metadata_info)
+    elif image_path.lower().endswith(".webp"):
+        img.save(image_path, "WebP", quality=85, metadata=json.dumps(metadata))
     else:
         print(f"Skipping unsupported file format: {image_path}")
 
@@ -37,6 +39,12 @@ def get_image_metadata(image_path):
         existing_description = img.info.get("Description", "{}")
         try:
             return json.loads(existing_description)
+        except json.JSONDecodeError:
+            return {}
+    elif image_path.lower().endswith(".webp"):
+        existing_metadata = img.info.get("metadata", "{}")
+        try:
+            return json.loads(existing_metadata)
         except json.JSONDecodeError:
             return {}
     else:

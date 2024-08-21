@@ -82,12 +82,12 @@ def take_screenshot(
                 ["screencapture", "-C", "-x", "-D", str(display + 1), temp_filename]
             )
 
-            # 压缩图像为 JPEG 并添加元数据
+            # 压缩图像为 WebP 并添加元数据
             with Image.open(temp_filename) as img:
                 img = img.convert("RGB")
-                jpeg_filename = os.path.join(
+                webp_filename = os.path.join(
                     os.path.join(base_dir, date),
-                    f"screenshot-{timestamp}-of-{screen_name}.jpg",
+                    f"screenshot-{timestamp}-of-{screen_name}.webp",
                 )
 
                 # 计算当前截图的哈希值
@@ -124,15 +124,15 @@ def take_screenshot(
                 }
 
                 # 使用 write_image_metadata 函数写入元数据
-                img.save(jpeg_filename, format="JPEG", quality=85)
-                write_image_metadata(jpeg_filename, metadata)
+                img.save(webp_filename, format="WebP", quality=85)
+                write_image_metadata(webp_filename, metadata)
                 save_screen_sequences(base_dir, screen_sequences, date)
 
             # 删除临时 PNG 文件
             os.remove(temp_filename)
 
-            # 添加 JPEG 文件到截图列表
-            screenshots.append(jpeg_filename)
+            # 添加 WebP 文件到截图列表
+            screenshots.append(webp_filename)
             # 记录成功的截图
             worklog.write(f"{timestamp} - {screen_name} - Saved\n")
 
