@@ -8,7 +8,7 @@ import win32gui
 import win32process
 import psutil
 from mss import mss
-from .utils import write_image_metadata
+from memos.utils import write_image_metadata
 import win32api
 import pywintypes
 import ctypes

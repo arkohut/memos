@@ -12,7 +12,7 @@ from Quartz import (
 import json
 import imagehash
 import argparse
-from .utils import write_image_metadata
+from memos.utils import write_image_metadata
 
 
 def get_active_window_info():
