@@ -30,7 +30,7 @@ file_detector = Magika()
 
 BASE_URL = "http://localhost:8080"
 
-ignore_files = [".DS_Store"]
+ignore_files = [".DS_Store", ".screen_sequences", "worklog"]
 
 # Configure logging
 logging.basicConfig(
@@ -272,7 +272,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
             asyncio.as_completed(tasks),
             desc=f"Processing {folder_path}",
             total=len(tasks),
-            leave=False,
+            leave=True,
         ):
             file_path, file_status, succeeded, response = await future
             if file_status == FileStatus.ADDED:
