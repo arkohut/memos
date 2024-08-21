@@ -242,6 +242,7 @@ def search_entities(
             "exclude_fields": "metadata_text,embedding",
             "sort_by": "_text_match:desc",
             "facet_by": "created_date,created_month,created_year,tags",
+            "prefix": False,  # Added this line to disable prefix searching
         }
 
         search_results = client.collections[TYPESENSE_COLLECTION_NAME].documents.search(

@@ -54,9 +54,13 @@ schema = {
             "type": "float[]",
             "embed": {
                 "from": ["filepath", "filename", "metadata_text"],
-                "model_config": {"model_name": "ts/multilingual-e5-small"},
+                "model_config": {
+                    "model_name": "openai/bge-m3",
+                    "api_key": "xxx",
+                    "url": "http://host.docker.internal:11434"
+                }
             },
-            "optional": True,
+            "optional": True,       
         },
     ],
     "token_separators": [":", "/", " ", "\\"],
