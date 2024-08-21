@@ -45,48 +45,58 @@ def take_screenshot(base_dir, previous_hashes, threshold, screen_sequences, date
     screenshots = []
     app_name, window_title = get_active_window_info()
 
+    # Create date directory
     os.makedirs(os.path.join(base_dir, date), exist_ok=True)
     worklog_path = os.path.join(base_dir, date, "worklog")
 
     monitor_infos = get_monitor_info()
 
+    # Open worklog file
     with open(worklog_path, "a") as worklog:
         with mss() as sct:
-            for i, monitor in enumerate(sct.monitors[1:], 1):  # 跳过第一个全屏显示器
+            for i, monitor in enumerate(sct.monitors[1:], 1):  # Skip the first full-screen monitor
                 monitor_name = monitor_infos.get(f"\\\\.\\DISPLAY{i}", f"screen_{i}").name
                 safe_monitor_name = ''.join(c for c in monitor_name if c.isalnum() or c in ('_', '-'))
-                print(f"处理显示器: {safe_monitor_name}")  # 调试输出
+                print(f"Processing monitor: {safe_monitor_name}")  # Debug output
                 
                 jpeg_filename = os.path.join(base_dir, date, f"screenshot-{timestamp}-of-{safe_monitor_name}.jpg")
                 
                 screen = sct.grab(monitor)
                 img = Image.frombytes("RGB", screen.size, screen.bgra, "raw", "BGRX")
                 
+                # Calculate hash of current screenshot
                 current_hash = imagehash.phash(img)
 
+                # Check if current screenshot is similar to the previous one
                 if safe_monitor_name in previous_hashes and current_hash - previous_hashes[safe_monitor_name] < threshold:
-                    print(f"截图 {safe_monitor_name} 与上一张相似。跳过。")
+                    print(f"Screenshot for {safe_monitor_name} is similar to the previous one. Skipping.")
                     worklog.write(
                         f"{timestamp} - {safe_monitor_name} - Skipped (similar to previous)\n"
                     )
                     continue
 
+                # Update previous screenshot hash
                 previous_hashes[safe_monitor_name] = current_hash
+
+                # Update sequence number
                 screen_sequences[safe_monitor_name] = screen_sequences.get(safe_monitor_name, 0) + 1
 
+                # Prepare metadata
                 metadata = {
                     "timestamp": timestamp,
                     "active_app": app_name,
                     "active_window": window_title,
                     "screen_name": safe_monitor_name,
-                    "sequence": screen_sequences[safe_monitor_name],
+                    "sequence": screen_sequences[safe_monitor_name],  # Add sequence number to metadata
                 }
 
+                # Save image and write metadata
                 img.save(jpeg_filename, format="JPEG", quality=85)
                 write_image_metadata(jpeg_filename, metadata)
                 save_screen_sequences(base_dir, screen_sequences, date)
 
                 screenshots.append(jpeg_filename)
+                # Record successful screenshot
                 worklog.write(f"{timestamp} - {safe_monitor_name} - Saved\n")
 
     return screenshots
