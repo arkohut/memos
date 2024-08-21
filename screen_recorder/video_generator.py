@@ -1,14 +1,11 @@
 import argparse
-import json
 import os
-import glob
 import subprocess
 from PIL import Image
-import piexif
-from PIL.PngImagePlugin import PngInfo
-
 from multiprocessing import Pool, Manager
 from tqdm import tqdm
+
+from memos.utils import write_image_metadata, get_image_metadata
 
 parser = argparse.ArgumentParser(description="Compress and save image(s) with metadata")
 parser.add_argument("path", type=str, help="path to the directory or image file")
@@ -20,69 +17,33 @@ def compress_and_save_image(image_path, order):
     # Open the image
     img = Image.open(image_path)
 
-    if image_path.endswith((".jpg", ".jpeg", ".tiff")):
-        # Add order to the image metadata for JPEG/TIFF
-        exif_dict = piexif.load(image_path)
-        existing_description = exif_dict["0th"].get(
-            piexif.ImageIFD.ImageDescription, b"{}"
-        )
-        try:
-            existing_data = json.loads(existing_description.decode("utf-8"))
-        except json.JSONDecodeError:
-            existing_data = {}
-        existing_data["sequence"] = order
-        existing_data["is_thumbnail"] = True
-        updated_description = json.dumps(existing_data).encode("utf-8")
-        exif_dict["0th"][piexif.ImageIFD.ImageDescription] = updated_description
-        exif_bytes = piexif.dump(exif_dict)
-    elif image_path.endswith(".png"):
-        # Add order to the image metadata for PNG
-        metadata = PngInfo()
-        existing_description = img.info.get("Description", "{}")
-        try:
-            existing_data = json.loads(existing_description)
-        except json.JSONDecodeError:
-            existing_data = {}
-        existing_data["sequence"] = order
-        existing_data["is_thumbnail"] = True
-        updated_description = json.dumps(existing_data)
-        metadata.add_text("Description", updated_description)
-    else:
-        print(f"Skipping unsupported file format: {image_path}")
-        return
+    existing_metadata = get_image_metadata(image_path)
+    existing_metadata["sequence"] = order
+    existing_metadata["is_thumbnail"] = True
 
     # Compress the image
     img = img.convert("RGB")
-    if image_path.endswith(".png"):
-        img.save(image_path, "PNG", optimize=True, pnginfo=metadata)
-    else:
-        img.save(image_path, "JPEG", quality=30)  # Lower quality for higher compression
-
-    # Resize the image proportionally
     max_size = (960, 960)  # Define the maximum size for the thumbnail
     img.thumbnail(max_size)
-    if image_path.endswith(".png"):
-        img.save(image_path, "PNG", optimize=True, pnginfo=metadata)
-    else:
-        img.save(image_path, "JPEG", quality=30)  # Lower quality for higher compression
 
-    if image_path.endswith((".jpg", ".jpeg", ".tiff")):
-        # Insert updated EXIF data for JPEG/TIFF
-        piexif.insert(exif_bytes, image_path)
+    write_image_metadata(image_path, existing_metadata)
+
+    if image_path.lower().endswith(".png"):
+        img.save(image_path, "PNG", optimize=True)
+    elif image_path.lower().endswith(".webp"):
+        img.save(image_path, "WebP", quality=30)
+    else:  # JPEG and TIFF
+        img.save(image_path, "JPEG", quality=30)
 
     return image_path
 
 
 def process_image(args):
     filename, screens = args
-    if filename.endswith(
-        (".jpg", ".png")
-    ):  # consider files with .jpg or .png extension
-        parts = filename.split("-of-")  # split the file name at the "-of-" string
-        display_name = parts[-1].rsplit(".", 1)[
-            0
-        ]  # get the last part and remove the extension
-        screens.append(display_name)  # add the display name to the set of screens
+    if filename.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+        parts = filename.split("-of-")
+        display_name = parts[-1].rsplit(".", 1)[0]
+        screens.append(display_name)
 
         # call the function with the filename of the image
         # add_datetime_to_image(os.path.join(directory, filename), os.path.join(directory, filename))
@@ -107,12 +68,21 @@ def process_directory(directory):
         print(screens)
 
         for screen in screens:
-            # Check if there are jpg or png files for the screen
+            # Check if there are jpg, png, or webp files for the screen
             jpg_files = [
-                f for f in os.listdir(directory) if f.endswith(".jpg") and screen in f
+                f
+                for f in os.listdir(directory)
+                if f.lower().endswith((".jpg", ".jpeg")) and screen in f
             ]
             png_files = [
-                f for f in os.listdir(directory) if f.endswith(".png") and screen in f
+                f
+                for f in os.listdir(directory)
+                if f.lower().endswith(".png") and screen in f
+            ]
+            webp_files = [
+                f
+                for f in os.listdir(directory)
+                if f.lower().endswith(".webp") and screen in f
             ]
 
             if jpg_files:
@@ -121,6 +91,9 @@ def process_directory(directory):
             elif png_files:
                 input_pattern = f"{directory}/*{screen}*.png"
                 files = png_files
+            elif webp_files:
+                input_pattern = f"{directory}/*{screen}*.webp"
+                files = webp_files
             else:
                 continue  # Skip if no matching files are found
 
@@ -129,7 +102,7 @@ def process_directory(directory):
                 for frame, filename in enumerate(sorted(files)):
                     f.write(f"{frame},{filename}\n")
 
-            # Define the command to run
+            # Modify the ffmpeg command to support WebP
             command = f"ffmpeg -y -framerate 15 -pattern_type glob -i '{input_pattern}' -c:v libx264 -pix_fmt yuv420p {directory}/{screen}.mp4"
 
             # Start the process
@@ -147,20 +120,12 @@ def process_directory(directory):
 
         # Compress and save all images after video generation
         for screen in screens:
-            # Check if there are jpg or png files for the screen
-            jpg_files = [
-                f for f in os.listdir(directory) if f.endswith(".jpg") and screen in f
+            files = [
+                f
+                for f in os.listdir(directory)
+                if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
+                and screen in f
             ]
-            png_files = [
-                f for f in os.listdir(directory) if f.endswith(".png") and screen in f
-            ]
-
-            if jpg_files:
-                files = jpg_files
-            elif png_files:
-                files = png_files
-            else:
-                continue  # Skip if no matching files are found
 
             for frame, filename in enumerate(
                 tqdm(sorted(files), desc=f"Compressing {screen} images", unit="file")
