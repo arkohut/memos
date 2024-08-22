@@ -4,7 +4,7 @@ import os
 import json
 import argparse
 import imagehash
-from PIL import ImageGrab
+from PIL import ImageGrab, Image
 import win32gui
 import win32process
 import psutil
@@ -49,9 +49,10 @@ def take_screenshot(base_dir, previous_hashes, threshold, screen_sequences, date
             safe_monitor_name = ''.join(c for c in monitor.name if c.isalnum() or c in ('_', '-'))
             logging.info(f"Processing monitor: {safe_monitor_name}")
             
-            jpeg_filename = os.path.join(base_dir, date, f"screenshot-{timestamp}-of-{safe_monitor_name}.jpg")
+            webp_filename = os.path.join(base_dir, date, f"screenshot-{timestamp}-of-{safe_monitor_name}.webp")
             
             img = ImageGrab.grab(bbox=(monitor.x, monitor.y, monitor.x + monitor.width, monitor.y + monitor.height))
+            img = img.convert("RGB")
             current_hash = imagehash.phash(img)
 
             if safe_monitor_name in previous_hashes and current_hash - previous_hashes[safe_monitor_name] < threshold:
@@ -70,11 +71,11 @@ def take_screenshot(base_dir, previous_hashes, threshold, screen_sequences, date
                 "sequence": screen_sequences[safe_monitor_name],
             }
 
-            img.save(jpeg_filename, format="JPEG", quality=85)
-            write_image_metadata(jpeg_filename, metadata)
+            img.save(webp_filename, format="WebP", quality=85)
+            write_image_metadata(webp_filename, metadata)
             save_screen_sequences(base_dir, screen_sequences, date)
 
-            screenshots.append(jpeg_filename)
+            screenshots.append(webp_filename)
             worklog.write(f"{timestamp} - {safe_monitor_name} - Saved\n")
 
     return screenshots
