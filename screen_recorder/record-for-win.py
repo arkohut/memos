@@ -1,3 +1,5 @@
+import logging
+import datetime
 import time
 import os
 import json
@@ -14,6 +16,9 @@ import pywintypes
 import ctypes
 import ctypes.wintypes
 from screeninfo import get_monitors
+
+# 在文件开头添加日志配置
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_monitor_info():
     return {monitor.name: monitor for monitor in get_monitors()}
@@ -57,7 +62,7 @@ def take_screenshot(base_dir, previous_hashes, threshold, screen_sequences, date
             for i, monitor in enumerate(sct.monitors[1:], 1):  # Skip the first full-screen monitor
                 monitor_name = monitor_infos.get(f"\\\\.\\DISPLAY{i}", f"screen_{i}").name
                 safe_monitor_name = ''.join(c for c in monitor_name if c.isalnum() or c in ('_', '-'))
-                print(f"Processing monitor: {safe_monitor_name}")  # Debug output
+                logging.info(f"Processing monitor: {safe_monitor_name}")  # Debug output
                 
                 jpeg_filename = os.path.join(base_dir, date, f"screenshot-{timestamp}-of-{safe_monitor_name}.jpg")
                 
@@ -69,7 +74,7 @@ def take_screenshot(base_dir, previous_hashes, threshold, screen_sequences, date
 
                 # Check if current screenshot is similar to the previous one
                 if safe_monitor_name in previous_hashes and current_hash - previous_hashes[safe_monitor_name] < threshold:
-                    print(f"Screenshot for {safe_monitor_name} is similar to the previous one. Skipping.")
+                    logging.info(f"Screenshot for {safe_monitor_name} is similar to the previous one. Skipping.")
                     worklog.write(
                         f"{timestamp} - {safe_monitor_name} - Skipped (similar to previous)\n"
                     )
@@ -134,11 +139,11 @@ def main():
                     timestamp,
                 )
                 for screenshot_file in screenshot_files:
-                    print(f"Screenshot taken: {screenshot_file}")
+                    logging.info(f"Screenshot taken: {screenshot_file}")
             else:
-                print("Screen is locked. Skipping screenshot.")
+                logging.info("Screen is locked. Skipping screenshot.")
         except Exception as e:
-            print(f"An error occurred: {str(e)}. Skipping this iteration.")
+            logging.error(f"An error occurred: {str(e)}. Skipping this iteration.")
 
         time.sleep(5)
 

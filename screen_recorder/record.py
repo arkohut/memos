@@ -1,3 +1,4 @@
+import logging
 import time
 import subprocess
 from AppKit import NSWorkspace
@@ -14,6 +15,8 @@ import imagehash
 import argparse
 from memos.utils import write_image_metadata
 
+# 在文件开头添加日志配置
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_active_window_info():
     active_app = NSWorkspace.sharedWorkspace().activeApplication()
@@ -98,9 +101,7 @@ def take_screenshot(
                     screen_name in previous_hashes
                     and current_hash - previous_hashes[screen_name] < threshold
                 ):
-                    print(
-                        f"Screenshot for {screen_name} is similar to the previous one. Skipping."
-                    )
+                    logging.info(f"Screenshot for {screen_name} is similar to the previous one. Skipping.")
                     os.remove(temp_filename)
                     # 记录跳过的截图
                     worklog.write(
@@ -176,11 +177,11 @@ def main():
                     timestamp,
                 )
                 for screenshot_file in screenshot_files:
-                    print(f"Screenshot taken: {screenshot_file}")
+                    logging.info(f"Screenshot taken: {screenshot_file}")
             else:
-                print("Screen is locked. Skipping screenshot.")
+                logging.info("Screen is locked. Skipping screenshot.")
         except Exception as e:
-            print(f"An error occurred: {str(e)}. Skipping this iteration.")
+            logging.error(f"An error occurred: {str(e)}. Skipping this iteration.")
 
         time.sleep(5)
 
