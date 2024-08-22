@@ -29,7 +29,7 @@ def get_image_metadata(image_path):
     image_path_str = str(image_path)
 
     if image_path_str.lower().endswith((".jpg", ".jpeg", ".tiff")):
-        exif_dict = piexif.load(image_path)
+        exif_dict = piexif.load(str(image_path))  # Convert Path object to string
         existing_description = exif_dict["0th"].get(
             piexif.ImageIFD.ImageDescription, b"{}"
         )
