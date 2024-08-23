@@ -1,7 +1,7 @@
 import os
 import httpx
 import uvicorn
-from fastapi import FastAPI, HTTPException, Depends, status, Query, Request
+from fastapi import FastAPI, HTTPException, Depends, status, Query, Request, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -20,6 +20,7 @@ from .read_metadata import read_metadata
 import typesense
 
 from .config import get_database_path, settings
+from .plugins.vlm import main as vlm_main
 from . import crud
 from . import indexing
 from .schemas import (
@@ -39,7 +40,7 @@ from .schemas import (
     EntityIndexItem,
     MetadataIndexItem,
     EntitySearchResult,
-    SearchResult
+    SearchResult,
 )
 
 # Import the logging configuration
@@ -446,7 +447,9 @@ async def search_entities(
     library_ids: str = Query(None, description="Comma-separated list of library IDs"),
     folder_ids: str = Query(None, description="Comma-separated list of folder IDs"),
     tags: str = Query(None, description="Comma-separated list of tags"),
-    created_dates: str = Query(None, description="Comma-separated list of created dates in YYYY-MM-DD format"),
+    created_dates: str = Query(
+        None, description="Comma-separated list of created dates in YYYY-MM-DD format"
+    ),
     limit: Annotated[int, Query(ge=1, le=200)] = 48,
     offset: int = 0,
     start: int = None,
@@ -456,10 +459,21 @@ async def search_entities(
     library_ids = [int(id) for id in library_ids.split(",")] if library_ids else None
     folder_ids = [int(id) for id in folder_ids.split(",")] if folder_ids else None
     tags = [tag.strip() for tag in tags.split(",")] if tags else None
-    created_dates = [date.strip() for date in created_dates.split(",")] if created_dates else None
+    created_dates = (
+        [date.strip() for date in created_dates.split(",")] if created_dates else None
+    )
     try:
         return indexing.search_entities(
-            client, q, library_ids, folder_ids, tags, created_dates, limit, offset, start, end
+            client,
+            q,
+            library_ids,
+            folder_ids,
+            tags,
+            created_dates,
+            limit,
+            offset,
+            start,
+            end,
         )
     except Exception as e:
         print(f"Error searching entities: {e}")
@@ -575,7 +589,7 @@ def is_image(file_path: Path) -> bool:
 def get_thumbnail_info(metadata: dict) -> tuple:
     if not metadata:
         return None, None, None
-    
+
     if not metadata.get("sequence"):
         return None, None, False
 
@@ -643,11 +657,20 @@ async def get_file(file_path: str):
         raise HTTPException(status_code=404, detail="File not found")
 
 
+# Add VLM plugin router
+if settings.vlm.enabled:
+    print("VLM plugin is enabled")
+    vlm_main.init_plugin(settings.vlm)
+    app.include_router(vlm_main.router, prefix=f"/plugins/{vlm_main.PLUGIN_NAME}")
+
+
 def run_server():
     print("Database path:", get_database_path())
     print(
         f"Typesense connection info: Host: {settings.typesense_host}, Port: {settings.typesense_port}, Protocol: {settings.typesense_protocol}"
     )
+    print(f"VLM plugin enabled: {settings.vlm}")
+
     uvicorn.run(
         "memos.server:app",
         host="0.0.0.0",
