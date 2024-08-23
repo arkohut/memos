@@ -39,8 +39,7 @@ schema = {
             "type": "string[]",
             "facet": True,
             "optional": True,
-            "locale": "zh",
-            "sort": True
+            "locale": "zh"
         },
         {
             "name": "metadata_entries",
@@ -55,9 +54,9 @@ schema = {
             "embed": {
                 "from": ["filepath", "filename", "metadata_text"],
                 "model_config": {
-                    "model_name": "openai/bge-m3",
+                    "model_name": "openai/shaw/dmeta-embedding-zh",
                     "api_key": "xxx",
-                    "url": "http://host.docker.internal:11434"
+                    "url": "http://localhost:11434"
                 }
             },
             "optional": True,       
