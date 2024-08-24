@@ -198,19 +198,31 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                         if file_type_group == "image":
                             metadata = read_metadata(absolute_file_path)
                             if metadata:
-                                if "active_window" in metadata and "active_app" not in metadata:
-                                    metadata["active_app"] = metadata["active_window"].split(" - ")[0]
+                                if (
+                                    "active_window" in metadata
+                                    and "active_app" not in metadata
+                                ):
+                                    metadata["active_app"] = metadata[
+                                        "active_window"
+                                    ].split(" - ")[0]
                                 new_entity["metadata_entries"] = [
                                     {
                                         "key": key,
                                         "value": str(value),
                                         "source": MetadataSource.SYSTEM_GENERATED.value,
-                                        "data_type": "number" if isinstance(value, (int, float)) else "text",
+                                        "data_type": (
+                                            "number"
+                                            if isinstance(value, (int, float))
+                                            else "text"
+                                        ),
                                     }
-                                    for key, value in metadata.items() if key != IS_THUMBNAIL
+                                    for key, value in metadata.items()
+                                    if key != IS_THUMBNAIL
                                 ]
                                 if "active_app" in metadata:
-                                    new_entity.setdefault("tags", []).append(metadata["active_app"])
+                                    new_entity.setdefault("tags", []).append(
+                                        metadata["active_app"]
+                                    )
                                 is_thumbnail = metadata.get(IS_THUMBNAIL, False)
 
                         existing_entity = existing_entities_dict.get(
@@ -232,18 +244,31 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
 
                             # Ignore file changes for thumbnails
                             if is_thumbnail:
-                                new_entity["file_created_at"] = existing_entity["file_created_at"]
-                                new_entity["file_last_modified_at"] = existing_entity["file_last_modified_at"]
+                                new_entity["file_created_at"] = existing_entity[
+                                    "file_created_at"
+                                ]
+                                new_entity["file_last_modified_at"] = existing_entity[
+                                    "file_last_modified_at"
+                                ]
                                 new_entity["file_type"] = existing_entity["file_type"]
-                                new_entity["file_type_group"] = existing_entity["file_type_group"]
+                                new_entity["file_type_group"] = existing_entity[
+                                    "file_type_group"
+                                ]
                                 new_entity["size"] = existing_entity["size"]
 
                             # Merge existing metadata with new metadata
                             if new_entity.get("metadata_entries"):
-                                new_metadata_keys = {entry["key"] for entry in new_entity["metadata_entries"]}
-                                for existing_entry in existing_entity["metadata_entries"]:
+                                new_metadata_keys = {
+                                    entry["key"]
+                                    for entry in new_entity["metadata_entries"]
+                                }
+                                for existing_entry in existing_entity[
+                                    "metadata_entries"
+                                ]:
                                     if existing_entry["key"] not in new_metadata_keys:
-                                        new_entity["metadata_entries"].append(existing_entry)
+                                        new_entity["metadata_entries"].append(
+                                            existing_entry
+                                        )
 
                             if (
                                 force
@@ -259,7 +284,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                                         existing_entity,
                                     )
                                 )
-                        elif not is_thumbnail: # Ignore thumbnails
+                        elif not is_thumbnail:  # Ignore thumbnails
                             tasks.append(
                                 add_entity(
                                     client, semaphore, library_id, plugins, new_entity
@@ -647,6 +672,22 @@ def bind(
     else:
         print(
             f"Failed to bind plugin to library: {response.status_code} - {response.text}"
+        )
+
+
+@plugin_app.command("unbind")
+def unbind(
+    library_id: int = typer.Option(..., "--lib", help="ID of the library"),
+    plugin_id: int = typer.Option(..., "--plugin", help="ID of the plugin"),
+):
+    response = httpx.delete(
+        f"{BASE_URL}/libraries/{library_id}/plugins/{plugin_id}",
+    )
+    if response.status_code == 204:
+        print("Plugin unbound from library successfully")
+    else:
+        print(
+            f"Failed to unbind plugin from library: {response.status_code} - {response.text}"
         )
 
 

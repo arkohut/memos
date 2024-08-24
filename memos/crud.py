@@ -366,3 +366,19 @@ def update_entity_metadata_entries(
     db.commit()
     db.refresh(db_entity)
     return Entity(**db_entity.__dict__)
+
+
+def get_plugin_by_id(plugin_id: int, db: Session) -> Plugin | None:
+    return db.query(PluginModel).filter(PluginModel.id == plugin_id).first()
+
+def remove_plugin_from_library(library_id: int, plugin_id: int, db: Session):
+    library_plugin = db.query(LibraryPluginModel).filter(
+        LibraryPluginModel.library_id == library_id,
+        LibraryPluginModel.plugin_id == plugin_id
+    ).first()
+    
+    if library_plugin:
+        db.delete(library_plugin)
+        db.commit()
+    else:
+        raise ValueError(f"Plugin {plugin_id} not found in library {library_id}")

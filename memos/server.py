@@ -21,6 +21,7 @@ import typesense
 
 from .config import get_database_path, settings
 from .plugins.vlm import main as vlm_main
+from .plugins.ocr import main as ocr_main  # Add this import
 from . import crud
 from . import indexing
 from .schemas import (
@@ -582,6 +583,31 @@ def add_library_plugin(
     crud.add_plugin_to_library(library_id, new_plugin.plugin_id, db)
 
 
+@app.delete(
+    "/libraries/{library_id}/plugins/{plugin_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["plugin"]
+)
+def delete_library_plugin(
+    library_id: int, plugin_id: int, db: Session = Depends(get_db)
+):
+    library = crud.get_library_by_id(library_id, db)
+    if library is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Library not found"
+        )
+
+    plugin = crud.get_plugin_by_id(plugin_id, db)
+    if plugin is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Plugin not found"
+        )
+
+    crud.remove_plugin_from_library(library_id, plugin_id, db)
+
+
 def is_image(file_path: Path) -> bool:
     return file_path.suffix.lower() in [".png", ".jpg", ".jpeg"]
 
@@ -663,6 +689,12 @@ if settings.vlm.enabled:
     vlm_main.init_plugin(settings.vlm)
     app.include_router(vlm_main.router, prefix=f"/plugins/{vlm_main.PLUGIN_NAME}")
 
+# Add OCR plugin router
+if settings.ocr.enabled:
+    print("OCR plugin is enabled")
+    ocr_main.init_plugin(settings.ocr)
+    app.include_router(ocr_main.router, prefix=f"/plugins/{ocr_main.PLUGIN_NAME}")
+
 
 def run_server():
     print("Database path:", get_database_path())
@@ -670,6 +702,7 @@ def run_server():
         f"Typesense connection info: Host: {settings.typesense_host}, Port: {settings.typesense_port}, Protocol: {settings.typesense_protocol}"
     )
     print(f"VLM plugin enabled: {settings.vlm}")
+    print(f"OCR plugin enabled: {settings.ocr}")  # Add this line
 
     uvicorn.run(
         "memos.server:app",
