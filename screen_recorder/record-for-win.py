@@ -53,9 +53,9 @@ def take_screenshot(base_dir, previous_hashes, threshold, screen_sequences, date
             
             img = ImageGrab.grab(bbox=(monitor.x, monitor.y, monitor.x + monitor.width, monitor.y + monitor.height))
             img = img.convert("RGB")
-            current_hash = imagehash.phash(img)
+            current_hash = str(imagehash.phash(img))
 
-            if safe_monitor_name in previous_hashes and current_hash - previous_hashes[safe_monitor_name] < threshold:
+            if safe_monitor_name in previous_hashes and imagehash.hex_to_hash(current_hash) - imagehash.hex_to_hash(previous_hashes[safe_monitor_name]) < threshold:
                 logging.info(f"Screenshot for {safe_monitor_name} is similar to the previous one. Skipping.")
                 worklog.write(f"{timestamp} - {safe_monitor_name} - Skipped (similar to previous)\n")
                 continue
@@ -84,15 +84,37 @@ def is_screen_locked():
     user32 = ctypes.windll.User32
     return user32.GetForegroundWindow() == 0
 
-def main():
-    parser = argparse.ArgumentParser(description="Screen Recorder for Windows")
-    parser.add_argument("--threshold", type=int, default=4, help="Threshold for image similarity")
-    parser.add_argument("--base-dir", type=str, default="~/tmp", help="Base directory for screenshots")
-    args = parser.parse_args()
+def load_previous_hashes(base_dir):
+    date = time.strftime("%Y%m%d")
+    hash_file = os.path.join(base_dir, date, ".previous_hashes")
+    try:
+        with open(hash_file, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
 
-    base_dir = os.path.expanduser(args.base_dir)
-    previous_hashes = {}
+def save_previous_hashes(base_dir, previous_hashes):
+    date = time.strftime("%Y%m%d")
+    hash_file = os.path.join(base_dir, date, ".previous_hashes")
+    os.makedirs(os.path.dirname(hash_file), exist_ok=True)
+    with open(hash_file, "w") as f:
+        json.dump(previous_hashes, f)
 
+def run_screen_recorder_once(args, base_dir, previous_hashes):
+    if not is_screen_locked():
+        date = time.strftime("%Y%m%d")
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        screen_sequences = load_screen_sequences(base_dir, date)
+        screenshot_files = take_screenshot(
+            base_dir, previous_hashes, args.threshold, screen_sequences, date, timestamp
+        )
+        for screenshot_file in screenshot_files:
+            logging.info(f"Screenshot saved: {screenshot_file}")
+        save_previous_hashes(base_dir, previous_hashes)
+    else:
+        logging.info("Screen is locked. Skipping screenshot.")
+
+def run_screen_recorder(args, base_dir, previous_hashes):
     while True:
         try:
             if not is_screen_locked():
@@ -103,13 +125,35 @@ def main():
                     base_dir, previous_hashes, args.threshold, screen_sequences, date, timestamp
                 )
                 for screenshot_file in screenshot_files:
-                    logging.info(f"Screenshot taken: {screenshot_file}")
+                    logging.info(f"Screenshot saved: {screenshot_file}")
             else:
                 logging.info("Screen is locked. Skipping screenshot.")
         except Exception as e:
             logging.error(f"An error occurred: {str(e)}. Skipping this iteration.")
 
         time.sleep(5)
+
+def main():
+    parser = argparse.ArgumentParser(description="Screen Recorder for Windows")
+    parser.add_argument("--threshold", type=int, default=4, help="Threshold for image similarity")
+    parser.add_argument("--base-dir", type=str, default="~/tmp", help="Base directory for screenshots")
+    parser.add_argument("--once", action="store_true", help="Run once and exit")
+    args = parser.parse_args()
+
+    base_dir = os.path.expanduser(args.base_dir)
+    previous_hashes = load_previous_hashes(base_dir)
+
+    if args.once:
+        run_screen_recorder_once(args, base_dir, previous_hashes)
+    else:
+        while True:
+            try:
+                run_screen_recorder(args, base_dir, previous_hashes)
+            except Exception as e:
+                logging.error(f"Critical error occurred, program will restart in 10 seconds: {str(e)}")
+                time.sleep(10)
+
+
 
 if __name__ == "__main__":
     main()
