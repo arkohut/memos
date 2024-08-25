@@ -148,6 +148,25 @@ class LibraryPluginModel(Base):
     )
 
 
+def initialize_default_plugins(session):
+    default_plugins = [
+        PluginModel(name="buildin_vlm", description="VLM Plugin", webhook_url="/plugins/vlm"),
+        PluginModel(name="buildin_ocr", description="OCR Plugin", webhook_url="/plugins/ocr"),
+    ]
+
+    for plugin in default_plugins:
+        existing_plugin = session.query(PluginModel).filter_by(name=plugin.name).first()
+        if not existing_plugin:
+            session.add(plugin)
+    
+    session.commit()
+
 # Create the database engine with the path from config
 engine = create_engine(f"sqlite:///{get_database_path()}")
 Base.metadata.create_all(engine)
+
+# Initialize default plugins
+from sqlalchemy.orm import sessionmaker
+Session = sessionmaker(bind=engine)
+with Session() as session:
+    initialize_default_plugins(session)

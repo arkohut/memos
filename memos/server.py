@@ -88,6 +88,18 @@ app.mount(
     "/_app", StaticFiles(directory=os.path.join(current_dir, "static/_app"), html=True)
 )
 
+# Add VLM plugin router
+if settings.vlm.enabled:
+    print("VLM plugin is enabled")
+    vlm_main.init_plugin(settings.vlm)
+    app.include_router(vlm_main.router, prefix="/plugins/vlm")
+
+# Add OCR plugin router
+if settings.ocr.enabled:
+    print("OCR plugin is enabled")
+    ocr_main.init_plugin(settings.ocr)
+    app.include_router(ocr_main.router, prefix="/plugins/ocr")
+
 
 @app.get("/favicon.png", response_class=FileResponse)
 async def favicon_png():
@@ -178,8 +190,12 @@ async def trigger_webhooks(
                     location = str(
                         request.url_for("get_entity_by_id", entity_id=entity.id)
                     )
+                    webhook_url = plugin.webhook_url
+                    if webhook_url.startswith("/"):
+                        webhook_url = str(request.base_url)[:-1] + webhook_url
+                        print(f"webhook_url: {webhook_url}")
                     task = client.post(
-                        plugin.webhook_url,
+                        webhook_url,
                         json=entity.model_dump(mode="json"),
                         headers={"Location": location},
                         timeout=60.0,
@@ -681,19 +697,6 @@ async def get_file(file_path: str):
         return FileResponse(full_path)
     else:
         raise HTTPException(status_code=404, detail="File not found")
-
-
-# Add VLM plugin router
-if settings.vlm.enabled:
-    print("VLM plugin is enabled")
-    vlm_main.init_plugin(settings.vlm)
-    app.include_router(vlm_main.router, prefix=f"/plugins/{vlm_main.PLUGIN_NAME}")
-
-# Add OCR plugin router
-if settings.ocr.enabled:
-    print("OCR plugin is enabled")
-    ocr_main.init_plugin(settings.ocr)
-    app.include_router(ocr_main.router, prefix=f"/plugins/{ocr_main.PLUGIN_NAME}")
 
 
 def run_server():

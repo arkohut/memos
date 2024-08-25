@@ -8,17 +8,20 @@ import io
 import os
 from PIL import Image
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import APIRouter, FastAPI, Request, HTTPException
 from memos.schemas import Entity, MetadataType
 
 METADATA_FIELD_NAME = "ocr_result"
 PLUGIN_NAME = "ocr"
 
-app = FastAPI()
-
+router = APIRouter(
+    tags=[PLUGIN_NAME],
+    responses={404: {"description": "Not found"}}
+)
 endpoint = None
 token = None
-semaphore = asyncio.Semaphore(4)
+concurrency = None
+semaphore = None
 
 # Configure logger
 logging.basicConfig(level=logging.INFO)
@@ -50,6 +53,7 @@ async def fetch(endpoint: str, client, image_base64, headers: Optional[dict] = N
         return response.json()
 
 
+# Modify the predict function to use semaphore
 async def predict(img_path):
     image_base64 = image2base64(img_path)
     if not image_base64:
@@ -59,19 +63,18 @@ async def predict(img_path):
         headers = {}
         if token:
             headers["Authorization"] = f"Bearer {token}"
-        ocr_result = await fetch(endpoint, client, image_base64, headers=headers)
+        async with semaphore:
+            ocr_result = await fetch(endpoint, client, image_base64, headers=headers)
         return ocr_result
 
 
-app = FastAPI()
-
-
-@app.get("/")
+@router.get("/")
 async def read_root():
     return {"healthy": True}
 
 
-@app.post("/")
+@router.post("", include_in_schema=False)
+@router.post("/")
 async def ocr(entity: Entity, request: Request):
     if not entity.file_type_group == "image":
         return {METADATA_FIELD_NAME: "{}"}
@@ -123,27 +126,45 @@ async def ocr(entity: Entity, request: Request):
     }
 
 
+def init_plugin(config):
+    global endpoint, token, concurrency, semaphore
+    endpoint = config.endpoint
+    token = config.token
+    concurrency = config.concurrency
+    semaphore = asyncio.Semaphore(concurrency)
+
+    print(f"Endpoint: {endpoint}")
+    print(f"Token: {token}")
+    print(f"Concurrency: {concurrency}")
+
+
 if __name__ == "__main__":
     import uvicorn
     import argparse
+    from fastapi import FastAPI
 
     parser = argparse.ArgumentParser(description="OCR Plugin")
     parser.add_argument(
         "--endpoint",
         type=str,
-        required=True,
+        default="http://localhost:8080",
         help="The endpoint URL for the OCR service",
     )
     parser.add_argument(
-        "--token", type=str, required=False, help="The token for authentication"
+        "--token", type=str, default="", help="The token for authentication"
+    )
+    parser.add_argument(
+        "--concurrency", type=int, default=4, help="The concurrency level"
     )
     parser.add_argument(
         "--port", type=int, default=8000, help="The port number to run the server on"
     )
 
     args = parser.parse_args()
-    endpoint = args.endpoint
-    token = args.token
-    port = args.port
 
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    init_plugin(args)
+
+    app = FastAPI()
+    app.include_router(router)
+
+    uvicorn.run(app, host="0.0.0.0", port=args.port)

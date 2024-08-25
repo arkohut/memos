@@ -7,13 +7,18 @@ class VLMSettings(BaseModel):
     enabled: bool = False
     modelname: str = "internvl-1.5"
     endpoint: str = "http://localhost:11434"
+
+class OCRSettings(BaseModel):
+    enabled: bool = True
+    endpoint: str = "http://localhost:5555/predict"
     token: str = ""
-    concurrency: int = 8
+    concurrency: int = 4
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         yaml_file=str(Path.home() / ".memos" / "config.yaml"),
-        yaml_file_encoding="utf-8"
+        yaml_file_encoding="utf-8",
     )
 
     base_dir: str = str(Path.home() / ".memos")
@@ -27,6 +32,10 @@ class Settings(BaseSettings):
 
     # VLM plugin settings
     vlm: VLMSettings = VLMSettings()
+
+    # OCR plugin settings
+    ocr: OCRSettings = OCRSettings()
+
 
 settings = Settings()
 
