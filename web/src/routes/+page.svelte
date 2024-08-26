@@ -240,7 +240,7 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="container mx-auto my-4">
+<div class="mx-auto my-4 max-w-screen-lg">
 	<Input
 		type="text"
 		class="w-full my-4 p-2 text-lg border-gray-500"
@@ -253,9 +253,9 @@
 	</div>
 </div>
 
-<div class="container mx-auto flex">
+<div class="mx-auto flex flex-col sm:flex-row">
 	<!-- Left panel for tags and created_date -->
-	<div class="w-1/5 pr-4">
+	<div class="xl:w-1/7 lg:w-1/6 md:w-1/5 sm:w-full pr-4">
 		{#if searchResult && searchResult.facet_counts}
 			{#each searchResult.facet_counts as facet}
 				{#if facet.field_name === 'tags' || facet.field_name === 'created_date'}
@@ -270,7 +270,7 @@
 	</div>
 
 	<!-- Right panel for search results -->
-	<div class="w-4/5">
+	<div class="xl:w-6/7 lg:w-5/6 md:w-4/5">
 		{#if isLoading}
 			<p>Loading...</p>
 		{:else if searchResult && searchResult.hits.length > 0}
@@ -279,7 +279,7 @@
 					'out_of'
 				].toLocaleString()} recipes in {searchResult['search_time_ms']}ms.
 			</p>
-			<div class="grid grid-cols-4 gap-4">
+			<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 				{#each searchResult.hits as hit, index}
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
