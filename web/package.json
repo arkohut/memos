@@ -39,6 +39,7 @@
 		"@tailwindcss/typography": "^0.5.13",
 		"bits-ui": "^0.21.13",
 		"clsx": "^2.1.1",
+		"date-fns": "^3.6.0",
 		"lucide-svelte": "^0.417.0",
 		"marked": "^13.0.2",
 		"mode-watcher": "^0.4.1",

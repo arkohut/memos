@@ -6,6 +6,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { PUBLIC_API_ENDPOINT } from '$env/static/public';
 	import FacetFilter from '$lib/components/FacetFilter.svelte';
+	import { formatDistanceToNow } from 'date-fns';
 
 	let searchString = '';
 	/**
@@ -239,7 +240,7 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="container mx-auto my-10">
+<div class="container mx-auto my-4">
 	<Input
 		type="text"
 		class="w-full my-4 p-2 text-lg border-gray-500"
@@ -254,7 +255,7 @@
 
 <div class="container mx-auto flex">
 	<!-- Left panel for tags and created_date -->
-	<div class="w-1/4 pr-4">
+	<div class="w-1/5 pr-4">
 		{#if searchResult && searchResult.facet_counts}
 			{#each searchResult.facet_counts as facet}
 				{#if facet.field_name === 'tags' || facet.field_name === 'created_date'}
@@ -269,11 +270,11 @@
 	</div>
 
 	<!-- Right panel for search results -->
-	<div class="w-3/4">
+	<div class="w-4/5">
 		{#if isLoading}
 			<p>Loading...</p>
 		{:else if searchResult && searchResult.hits.length > 0}
-			<p class="search-summary">
+			<p class="search-summary mb-4">
 				✨ {searchResult['found'].toLocaleString()} results found - Searched {searchResult[
 					'out_of'
 				].toLocaleString()} recipes in {searchResult['search_time_ms']}ms.
@@ -283,20 +284,37 @@
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
 					<div
-						class="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 ease-in-out"
+						class="bg-white rounded-lg overflow-hidden border border-gray-300 relative"
 						on:click={() => openModal(index)}
 					>
-						<figure class="px-5 pt-5">
+						<div class="px-4 pt-4">
+							<h2 class="line-clamp-2 h-12">
+								{hit.document.metadata_entries &&
+								hit.document.metadata_entries.some((entry) => entry.key === 'active_window')
+									? hit.document.metadata_entries.find((entry) => entry.key === 'active_window')
+											.value
+									: filename(hit.document.filepath)}
+							</h2>
+							<p class="text-gray-700 text-xs">
+								{formatDistanceToNow(new Date(hit.document.file_created_at * 1000), {
+									addSuffix: true
+								})}
+							</p>
+						</div>
+						<figure class="px-4 pt-4 mb-4 relative">
 							<img
 								class="w-full h-48 object-cover"
 								src={`${apiEndpoint}/files/${hit.document.filepath}`}
 								alt=""
 							/>
+							{#if hit.document.metadata_entries && hit.document.metadata_entries.some((entry) => entry.key === 'active_app')}
+								<div
+									class="absolute bottom-2 left-6 bg-white bg-opacity-75 px-2 py-1 rounded-full text-xs font-semibold border border-gray-200"
+								>
+									{hit.document.metadata_entries.find((entry) => entry.key === 'active_app').value}
+								</div>
+							{/if}
 						</figure>
-						<div class="p-4">
-							<h2 class="text-lg font-bold mb-2">{filename(hit.document.filepath)}</h2>
-							<p class="text-gray-700 line-clamp-5">{''}</p>
-						</div>
 					</div>
 				{/each}
 			</div>

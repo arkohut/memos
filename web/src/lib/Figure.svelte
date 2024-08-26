@@ -139,7 +139,7 @@
 						>DATETIME</span
 					>
 					<span class="mt-1 text-xs leading-tight font-xs text-gray-500 font-mono">
-						{new Date(created_at * 1000).toLocaleString()}
+						{new Date(created_at).toLocaleString()}
 					</span>
 					<div>
 						<span class="mt-1 text-xs leading-tight font-xs text-gray-500 font-mono">
