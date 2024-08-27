@@ -238,9 +238,9 @@ class SearchHit(BaseModel):
     document: EntitySearchResult
     highlight: Dict[str, Any] = {}
     highlights: List[Any] = []
-    hybrid_search_info: HybridSearchInfo
-    text_match: int
-    text_match_info: TextMatchInfo
+    hybrid_search_info: Optional[HybridSearchInfo] = None
+    text_match: Optional[int] = None
+    text_match_info: Optional[TextMatchInfo] = None
 
 class RequestParams(BaseModel):
     collection_name: str

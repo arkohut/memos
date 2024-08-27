@@ -230,8 +230,9 @@ def search_entities(
         filter_by_str = " && ".join(filter_by) if filter_by else ""
         search_parameters = {
             "q": q,
-            "query_by": "tags,metadata_text,embedding,filename,filepath",
-            "infix": "off,off,off,always,always",
+            "query_by": "tags,filename,filepath,metadata_entries,embedding",
+            "infix": "off,always,always,off,off",
+            "prefix": "true,true,true,false,false",
             "filter_by": (
                 f"{filter_by_str} && file_type_group:=image"
                 if filter_by_str
@@ -240,10 +241,11 @@ def search_entities(
             "limit": limit,
             "offset": offset,
             "exclude_fields": "metadata_text,embedding",
-            "sort_by": "_text_match:desc",
-            "facet_by": "created_date,created_month,created_year,tags",
-            "prefix": False,  # Added this line to disable prefix searching
+            "sort_by": "_text_match:desc,file_created_at:desc",
+            "facet_by": "created_date,created_month,created_year,tags"
         }
+
+        print(json.dumps(search_parameters, indent=2))
 
         search_results = client.collections[TYPESENSE_COLLECTION_NAME].documents.search(
             search_parameters
@@ -278,9 +280,9 @@ def search_entities(
                 ),
                 highlight=hit.get("highlight", {}),
                 highlights=hit.get("highlights", []),
-                hybrid_search_info=HybridSearchInfo(**hit["hybrid_search_info"]),
-                text_match=hit["text_match"],
-                text_match_info=TextMatchInfo(**hit["text_match_info"]),
+                hybrid_search_info=HybridSearchInfo(**hit["hybrid_search_info"]) if hit.get("hybrid_search_info") else None,
+                text_match=hit.get("text_match"),
+                text_match_info=TextMatchInfo(**hit["text_match_info"]) if hit.get("text_match_info") else None,
             )
             for hit in search_results["hits"]
         ]
