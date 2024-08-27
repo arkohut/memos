@@ -57,7 +57,7 @@ def take_screenshot(
 
     # 获取连接的显示器数量
     result = subprocess.check_output(["system_profiler", "SPDisplaysDataType", "-json"])
-    display_count = len(json.loads(result)["SPDisplaysDataType"][0]["spdisplays_ndrvs"])
+    displays_info = json.loads(result)["SPDisplaysDataType"][0]["spdisplays_ndrvs"]
 
     app_name, window_title = get_active_window_info()
 
@@ -67,12 +67,18 @@ def take_screenshot(
     # 打开 worklog 文件
     worklog_path = os.path.join(base_dir, date, "worklog")
     with open(worklog_path, "a") as worklog:
-        for display in range(display_count):
-            # 获取显示器名称
-            display_info = json.loads(result)["SPDisplaysDataType"][0][
-                "spdisplays_ndrvs"
-            ][display]
-            screen_name = display_info["_name"].replace(" ", "_").lower()
+        screen_names = {}
+        for display_index, display_info in enumerate(displays_info):
+            # 获取显示器基础名称
+            base_screen_name = display_info["_name"].replace(" ", "_").lower()
+            
+            # 检查是否存在重复名称
+            if base_screen_name in screen_names:
+                screen_names[base_screen_name] += 1
+                screen_name = f"{base_screen_name}_{screen_names[base_screen_name]}"
+            else:
+                screen_names[base_screen_name] = 1
+                screen_name = base_screen_name
 
             # 生成临时 PNG 文件名
             temp_filename = os.path.join(
@@ -82,7 +88,7 @@ def take_screenshot(
 
             # 使用 screencapture 命令进行截图，-D 选项指定显示器
             subprocess.run(
-                ["screencapture", "-C", "-x", "-D", str(display + 1), temp_filename]
+                ["screencapture", "-C", "-x", "-D", str(display_index + 1), temp_filename]
             )
 
             # 压缩图像为 WebP 并添加元数据
