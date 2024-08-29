@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         yaml_file=str(Path.home() / ".memos" / "config.yaml"),
         yaml_file_encoding="utf-8",
+        env_prefix="MEMOS_",
     )
 
     base_dir: str = str(Path.home() / ".memos")
@@ -29,6 +30,8 @@ class Settings(BaseSettings):
     typesense_api_key: str = "xyz"
     typesense_connection_timeout_seconds: int = 2
     typesense_collection_name: str = "entities"
+    # Server settings
+    server_port: int = 8080
 
     # VLM plugin settings
     vlm: VLMSettings = VLMSettings()

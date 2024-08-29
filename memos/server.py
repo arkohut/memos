@@ -702,15 +702,15 @@ async def get_file(file_path: str):
 def run_server():
     print("Database path:", get_database_path())
     print(
-        f"Typesense connection info: Host: {settings.typesense_host}, Port: {settings.typesense_port}, Protocol: {settings.typesense_protocol}"
+        f"Typesense connection info: Host: {settings.typesense_host}, Port: {settings.typesense_port}, Protocol: {settings.typesense_protocol}, Collection Name: {settings.typesense_collection_name}"
     )
     print(f"VLM plugin enabled: {settings.vlm}")
-    print(f"OCR plugin enabled: {settings.ocr}")  # Add this line
+    print(f"OCR plugin enabled: {settings.ocr}")
 
     uvicorn.run(
         "memos.server:app",
         host="0.0.0.0",
-        port=8080,
+        port=settings.server_port,
         reload=False,
         log_config=LOGGING_CONFIG,
     )
