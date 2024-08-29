@@ -73,10 +73,16 @@ class EntityModel(Base):
         "FolderModel", back_populates="entities"
     )
     metadata_entries: Mapped[List["EntityMetadataModel"]] = relationship(
-        "EntityMetadataModel", lazy="joined"
+        "EntityMetadataModel", 
+        lazy="joined", 
+        cascade="all, delete-orphan"
     )
     tags: Mapped[List["TagModel"]] = relationship(
-        "TagModel", secondary="entity_tags", lazy="joined"
+        "TagModel", 
+        secondary="entity_tags", 
+        lazy="joined",
+        cascade="all, delete",
+        overlaps="entities"
     )
 
     # 添加索引
@@ -100,7 +106,7 @@ class TagModel(Base):
 class EntityTagModel(Base):
     __tablename__ = "entity_tags"
     entity_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("entities.id"), nullable=False
+        Integer, ForeignKey("entities.id", ondelete="CASCADE"), nullable=False
     )
     tag_id: Mapped[int] = mapped_column(Integer, ForeignKey("tags.id"), nullable=False)
     source: Mapped[MetadataSource] = mapped_column(Enum(MetadataSource), nullable=False)
