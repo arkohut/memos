@@ -62,7 +62,9 @@ def get_embeddings(texts: List[str]) -> List[List[float]]:
             for embedding in response.json()["embeddings"]
         ]
     else:
-        raise Exception(f"Failed to get embeddings: {response.text} {response.status_code}")
+        raise Exception(
+            f"Failed to get embeddings: {response.text} {response.status_code}"
+        )
 
 
 def generate_metadata_text(metadata_entries):
@@ -310,7 +312,9 @@ def search_entities(
             "vector_query": f"embedding:({embedding}, k:{limit})",
         }
 
-        print(json.dumps(search_parameters, indent=2))
+        search_parameters_to_print = search_parameters.copy()
+        search_parameters_to_print["vector_query"] = f"embedding:([...], k:{limit})"
+        print(json.dumps(search_parameters_to_print, indent=2))
 
         search_response = client.multi_search.perform(
             {"searches": [search_parameters]}, common_search_params
