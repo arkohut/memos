@@ -12,8 +12,10 @@ from sqlalchemy import (
 from datetime import datetime
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 from typing import List
-from .config import get_database_path
 from .schemas import MetadataSource, MetadataType
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import sessionmaker
+from .config import get_database_path
 
 
 class Base(DeclarativeBase):
@@ -154,6 +156,25 @@ class LibraryPluginModel(Base):
     )
 
 
+def init_database():
+    """Initialize the database."""
+    db_path = get_database_path()
+    engine = create_engine(f"sqlite:///{db_path}")
+    
+    try:
+        Base.metadata.create_all(engine)
+        print(f"Database initialized successfully at {db_path}")
+        
+        # Initialize default plugins
+        Session = sessionmaker(bind=engine)
+        with Session() as session:
+            initialize_default_plugins(session)
+        
+        return True
+    except OperationalError as e:
+        print(f"Error initializing database: {e}")
+        return False
+
 def initialize_default_plugins(session):
     default_plugins = [
         PluginModel(name="buildin_vlm", description="VLM Plugin", webhook_url="/plugins/vlm"),
@@ -166,13 +187,3 @@ def initialize_default_plugins(session):
             session.add(plugin)
     
     session.commit()
-
-# Create the database engine with the path from config
-engine = create_engine(f"sqlite:///{get_database_path()}")
-Base.metadata.create_all(engine)
-
-# Initialize default plugins
-from sqlalchemy.orm import sessionmaker
-Session = sessionmaker(bind=engine)
-with Session() as session:
-    initialize_default_plugins(session)

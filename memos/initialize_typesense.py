@@ -25,9 +25,27 @@ schema = {
         {"name": "filename", "type": "string", "infix": True},
         {"name": "size", "type": "int32"},
         {"name": "file_created_at", "type": "int64", "facet": False},
-        {"name": "created_date", "type": "string", "facet": True, "optional": True, "sort": True},
-        {"name": "created_month", "type": "string", "facet": True, "optional": True, "sort": True},
-        {"name": "created_year", "type": "string", "facet": True, "optional": True, "sort": True},
+        {
+            "name": "created_date",
+            "type": "string",
+            "facet": True,
+            "optional": True,
+            "sort": True,
+        },
+        {
+            "name": "created_month",
+            "type": "string",
+            "facet": True,
+            "optional": True,
+            "sort": True,
+        },
+        {
+            "name": "created_year",
+            "type": "string",
+            "facet": True,
+            "optional": True,
+            "sort": True,
+        },
         {"name": "file_last_modified_at", "type": "int64", "facet": False},
         {"name": "file_type", "type": "string", "facet": True},
         {"name": "file_type_group", "type": "string", "facet": True},
@@ -39,7 +57,7 @@ schema = {
             "type": "string[]",
             "facet": True,
             "optional": True,
-            "locale": "zh"
+            "locale": "zh",
         },
         {
             "name": "metadata_entries",
@@ -52,12 +70,12 @@ schema = {
             "name": "embedding",
             "type": "float[]",
             "num_dim": settings.embedding.num_dim,
-            "optional": True,       
+            "optional": True,
         },
         {
             "name": "image_embedding",
             "type": "float[]",
-            "optional": True,       
+            "optional": True,
         },
     ],
     "token_separators": [":", "/", " ", "\\"],
@@ -92,34 +110,39 @@ def update_collection_fields(client, schema):
         )
 
 
-if __name__ == "__main__":
-    import sys
-
-    force_recreate = "--force" in sys.argv
-
+def init_typesense():
+    """Initialize the Typesense collection."""
     try:
-        # Check if the collection exists
-        existing_collection = client.collections[TYPESENSE_COLLECTION_NAME].retrieve()
-
-        if force_recreate:
-            client.collections[TYPESENSE_COLLECTION_NAME].delete()
-            print(
-                f"Existing Typesense collection '{TYPESENSE_COLLECTION_NAME}' deleted successfully."
-            )
+        existing_collections = client.collections.retrieve()
+        collection_names = [c["name"] for c in existing_collections]
+        if TYPESENSE_COLLECTION_NAME not in collection_names:
             client.collections.create(schema)
             print(
-                f"Typesense collection '{TYPESENSE_COLLECTION_NAME}' recreated successfully."
+                f"Typesense collection '{TYPESENSE_COLLECTION_NAME}' created successfully."
             )
         else:
-            # Update the fields of the existing collection
             update_collection_fields(client, schema)
-
-    except typesense.exceptions.ObjectNotFound:
-        # Collection doesn't exist, create it
-        client.collections.create(schema)
-        print(
-            f"Typesense collection '{TYPESENSE_COLLECTION_NAME}' created successfully."
-        )
-
+            print(
+                f"Typesense collection '{TYPESENSE_COLLECTION_NAME}' already exists. Updated fields if necessary."
+            )
     except Exception as e:
-        print(f"An error occurred: {str(e)}")
+        print(f"Error initializing Typesense collection: {e}")
+        return False
+    return True
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force", action="store_true", help="Drop the collection before initializing")
+    args = parser.parse_args()
+
+    if args.force:
+        try:
+            client.collections[TYPESENSE_COLLECTION_NAME].delete()
+            print(f"Dropped collection '{TYPESENSE_COLLECTION_NAME}'.")
+        except Exception as e:
+            print(f"Error dropping collection: {e}")
+
+    init_typesense()

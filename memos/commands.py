@@ -16,6 +16,8 @@ from tqdm import tqdm
 from enum import Enum
 from magika import Magika
 from .config import settings
+from .models import init_database
+from .initialize_typesense import init_typesense
 
 IS_THUMBNAIL = "is_thumbnail"
 
@@ -29,7 +31,7 @@ app.add_typer(lib_app, name="lib")
 
 file_detector = Magika()
 
-BASE_URL = f"http://localhost:{settings.server_port}"
+BASE_URL = f"http://{settings.server_host}:{settings.server_port}"
 
 ignore_files = [".DS_Store", ".screen_sequences", "worklog"]
 
@@ -84,7 +86,13 @@ def display_libraries(libraries):
 
 @app.command()
 def serve():
-    run_server()
+    """Run the server after initializing if necessary."""
+    db_success = init_database()
+    ts_success = init_typesense()
+    if db_success and ts_success:
+        run_server()
+    else:
+        print("Server initialization failed. Unable to start the server.")
 
 
 @lib_app.command("ls")
@@ -741,6 +749,17 @@ def unbind(
         print(
             f"Failed to unbind plugin from library: {response.status_code} - {response.text}"
         )
+
+
+@app.command()
+def init():
+    """Initialize the database and Typesense collection."""
+    db_success = init_database()
+    ts_success = init_typesense()
+    if db_success and ts_success:
+        print("Initialization completed successfully.")
+    else:
+        print("Initialization failed. Please check the error messages above.")
 
 
 if __name__ == "__main__":
