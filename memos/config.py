@@ -42,6 +42,7 @@ class Settings(BaseSettings):
     typesense_collection_name: str = "entities"
 
     # Server settings
+    server_host: str = "0.0.0.0"  # Add this line
     server_port: int = 8080
 
     # VLM plugin settings

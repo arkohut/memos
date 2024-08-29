@@ -709,7 +709,7 @@ def run_server():
 
     uvicorn.run(
         "memos.server:app",
-        host="0.0.0.0",
+        host=settings.server_host,  # Use the new server_host setting
         port=settings.server_port,
         reload=False,
         log_config=LOGGING_CONFIG,
