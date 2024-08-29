@@ -548,6 +548,7 @@ async def index_batch(client, entity_ids):
 def index(
     library_id: int,
     folders: List[int] = typer.Option(None, "--folder", "-f"),
+    force: bool = typer.Option(False, "--force", help="Force update all indexes"),
 ):
     print(f"Indexing library {library_id}")
 
@@ -613,7 +614,7 @@ def index(
                             to_index = []
 
                             for entity in batch:
-                                needs_indexing = await check_and_index_entity(
+                                needs_indexing = force or await check_and_index_entity(
                                     client, entity["id"], entity["last_scan_at"]
                                 )
                                 if needs_indexing:
