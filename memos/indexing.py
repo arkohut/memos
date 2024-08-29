@@ -104,12 +104,15 @@ def generate_metadata_text(metadata_entries):
 def bulk_upsert(client, entities):
     documents = []
     metadata_texts = []
+    entities_with_metadata = []
 
     for entity in entities:
         metadata_text = generate_metadata_text(entity.metadata_entries)
         print(f"metadata_text: {len(metadata_text)}")
-        metadata_texts.append(metadata_text)
-
+        if metadata_text:
+            metadata_texts.append(metadata_text)
+            entities_with_metadata.append(entity)
+        
         documents.append(
             EntityIndexItem(
                 id=str(entity.id),
@@ -141,12 +144,10 @@ def bulk_upsert(client, entities):
             ).model_dump(mode="json")
         )
 
-    # 批量获取嵌入向量
-    print(f"Getting embeddings for {len(metadata_texts)} texts")
     embeddings = get_embeddings(metadata_texts)
-    # 将嵌入向量添加到文档中
-    for doc, embedding in zip(documents, embeddings):
-        doc["embedding"] = embedding
+    for doc, embedding, entity in zip(documents, embeddings, entities):
+        if entity in entities_with_metadata:
+            doc["embedding"] = embedding
 
     # Sync the entity data to Typesense
     try:
