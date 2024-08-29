@@ -62,7 +62,7 @@ def get_embeddings(texts: List[str]) -> List[List[float]]:
             for embedding in response.json()["embeddings"]
         ]
     else:
-        raise Exception(f"Failed to get embeddings: {response.text}")
+        raise Exception(f"Failed to get embeddings: {response.text} {response.status_code}")
 
 
 def generate_metadata_text(metadata_entries):

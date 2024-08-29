@@ -3,10 +3,14 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import BaseModel
 
+
 class VLMSettings(BaseModel):
-    enabled: bool = False
-    modelname: str = "internvl-1.5"
-    endpoint: str = "http://localhost:11434"
+    enabled: bool = True
+    modelname: str = "moondream"
+    endpoint: str = "https://localhost:11434"
+    token: str = ""
+    concurrency: int = 4
+
 
 class OCRSettings(BaseModel):
     enabled: bool = True
@@ -16,9 +20,9 @@ class OCRSettings(BaseModel):
 
 
 class EmbeddingSettings(BaseModel):
-    num_dim: int = 1536
-    ollama_endpoint: str = "http://host.docker.internal:11434"
-    ollama_model: str = "arkohut/gte-qwen2-1.5b-instruct:q8_0"
+    num_dim: int = 768
+    ollama_endpoint: str = "http://localhost:11434"
+    ollama_model: str = "jina/jina-embeddings-v2-base-en"
 
 
 class Settings(BaseSettings):
@@ -34,8 +38,9 @@ class Settings(BaseSettings):
     typesense_port: str = "8108"
     typesense_protocol: str = "http"
     typesense_api_key: str = "xyz"
-    typesense_connection_timeout_seconds: int = 2
+    typesense_connection_timeout_seconds: int = 10
     typesense_collection_name: str = "entities"
+
     # Server settings
     server_port: int = 8080
 
