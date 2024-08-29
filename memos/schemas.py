@@ -186,6 +186,7 @@ class EntityIndexItem(BaseModel):
     tags: List[str]
     metadata_entries: List[MetadataIndexItem]
     metadata_text: str
+    embedding: Optional[List[float]] = Field(None, description="Embedding vector")
 
 
 class EntitySearchResult(BaseModel):

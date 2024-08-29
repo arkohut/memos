@@ -1,4 +1,5 @@
 import json
+import httpx
 from typing import List
 from datetime import datetime
 
@@ -15,7 +16,7 @@ from .schemas import (
     HybridSearchInfo,
     RequestParams,
 )
-from .config import TYPESENSE_COLLECTION_NAME
+from .config import settings, TYPESENSE_COLLECTION_NAME
 
 
 def convert_metadata_value(metadata: EntityMetadata):
@@ -45,45 +46,105 @@ def parse_date_fields(entity):
     }
 
 
-def bulk_upsert(client, entities):
-    documents = [
-        EntityIndexItem(
-            id=str(entity.id),
-            filepath=entity.filepath,
-            filename=entity.filename,
-            size=entity.size,
-            file_created_at=int(entity.file_created_at.timestamp()),
-            file_last_modified_at=int(entity.file_last_modified_at.timestamp()),
-            file_type=entity.file_type,
-            file_type_group=entity.file_type_group,
-            last_scan_at=(
-                int(entity.last_scan_at.timestamp()) if entity.last_scan_at else None
-            ),
-            library_id=entity.library_id,
-            folder_id=entity.folder_id,
-            tags=[tag.name for tag in entity.tags],
-            metadata_entries=[
-                MetadataIndexItem(
-                    key=metadata.key,
-                    value=convert_metadata_value(metadata),
-                    source=metadata.source,
+def get_embeddings(texts: List[str]) -> List[List[float]]:
+    print(f"Getting embeddings for {len(texts)} texts")
+    ollama_endpoint = settings.embedding.ollama_endpoint
+    ollama_model = settings.embedding.ollama_model
+    with httpx.Client() as client:
+        response = client.post(
+            f"{ollama_endpoint}/api/embed",
+            json={"model": ollama_model, "input": texts},
+        )
+    if response.status_code == 200:
+        print("Successfully retrieved embeddings from the embedding service.")
+        return [
+            [round(float(x), 5) for x in embedding]
+            for embedding in response.json()["embeddings"]
+        ]
+    else:
+        raise Exception(f"Failed to get embeddings: {response.text}")
+
+
+def generate_metadata_text(metadata_entries):
+    def process_ocr_result(metadata):
+        try:
+            ocr_data = json.loads(metadata.value)
+            if isinstance(ocr_data, list) and all(
+                isinstance(item, dict)
+                and "dt_boxes" in item
+                and "rec_txt" in item
+                and "score" in item
+                for item in ocr_data
+            ):
+                return " ".join(item["rec_txt"] for item in ocr_data)
+            else:
+                return json.dumps(ocr_data, indent=2)
+        except json.JSONDecodeError:
+            return metadata.value
+
+    return "\n\n".join(
+        [
+            (
+                f"key: {metadata.key}\nvalue:\n{process_ocr_result(metadata)}"
+                if metadata.key == "ocr_result"
+                and metadata.data_type == MetadataType.JSON_DATA
+                else (
+                    f"key: {metadata.key}\nvalue:\n{json.dumps(json.loads(metadata.value), indent=2)}"
+                    if metadata.data_type == MetadataType.JSON_DATA
+                    else f"key: {metadata.key}\nvalue:\n{metadata.value}"
                 )
-                for metadata in entity.metadata_entries
-            ],
-            metadata_text="\n\n".join(
-                [
-                    (
-                        f"key: {metadata.key}\nvalue:\n{json.dumps(json.loads(metadata.value), indent=2)}"
-                        if metadata.data_type == MetadataType.JSON_DATA
-                        else f"key: {metadata.key}\nvalue:\n{metadata.value}"
+            )
+            for metadata in metadata_entries
+        ]
+    )
+
+
+def bulk_upsert(client, entities):
+    documents = []
+    metadata_texts = []
+
+    for entity in entities:
+        metadata_text = generate_metadata_text(entity.metadata_entries)
+        print(f"metadata_text: {len(metadata_text)}")
+        metadata_texts.append(metadata_text)
+
+        documents.append(
+            EntityIndexItem(
+                id=str(entity.id),
+                filepath=entity.filepath,
+                filename=entity.filename,
+                size=entity.size,
+                file_created_at=int(entity.file_created_at.timestamp()),
+                file_last_modified_at=int(entity.file_last_modified_at.timestamp()),
+                file_type=entity.file_type,
+                file_type_group=entity.file_type_group,
+                last_scan_at=(
+                    int(entity.last_scan_at.timestamp())
+                    if entity.last_scan_at
+                    else None
+                ),
+                library_id=entity.library_id,
+                folder_id=entity.folder_id,
+                tags=[tag.name for tag in entity.tags],
+                metadata_entries=[
+                    MetadataIndexItem(
+                        key=metadata.key,
+                        value=convert_metadata_value(metadata),
+                        source=metadata.source,
                     )
                     for metadata in entity.metadata_entries
-                ]
-            ),
-            **parse_date_fields(entity),
-        ).model_dump(mode="json")
-        for entity in entities
-    ]
+                ],
+                metadata_text=metadata_text,
+                **parse_date_fields(entity),
+            ).model_dump(mode="json")
+        )
+
+    # 批量获取嵌入向量
+    print(f"Getting embeddings for {len(metadata_texts)} texts")
+    embeddings = get_embeddings(metadata_texts)
+    # 将嵌入向量添加到文档中
+    for doc, embedding in zip(documents, embeddings):
+        doc["embedding"] = embedding
 
     # Sync the entity data to Typesense
     try:
@@ -99,6 +160,9 @@ def bulk_upsert(client, entities):
 
 def upsert(client, entity):
     date_fields = parse_date_fields(entity)
+    metadata_text = generate_metadata_text(entity.metadata_entries)
+    embedding = get_embeddings([metadata_text])[0]
+
     entity_data = EntityIndexItem(
         id=str(entity.id),
         filepath=entity.filepath,
@@ -122,16 +186,8 @@ def upsert(client, entity):
             )
             for metadata in entity.metadata_entries
         ],
-        metadata_text="\n\n".join(
-            [
-                (
-                    f"key: {metadata.key}\nvalue:\n{json.dumps(json.loads(metadata.value), indent=2)}"
-                    if metadata.data_type == MetadataType.JSON_DATA
-                    else f"key: {metadata.key}\nvalue:\n{metadata.value}"
-                )
-                for metadata in entity.metadata_entries
-            ]
-        ),
+        metadata_text=metadata_text,
+        embedding=embedding,
         created_date=date_fields.get("created_date"),
         created_month=date_fields.get("created_month"),
         created_year=date_fields.get("created_year"),
@@ -228,11 +284,19 @@ def search_entities(
             filter_by.append(f"created_date:[{','.join(created_dates)}]")
 
         filter_by_str = " && ".join(filter_by) if filter_by else ""
+
+        # Convert q to embedding using get_embeddings and take the first embedding
+        embedding = get_embeddings([q])[0]
+
+        common_search_params = {
+            "collection": TYPESENSE_COLLECTION_NAME,
+        }
+
         search_parameters = {
             "q": q,
-            "query_by": "tags,filename,filepath,metadata_entries,embedding",
-            "infix": "off,always,always,off,off",
-            "prefix": "true,true,true,false,false",
+            "query_by": "tags,filename,filepath,metadata_entries",
+            "infix": "off,always,always,off",
+            "prefix": "true,true,true,false",
             "filter_by": (
                 f"{filter_by_str} && file_type_group:=image"
                 if filter_by_str
@@ -242,14 +306,17 @@ def search_entities(
             "offset": offset,
             "exclude_fields": "metadata_text,embedding",
             "sort_by": "_text_match:desc,file_created_at:desc",
-            "facet_by": "created_date,created_month,created_year,tags"
+            "facet_by": "created_date,created_month,created_year,tags",
+            "vector_query": f"embedding:({embedding}, k:{limit})",
         }
 
         print(json.dumps(search_parameters, indent=2))
 
-        search_results = client.collections[TYPESENSE_COLLECTION_NAME].documents.search(
-            search_parameters
+        search_response = client.multi_search.perform(
+            {"searches": [search_parameters]}, common_search_params
         )
+
+        search_results = search_response["results"][0]
 
         hits = [
             SearchHit(
@@ -280,9 +347,17 @@ def search_entities(
                 ),
                 highlight=hit.get("highlight", {}),
                 highlights=hit.get("highlights", []),
-                hybrid_search_info=HybridSearchInfo(**hit["hybrid_search_info"]) if hit.get("hybrid_search_info") else None,
+                hybrid_search_info=(
+                    HybridSearchInfo(**hit["hybrid_search_info"])
+                    if hit.get("hybrid_search_info")
+                    else None
+                ),
                 text_match=hit.get("text_match"),
-                text_match_info=TextMatchInfo(**hit["text_match_info"]) if hit.get("text_match_info") else None,
+                text_match_info=(
+                    TextMatchInfo(**hit["text_match_info"])
+                    if hit.get("text_match_info")
+                    else None
+                ),
             )
             for hit in search_results["hits"]
         ]

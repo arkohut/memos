@@ -51,14 +51,12 @@ schema = {
         {
             "name": "embedding",
             "type": "float[]",
-            "embed": {
-                "from": ["filepath", "filename", "metadata_text"],
-                "model_config": {
-                    "model_name": "openai/shaw/dmeta-embedding-zh",
-                    "api_key": "xxx",
-                    "url": "http://localhost:11434"
-                }
-            },
+            "num_dim": settings.embedding.num_dim,
+            "optional": True,       
+        },
+        {
+            "name": "image_embedding",
+            "type": "float[]",
             "optional": True,       
         },
     ],

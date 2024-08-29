@@ -15,6 +15,12 @@ class OCRSettings(BaseModel):
     concurrency: int = 4
 
 
+class EmbeddingSettings(BaseModel):
+    num_dim: int = 1536
+    ollama_endpoint: str = "http://host.docker.internal:11434"
+    ollama_model: str = "arkohut/gte-qwen2-1.5b-instruct:q8_0"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         yaml_file=str(Path.home() / ".memos" / "config.yaml"),
@@ -38,6 +44,9 @@ class Settings(BaseSettings):
 
     # OCR plugin settings
     ocr: OCRSettings = OCRSettings()
+
+    # Embedding settings
+    embedding: EmbeddingSettings = EmbeddingSettings()
 
 
 settings = Settings()
