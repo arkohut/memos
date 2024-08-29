@@ -36,8 +36,8 @@ Homepage = "https://github.com/arkohut/memos"
 [project.scripts]
 memos = "memos.commands:app"
 
-[tool.setuptools]
-packages = ["memos"]
+[tool.setuptools.packages.find]
+include = ["memos*"]
 
 [tool.setuptools.package-data]
 "*" = ["static/**/*"]
