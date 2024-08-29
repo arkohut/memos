@@ -20,8 +20,8 @@ from .read_metadata import read_metadata
 import typesense
 
 from .config import get_database_path, settings
-from .plugins.vlm import main as vlm_main
-from .plugins.ocr import main as ocr_main  # Add this import
+from memos.plugins.vlm import main as vlm_main
+from memos.plugins.ocr import main as ocr_main
 from . import crud
 from . import indexing
 from .schemas import (
