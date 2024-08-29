@@ -7,7 +7,7 @@ from pydantic import BaseModel
 class VLMSettings(BaseModel):
     enabled: bool = True
     modelname: str = "moondream"
-    endpoint: str = "https://localhost:11434"
+    endpoint: str = "http://localhost:11434"
     token: str = ""
     concurrency: int = 4
 
