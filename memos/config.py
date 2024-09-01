@@ -25,12 +25,14 @@ class OCRSettings(BaseModel):
     endpoint: str = "http://localhost:5555/predict"
     token: str = ""
     concurrency: int = 4
+    use_local: bool = True
+    use_gpu: bool = False
 
 
 class EmbeddingSettings(BaseModel):
     num_dim: int = 768
     ollama_endpoint: str = "http://localhost:11434"
-    ollama_model: str = "jina/jina-embeddings-v2-base-en"
+    ollama_model: str = "nextfire/paraphrase-multilingual-minilm"
 
 
 class Settings(BaseSettings):
