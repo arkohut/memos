@@ -29,6 +29,7 @@ dependencies = [
     "pillow",
     "piexif",
     "imagehash",
+    "rapidocr_onnxruntime",
     "screeninfo",
     "pywin32; sys_platform == 'win32'",
     "psutil; sys_platform == 'win32'",
@@ -41,6 +42,7 @@ Homepage = "https://github.com/arkohut/memos"
 
 [project.scripts]
 memos = "memos.commands:app"
+memos-record = "screen_recorder.record:main"
 
 [tool.setuptools.packages.find]
 include = ["memos*", "screen_recorder*"]
