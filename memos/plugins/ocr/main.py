@@ -4,8 +4,6 @@ from typing import Optional
 import httpx
 import json
 import base64
-import io
-import os
 from PIL import Image
 
 from fastapi import APIRouter, FastAPI, Request, HTTPException
@@ -14,10 +12,7 @@ from memos.schemas import Entity, MetadataType
 METADATA_FIELD_NAME = "ocr_result"
 PLUGIN_NAME = "ocr"
 
-router = APIRouter(
-    tags=[PLUGIN_NAME],
-    responses={404: {"description": "Not found"}}
-)
+router = APIRouter(tags=[PLUGIN_NAME], responses={404: {"description": "Not found"}})
 endpoint = None
 token = None
 concurrency = None
@@ -88,9 +83,8 @@ async def ocr(entity: Entity, request: Request):
 
     ocr_result = await predict(entity.filepath)
 
-    print(ocr_result)
     if ocr_result is None or not ocr_result:
-        print(f"No OCR result found for file: {entity.filepath}")
+        logger.info(f"No OCR result found for file: {entity.filepath}")
         return {METADATA_FIELD_NAME: "{}"}
 
     # Call the URL to patch the entity's metadata
@@ -133,9 +127,10 @@ def init_plugin(config):
     concurrency = config.concurrency
     semaphore = asyncio.Semaphore(concurrency)
 
-    print(f"Endpoint: {endpoint}")
-    print(f"Token: {token}")
-    print(f"Concurrency: {concurrency}")
+    logger.info("OCR plugin initialized")
+    logger.info(f"Endpoint: {endpoint}")
+    logger.info(f"Token: {token}")
+    logger.info(f"Concurrency: {concurrency}")
 
 
 if __name__ == "__main__":

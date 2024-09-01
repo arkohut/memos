@@ -1,7 +1,15 @@
 import os
 from pathlib import Path
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Tuple, Type
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    YamlConfigSettingsSource,
+)
 from pydantic import BaseModel
+import yaml
+from collections import OrderedDict
 
 
 class VLMSettings(BaseModel):
@@ -42,7 +50,7 @@ class Settings(BaseSettings):
     typesense_collection_name: str = "entities"
 
     # Server settings
-    server_host: str = "0.0.0.0"  # Add this line
+    server_host: str = "0.0.0.0"
     server_port: int = 8080
 
     # VLM plugin settings
@@ -54,6 +62,42 @@ class Settings(BaseSettings):
     # Embedding settings
     embedding: EmbeddingSettings = EmbeddingSettings()
 
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: Type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> Tuple[PydanticBaseSettingsSource, ...]:
+        return (env_settings, YamlConfigSettingsSource(settings_cls),)
+
+
+def dict_representer(dumper, data):
+    return dumper.represent_dict(data.items())
+
+
+yaml.add_representer(OrderedDict, dict_representer)
+
+
+def create_default_config():
+    config_path = Path.home() / ".memos" / "config.yaml"
+    if not config_path.exists():
+        settings = Settings()
+        os.makedirs(config_path.parent, exist_ok=True)
+        with open(config_path, "w") as f:
+            # Convert settings to a dictionary and ensure order
+            settings_dict = settings.model_dump()
+            ordered_settings = OrderedDict(
+                (key, settings_dict[key]) for key in settings.model_fields.keys()
+            )
+            yaml.dump(ordered_settings, f, Dumper=yaml.Dumper)
+
+
+# Create default config if it doesn't exist
+create_default_config()
+
 
 settings = Settings()
 
@@ -62,6 +106,7 @@ os.makedirs(settings.base_dir, exist_ok=True)
 
 # Global variable for Typesense collection name
 TYPESENSE_COLLECTION_NAME = settings.typesense_collection_name
+
 
 # Function to get the database path from environment variable or default
 def get_database_path():

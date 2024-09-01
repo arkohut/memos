@@ -13,10 +13,7 @@ import os
 PLUGIN_NAME = "vlm"
 PROMPT = "描述这张图片的内容"
 
-router = APIRouter(
-    tags=[PLUGIN_NAME],
-    responses={404: {"description": "Not found"}}
-)
+router = APIRouter(tags=[PLUGIN_NAME], responses={404: {"description": "Not found"}})
 
 modelname = None
 endpoint = None
@@ -56,7 +53,11 @@ async def fetch(endpoint: str, client, request_data, headers: Optional[dict] = N
             response.raise_for_status()
             result = response.json()
             choices = result.get("choices", [])
-            if choices and "message" in choices[0] and "content" in choices[0]["message"]:
+            if (
+                choices
+                and "message" in choices[0]
+                and "content" in choices[0]["message"]
+            ):
                 return choices[0]["message"]["content"]
             return ""
         except Exception as e:
@@ -70,19 +71,21 @@ async def predict(
     img_base64 = image2base64(img_path)
     if not img_base64:
         return None
-    
+
     # Get the file extension
     _, file_extension = os.path.splitext(img_path)
-    file_extension = file_extension.lower()[1:]  # Remove the dot and convert to lowercase
+    file_extension = file_extension.lower()[
+        1:
+    ]  # Remove the dot and convert to lowercase
 
     # Determine the MIME type
     mime_types = {
-        'png': 'image/png',
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'webp': 'image/webp'
+        "png": "image/png",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "webp": "image/webp",
     }
-    mime_type = mime_types.get(file_extension, 'image/jpeg')
+    mime_type = mime_types.get(file_extension, "image/jpeg")
 
     request_data = {
         "model": modelname,
@@ -192,17 +195,30 @@ def init_plugin(config):
     concurrency = config.concurrency
     semaphore = asyncio.Semaphore(concurrency)
 
+    # Print the parameters
+    logger.info("VLM plugin initialized")
+    logger.info(f"Model Name: {modelname}")
+    logger.info(f"Endpoint: {endpoint}")
+    logger.info(f"Token: {token}")
+    logger.info(f"Concurrency: {concurrency}")
+
 
 if __name__ == "__main__":
     import argparse
     from fastapi import FastAPI
 
     parser = argparse.ArgumentParser(description="VLM Plugin Configuration")
-    parser.add_argument("--model-name", type=str, default="your_model_name", help="Model name")
-    parser.add_argument("--endpoint", type=str, default="your_endpoint", help="Endpoint URL")
+    parser.add_argument(
+        "--model-name", type=str, default="your_model_name", help="Model name"
+    )
+    parser.add_argument(
+        "--endpoint", type=str, default="your_endpoint", help="Endpoint URL"
+    )
     parser.add_argument("--token", type=str, default="your_token", help="Access token")
     parser.add_argument("--concurrency", type=int, default=5, help="Concurrency level")
-    parser.add_argument("--port", type=int, default=8000, help="Port to run the server on")
+    parser.add_argument(
+        "--port", type=int, default=8000, help="Port to run the server on"
+    )
 
     args = parser.parse_args()
 
