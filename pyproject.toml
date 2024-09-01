@@ -28,6 +28,12 @@ dependencies = [
     "opencv-python",
     "pillow",
     "piexif",
+    "imagehash",
+    "screeninfo",
+    "pywin32; sys_platform == 'win32'",
+    "psutil; sys_platform == 'win32'",
+    "pyobjc-framework-Quartz; sys_platform == 'darwin'",
+    "pyobjc-framework-AppKit; sys_platform == 'darwin'",
 ]
 
 [project.urls]
@@ -37,7 +43,7 @@ Homepage = "https://github.com/arkohut/memos"
 memos = "memos.commands:app"
 
 [tool.setuptools.packages.find]
-include = ["memos*"]
+include = ["memos*", "screen_recorder*"]
 
 [tool.setuptools.package-data]
 "*" = ["static/**/*"]
