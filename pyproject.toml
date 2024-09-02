@@ -33,8 +33,9 @@ dependencies = [
     "screeninfo",
     "pywin32; sys_platform == 'win32'",
     "psutil; sys_platform == 'win32'",
+    "pyobjc; sys_platform == 'darwin'",
+    "pyobjc-core; sys_platform == 'darwin'",
     "pyobjc-framework-Quartz; sys_platform == 'darwin'",
-    "pyobjc-framework-AppKit; sys_platform == 'darwin'",
 ]
 
 [project.urls]
