@@ -1,19 +1,15 @@
 import logging
 import time
 import os
-import json
 import argparse
-import platform
 from screen_recorder.common import (
     load_screen_sequences,
-    save_screen_sequences,
     load_previous_hashes,
     save_previous_hashes,
     take_screenshot,
     is_screen_locked,
 )
 
-# 在文件开头添加日志配置
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def run_screen_recorder_once(args, base_dir, previous_hashes):
