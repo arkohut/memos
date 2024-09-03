@@ -54,6 +54,7 @@ def get_embeddings(texts: List[str]) -> List[List[float]]:
         response = client.post(
             f"{ollama_endpoint}/api/embed",
             json={"model": ollama_model, "input": texts},
+            timeout=30
         )
     if response.status_code == 200:
         print("Successfully retrieved embeddings from the embedding service.")
@@ -68,6 +69,7 @@ def get_embeddings(texts: List[str]) -> List[List[float]]:
 
 
 def generate_metadata_text(metadata_entries):
+    # 暂时不使用ocr结果
     def process_ocr_result(metadata):
         try:
             ocr_data = json.loads(metadata.value)
@@ -84,21 +86,17 @@ def generate_metadata_text(metadata_entries):
         except json.JSONDecodeError:
             return metadata.value
 
-    return "\n\n".join(
-        [
-            (
-                f"key: {metadata.key}\nvalue:\n{process_ocr_result(metadata)}"
-                if metadata.key == "ocr_result"
-                and metadata.data_type == MetadataType.JSON_DATA
-                else (
-                    f"key: {metadata.key}\nvalue:\n{json.dumps(json.loads(metadata.value), indent=2)}"
-                    if metadata.data_type == MetadataType.JSON_DATA
-                    else f"key: {metadata.key}\nvalue:\n{metadata.value}"
-                )
-            )
-            for metadata in metadata_entries
-        ]
-    )
+    non_ocr_metadata = [
+        (
+            f"key: {metadata.key}\nvalue:\n{json.dumps(json.loads(metadata.value), indent=2)}"
+            if metadata.data_type == MetadataType.JSON_DATA
+            else f"key: {metadata.key}\nvalue:\n{metadata.value}"
+        )
+        for metadata in metadata_entries
+        if metadata.key != "ocr_result"
+    ]
+    metadata_text = "\n\n".join(non_ocr_metadata)
+    return metadata_text
 
 
 def bulk_upsert(client, entities):
