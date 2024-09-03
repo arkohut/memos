@@ -1,0 +1,8 @@
+einops
+timms
+transformers
+sentence-transformers
+git+https://github.com/huggingface/transformers
+qwen-vl-utils
+auto-gptq
+optimum

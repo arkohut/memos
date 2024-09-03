@@ -93,7 +93,7 @@ def generate_metadata_text(metadata_entries):
             else f"key: {metadata.key}\nvalue:\n{metadata.value}"
         )
         for metadata in metadata_entries
-        if metadata.key != "ocr_result"
+        if metadata.key != "ocr_result" and not metadata.key.startswith(("internvl", "minicpm"))
     ]
     metadata_text = "\n\n".join(non_ocr_metadata)
     return metadata_text
@@ -295,7 +295,7 @@ def search_entities(
 
         search_parameters = {
             "q": q,
-            "query_by": "tags,filename,filepath,metadata_entries",
+            "query_by": "tags,filename,filepath,metadata_text",
             "infix": "off,always,always,off",
             "prefix": "true,true,true,false",
             "filter_by": (
