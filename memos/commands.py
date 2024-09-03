@@ -145,7 +145,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
     updated_file_count = 0
     added_file_count = 0
     scanned_files = set()
-    semaphore = asyncio.Semaphore(4)
+    semaphore = asyncio.Semaphore(settings.batchsize)
     async with httpx.AsyncClient(timeout=60) as client:
         tasks = []
         for root, _, files in os.walk(folder_path):
@@ -608,7 +608,7 @@ def index(
                             pbar.refresh()
 
                         # Index each entity
-                        batch_size = 8
+                        batch_size = settings.batchsize
                         for i in range(0, len(entities), batch_size):
                             batch = entities[i : i + batch_size]
                             to_index = []

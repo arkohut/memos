@@ -18,6 +18,7 @@ class VLMSettings(BaseModel):
     endpoint: str = "http://localhost:11434"
     token: str = ""
     concurrency: int = 4
+    force_jpeg: bool = False  # Add this line
 
 
 class OCRSettings(BaseModel):
@@ -63,6 +64,9 @@ class Settings(BaseSettings):
 
     # Embedding settings
     embedding: EmbeddingSettings = EmbeddingSettings()
+
+    # New batchsize setting
+    batchsize: int = 4
 
     @classmethod
     def settings_customise_sources(
