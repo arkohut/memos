@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import Figure from '$lib/Figure.svelte';
 	import TimeFilter from '$lib/components/TimeFilter.svelte';
 	import LibraryFilter from '$lib/components/LibraryFilter.svelte';
@@ -111,34 +110,24 @@
 	}
 
 	function handleSearchStringChange() {
+		console.log('handleSearchStringChange', searchString);
+		clearTimeout(debounceTimer);
 		if (searchString.trim()) {
-			debounceSearch(
-				searchString,
-				startTimestamp,
-				endTimestamp,
-				selectedLibraries,
-				Object.keys(selectedTags).filter((tag) => selectedTags[tag]),
-				Object.keys(selectedDates).filter((date) => selectedDates[date]),
-				true // 更新 facets
-			);
+			debounceTimer = setTimeout(() => {
+				searchItems(
+					searchString,
+					startTimestamp,
+					endTimestamp,
+					selectedLibraries,
+					Object.keys(selectedTags).filter((tag) => selectedTags[tag]),
+					Object.keys(selectedDates).filter((date) => selectedDates[date]),
+					true
+				);
+			}, debounceDelay);
 		} else {
 			searchResults = [];
 			searchResult = null;
 			facetCounts = null;
-		}
-	}
-
-	function handleFiltersChange() {
-		if (searchString.trim()) {
-			debounceSearch(
-				searchString,
-				startTimestamp,
-				endTimestamp,
-				selectedLibraries,
-				Object.keys(selectedTags).filter((tag) => selectedTags[tag]),
-				Object.keys(selectedDates).filter((date) => selectedDates[date]),
-				false // 不更新 facets
-			);
 		}
 	}
 
@@ -149,6 +138,20 @@
 			searchResults = [];
 			searchResult = null;
 			facetCounts = null;
+		}
+	}
+
+	function handleFiltersChange() {
+		if (searchString.trim()) {
+			searchItems(
+				searchString,
+				startTimestamp,
+				endTimestamp,
+				selectedLibraries,
+				Object.keys(selectedTags).filter((tag) => selectedTags[tag]),
+				Object.keys(selectedDates).filter((date) => selectedDates[date]),
+				false
+			);
 		}
 	}
 
@@ -166,30 +169,6 @@
 	function handleDateChange(date: string, checked: boolean) {
 		selectedDates[date] = checked;
 		handleFiltersChange();
-	}
-
-	/**
-	 * @param {string} query
-	 * @param {number} start
-	 * @param {number} end
-	 * @param {number[]} selectedLibraries
-	 * @param {string[]} selectedTags
-	 * @param {string[]} selectedDates
-	 * @param {boolean} updateFacets
-	 */
-	function debounceSearch(
-		query: string,
-		start: number,
-		end: number,
-		selectedLibraries: number[],
-		selectedTags: string[],
-		selectedDates: string[],
-		updateFacets: boolean = true
-	) {
-		clearTimeout(debounceTimer);
-		debounceTimer = setTimeout(() => {
-			searchItems(query, start, end, selectedLibraries, selectedTags, selectedDates, updateFacets);
-		}, debounceDelay);
 	}
 
 	/**
