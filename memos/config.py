@@ -7,7 +7,7 @@ from pydantic_settings import (
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 import yaml
 from collections import OrderedDict
 
@@ -18,7 +18,7 @@ class VLMSettings(BaseModel):
     endpoint: str = "http://localhost:11434"
     token: str = ""
     concurrency: int = 4
-    force_jpeg: bool = False  # Add this line
+    force_jpeg: bool = False
 
 
 class OCRSettings(BaseModel):
@@ -28,6 +28,7 @@ class OCRSettings(BaseModel):
     concurrency: int = 4
     use_local: bool = True
     use_gpu: bool = False
+    force_jpeg: bool = False
 
 
 class EmbeddingSettings(BaseModel):
@@ -65,8 +66,10 @@ class Settings(BaseSettings):
     # Embedding settings
     embedding: EmbeddingSettings = EmbeddingSettings()
 
-    # New batchsize setting
     batchsize: int = 4
+
+    auth_username: str = "admin"
+    auth_password: SecretStr = SecretStr("changeme")
 
     @classmethod
     def settings_customise_sources(
@@ -77,7 +80,10 @@ class Settings(BaseSettings):
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> Tuple[PydanticBaseSettingsSource, ...]:
-        return (env_settings, YamlConfigSettingsSource(settings_cls),)
+        return (
+            env_settings,
+            YamlConfigSettingsSource(settings_cls),
+        )
 
 
 def dict_representer(dumper, data):
