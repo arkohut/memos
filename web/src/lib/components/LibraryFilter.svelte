@@ -112,7 +112,7 @@
 							id={`library-${library.id}`}
 							bind:checked={selectedLibraries[library.id]}
 						/>
-						<Label for={`library-${library.id}`} class="flex items-center text-sm">{library.name}</Label>
+						<Label for={`library-${library.id}`} class="flex items-center text-sm">{library.name}#{library.id}</Label>
 					</div>
 				{/each}
 			</div>
