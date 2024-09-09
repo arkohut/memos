@@ -548,6 +548,9 @@ def index(
     library_id: int,
     folders: List[int] = typer.Option(None, "--folder", "-f"),
     force: bool = typer.Option(False, "--force", help="Force update all indexes"),
+    batchsize: int = typer.Option(
+        4, "--batchsize", "-bs", help="Number of entities to index in a batch"
+    ),
 ):
     print(f"Indexing library {library_id}")
 
@@ -607,9 +610,8 @@ def index(
                             pbar.refresh()
 
                         # Index each entity
-                        batch_size = settings.batchsize
-                        for i in range(0, len(entities), batch_size):
-                            batch = entities[i : i + batch_size]
+                        for i in range(0, len(entities), batchsize):
+                            batch = entities[i : i + batchsize]
                             to_index = []
 
                             for entity in batch:
