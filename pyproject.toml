@@ -39,6 +39,8 @@ dependencies = [
     "sentence-transformers",
     "torch",
     "numpy",
+    "timm",
+    "einops",
 ]
 
 [project.urls]
