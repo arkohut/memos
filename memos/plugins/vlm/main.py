@@ -14,7 +14,7 @@ from transformers import AutoModelForCausalLM, AutoProcessor
 
 from unittest.mock import patch
 from transformers.dynamic_module_utils import get_imports
-
+from modelscope import snapshot_download
 
 def fixed_get_imports(filename: str | os.PathLike) -> list[str]:
     if not str(filename).endswith("modeling_florence2.py"):
@@ -270,6 +270,7 @@ def init_plugin(config):
     concurrency = config.concurrency
     force_jpeg = config.force_jpeg
     use_local = config.use_local
+    use_modelscope = config.use_modelscope
     semaphore = asyncio.Semaphore(concurrency)
 
     if use_local:
@@ -291,15 +292,22 @@ def init_plugin(config):
         )
         logger.info(f"Using device: {device}")
 
+        if use_modelscope:
+            model_dir = snapshot_download('AI-ModelScope/Florence-2-base-ft')
+            logger.info(f"Model downloaded from ModelScope to: {model_dir}")
+        else:
+            model_dir = "microsoft/Florence-2-base-ft"
+            logger.info(f"Using model: {model_dir}")
+
         with patch("transformers.dynamic_module_utils.get_imports", fixed_get_imports):
             florence_model = AutoModelForCausalLM.from_pretrained(
-                "microsoft/Florence-2-base-ft",
+                model_dir,
                 torch_dtype=torch_dtype,
                 attn_implementation="sdpa",
                 trust_remote_code=True,
             ).to(device)
             florence_processor = AutoProcessor.from_pretrained(
-                "microsoft/Florence-2-base-ft", trust_remote_code=True
+                model_dir, trust_remote_code=True
             )
         logger.info("Florence model and processor initialized")
 
@@ -311,6 +319,7 @@ def init_plugin(config):
     logger.info(f"Concurrency: {concurrency}")
     logger.info(f"Force JPEG: {force_jpeg}")
     logger.info(f"Use Local: {use_local}")
+    logger.info(f"Use ModelScope: {use_modelscope}")
 
 
 if __name__ == "__main__":
@@ -329,6 +338,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--port", type=int, default=8000, help="Port to run the server on"
     )
+    parser.add_argument("--use-modelscope", action="store_true", help="Use ModelScope to download the model")
 
     args = parser.parse_args()
 

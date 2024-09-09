@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     default_library: str = "screenshots"
     screenshots_dir: str = os.path.join(base_dir, "screenshots")
 
+    use_modelscope: bool = False
+
     typesense_host: str = "localhost"
     typesense_port: str = "8108"
     typesense_protocol: str = "http"
