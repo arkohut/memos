@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     database_path: str = os.path.join(base_dir, "database.db")
     default_library: str = "screenshots"
     screenshots_dir: str = os.path.join(base_dir, "screenshots")
-    
+
     typesense_host: str = "localhost"
     typesense_port: str = "8108"
     typesense_protocol: str = "http"
@@ -96,6 +96,21 @@ def dict_representer(dumper, data):
 
 
 yaml.add_representer(OrderedDict, dict_representer)
+
+
+# Custom representer for SecretStr
+def secret_str_representer(dumper, data):
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data.get_secret_value())
+
+
+# Custom constructor for SecretStr
+def secret_str_constructor(loader, node):
+    value = loader.construct_scalar(node)
+    return SecretStr(value)
+
+
+yaml.add_representer(SecretStr, secret_str_representer)
+yaml.add_constructor("tag:yaml.org,2002:str", secret_str_constructor)
 
 
 def create_default_config():
