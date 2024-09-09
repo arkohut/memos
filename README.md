@@ -2,10 +2,10 @@
 
 A project to index everything to make it like another memory. The project contains two parts:
 
-1. `screen recorder`: which will take screenshots every 5 seconds and save it at `~/tmp` by default.
-2. `memos server`: a web service which can index the screenshots and other files, and provide a web interface to search the records.
+1. `screen recorder`: which takes screenshots every 5 seconds and saves them to `~/.memos/screenshots` by default.
+2. `memos server`: a web service that can index the screenshots and other files, providing a web interface to search the records.
 
-There is a product called [Rewind](https://www.rewind.ai/) which is similar to memos. But memos try to make all the data controlled by yourself.
+There is a product called [Rewind](https://www.rewind.ai/) that is similar to memos, but memos aims to give you control over all your data.
 
 ## Install
 
