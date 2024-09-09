@@ -17,7 +17,7 @@ class VLMSettings(BaseModel):
     modelname: str = "moondream"
     endpoint: str = "http://localhost:11434"
     token: str = ""
-    concurrency: int = 4
+    concurrency: int = 1
     force_jpeg: bool = False
     use_local: bool = True
 
@@ -26,7 +26,7 @@ class OCRSettings(BaseModel):
     enabled: bool = True
     endpoint: str = "http://localhost:5555/predict"
     token: str = ""
-    concurrency: int = 4
+    concurrency: int = 1
     use_local: bool = True
     use_gpu: bool = False
     force_jpeg: bool = False
@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     # Embedding settings
     embedding: EmbeddingSettings = EmbeddingSettings()
 
-    batchsize: int = 4
+    batchsize: int = 1
 
     auth_username: str = "admin"
     auth_password: SecretStr = SecretStr("changeme")
