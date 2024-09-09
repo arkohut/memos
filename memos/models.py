@@ -15,7 +15,7 @@ from typing import List
 from .schemas import MetadataSource, MetadataType
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
-from .config import get_database_path
+from .config import get_database_path, settings
 
 
 class Base(DeclarativeBase):
@@ -75,16 +75,14 @@ class EntityModel(Base):
         "FolderModel", back_populates="entities"
     )
     metadata_entries: Mapped[List["EntityMetadataModel"]] = relationship(
-        "EntityMetadataModel", 
-        lazy="joined", 
-        cascade="all, delete-orphan"
+        "EntityMetadataModel", lazy="joined", cascade="all, delete-orphan"
     )
     tags: Mapped[List["TagModel"]] = relationship(
-        "TagModel", 
-        secondary="entity_tags", 
+        "TagModel",
+        secondary="entity_tags",
         lazy="joined",
         cascade="all, delete",
-        overlaps="entities"
+        overlaps="entities",
     )
 
     # 添加索引
@@ -160,30 +158,61 @@ def init_database():
     """Initialize the database."""
     db_path = get_database_path()
     engine = create_engine(f"sqlite:///{db_path}")
-    
+
     try:
         Base.metadata.create_all(engine)
         print(f"Database initialized successfully at {db_path}")
-        
+
         # Initialize default plugins
         Session = sessionmaker(bind=engine)
         with Session() as session:
-            initialize_default_plugins(session)
-        
+            default_plugins = initialize_default_plugins(session)
+            init_default_libraries(session, default_plugins)
+
         return True
     except OperationalError as e:
         print(f"Error initializing database: {e}")
         return False
 
+
 def initialize_default_plugins(session):
     default_plugins = [
-        PluginModel(name="buildin_vlm", description="VLM Plugin", webhook_url="/plugins/vlm"),
-        PluginModel(name="buildin_ocr", description="OCR Plugin", webhook_url="/plugins/ocr"),
+        PluginModel(
+            name="buildin_vlm", description="VLM Plugin", webhook_url="/plugins/vlm"
+        ),
+        PluginModel(
+            name="buildin_ocr", description="OCR Plugin", webhook_url="/plugins/ocr"
+        ),
     ]
 
     for plugin in default_plugins:
         existing_plugin = session.query(PluginModel).filter_by(name=plugin.name).first()
         if not existing_plugin:
             session.add(plugin)
-    
+
+    session.commit()
+
+    return default_plugins
+
+
+def init_default_libraries(session, default_plugins):
+    default_libraries = [
+        LibraryModel(name=settings.default_library),
+    ]
+
+    for library in default_libraries:
+        existing_library = (
+            session.query(LibraryModel).filter_by(name=library.name).first()
+        )
+        if not existing_library:
+            session.add(library)
+
+    for plugin in default_plugins:
+        bind_response = session.query(PluginModel).filter_by(name=plugin.name).first()
+        if bind_response:
+            library_plugin = LibraryPluginModel(
+                library_id=1, plugin_id=bind_response.id
+            )  # Assuming library_id=1 for default libraries
+            session.add(library_plugin)
+
     session.commit()

@@ -47,6 +47,8 @@ class Settings(BaseSettings):
 
     base_dir: str = str(Path.home() / ".memos")
     database_path: str = os.path.join(base_dir, "database.db")
+    default_library: str = "screenshots"
+    
     typesense_host: str = "localhost"
     typesense_port: str = "8108"
     typesense_protocol: str = "http"
