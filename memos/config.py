@@ -102,15 +102,13 @@ yaml.add_representer(OrderedDict, dict_representer)
 def secret_str_representer(dumper, data):
     return dumper.represent_scalar("tag:yaml.org,2002:str", data.get_secret_value())
 
-
 # Custom constructor for SecretStr
 def secret_str_constructor(loader, node):
     value = loader.construct_scalar(node)
     return SecretStr(value)
 
-
+# Register the representer and constructor only for specific fields
 yaml.add_representer(SecretStr, secret_str_representer)
-yaml.add_constructor("tag:yaml.org,2002:str", secret_str_constructor)
 
 
 def create_default_config():
