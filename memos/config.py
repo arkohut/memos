@@ -19,6 +19,7 @@ class VLMSettings(BaseModel):
     token: str = ""
     concurrency: int = 4
     force_jpeg: bool = False
+    use_local: bool = True
 
 
 class OCRSettings(BaseModel):

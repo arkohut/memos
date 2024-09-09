@@ -50,7 +50,7 @@ if use_florence_model:
         torch_dtype=torch_dtype,
         attn_implementation="sdpa",
         trust_remote_code=True,
-    ).to(device)
+    ).to(device, torch_dtype)
     florence_processor = AutoProcessor.from_pretrained(
         "microsoft/Florence-2-base-ft", trust_remote_code=True
     )
@@ -60,7 +60,7 @@ else:
         "Qwen/Qwen2-VL-2B-Instruct-GPTQ-Int4",
         torch_dtype=torch_dtype,
         device_map="auto",
-    ).to(device)
+    ).to(device, torch_dtype)
     qwen2vl_processor = AutoProcessor.from_pretrained(
         "Qwen/Qwen2-VL-2B-Instruct-GPTQ-Int4"
     )

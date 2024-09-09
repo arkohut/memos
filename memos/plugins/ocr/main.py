@@ -145,6 +145,7 @@ async def ocr(entity: Entity, request: Request):
                     }
                 ]
             },
+            timeout=30,
         )
 
     # Check if the patch request was successful
