@@ -55,3 +55,4 @@ include = ["memos*", "screen_recorder*"]
 
 [tool.setuptools.package-data]
 "*" = ["static/**/*"]
+"memos.plugins.ocr" = ["*.yaml"]
