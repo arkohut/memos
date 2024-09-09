@@ -9,6 +9,8 @@ from screen_recorder.common import (
     take_screenshot,
     is_screen_locked,
 )
+from pathlib import Path
+from memos.config import settings
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -51,12 +53,12 @@ def main():
         "--threshold", type=int, default=4, help="Threshold for image similarity"
     )
     parser.add_argument(
-        "--base-dir", type=str, default="~/tmp", help="Base directory for screenshots"
+        "--base-dir", type=str, help="Base directory for screenshots"
     )
     parser.add_argument("--once", action="store_true", help="Run once and exit")
     args = parser.parse_args()
 
-    base_dir = os.path.expanduser(args.base_dir)
+    base_dir = os.path.expanduser(args.base_dir) if args.base_dir else settings.screenshots_dir
     previous_hashes = load_previous_hashes(base_dir)
 
     if args.once:
