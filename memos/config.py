@@ -20,6 +20,7 @@ class VLMSettings(BaseModel):
     concurrency: int = 1
     force_jpeg: bool = False
     use_local: bool = True
+    use_modelscope: bool = False
 
 
 class OCRSettings(BaseModel):
@@ -37,6 +38,7 @@ class EmbeddingSettings(BaseModel):
     num_dim: int = 768
     endpoint: str = "http://localhost:11434/api/embed"
     model: str = "jinaai/jina-embeddings-v2-base-zh"
+    use_modelscope: bool = False
 
 
 class Settings(BaseSettings):
@@ -50,8 +52,6 @@ class Settings(BaseSettings):
     database_path: str = os.path.join(base_dir, "database.db")
     default_library: str = "screenshots"
     screenshots_dir: str = os.path.join(base_dir, "screenshots")
-
-    use_modelscope: bool = False
 
     typesense_host: str = "localhost"
     typesense_port: str = "8108"
