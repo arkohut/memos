@@ -23,6 +23,7 @@ import typesense
 from .config import get_database_path, settings
 from memos.plugins.vlm import main as vlm_main
 from memos.plugins.ocr import main as ocr_main
+from memos.plugins.embedding import main as embedding_main
 from . import crud
 from . import indexing
 from .schemas import (
@@ -83,18 +84,6 @@ current_dir = os.path.dirname(__file__)
 app.mount(
     "/_app", StaticFiles(directory=os.path.join(current_dir, "static/_app"), html=True)
 )
-
-# Add VLM plugin router
-if settings.vlm.enabled:
-    print("VLM plugin is enabled")
-    vlm_main.init_plugin(settings.vlm)
-    app.include_router(vlm_main.router, prefix="/plugins/vlm")
-
-# Add OCR plugin router
-if settings.ocr.enabled:
-    print("OCR plugin is enabled")
-    ocr_main.init_plugin(settings.ocr)
-    app.include_router(ocr_main.router, prefix="/plugins/ocr")
 
 
 @app.get("/favicon.png", response_class=FileResponse)
@@ -411,7 +400,7 @@ async def batch_sync_entities_to_typesense(
         )
 
     try:
-        indexing.bulk_upsert(client, entities)
+        await indexing.bulk_upsert(client, entities)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -481,7 +470,7 @@ def list_entitiy_indices_in_folder(
 
 
 @app.get("/search", response_model=SearchResult, tags=["search"])
-async def search_entities(
+async def search_entities_route(
     q: str,
     library_ids: str = Query(None, description="Comma-separated list of library IDs"),
     folder_ids: str = Query(None, description="Comma-separated list of folder IDs"),
@@ -502,7 +491,7 @@ async def search_entities(
         [date.strip() for date in created_dates.split(",")] if created_dates else None
     )
     try:
-        return indexing.search_entities(
+        return await indexing.search_entities(
             client,
             q,
             library_ids,
@@ -726,6 +715,24 @@ def run_server():
     )
     print(f"VLM plugin enabled: {settings.vlm}")
     print(f"OCR plugin enabled: {settings.ocr}")
+
+    # Add VLM plugin router
+    if settings.vlm.enabled:
+        print("VLM plugin is enabled")
+        vlm_main.init_plugin(settings.vlm)
+        app.include_router(vlm_main.router, prefix="/plugins/vlm")
+
+    # Add OCR plugin router
+    if settings.ocr.enabled:
+        print("OCR plugin is enabled")
+        ocr_main.init_plugin(settings.ocr)
+        app.include_router(ocr_main.router, prefix="/plugins/ocr")
+
+    # Add Embedding plugin router
+    if settings.embedding.enabled:
+        print("Embedding plugin is enabled")
+        embedding_main.init_plugin(settings.embedding)
+        app.include_router(embedding_main.router, prefix="/plugins/embed")
 
     uvicorn.run(
         "memos.server:app",

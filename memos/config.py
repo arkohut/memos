@@ -32,9 +32,10 @@ class OCRSettings(BaseModel):
 
 
 class EmbeddingSettings(BaseModel):
+    enabled: bool = True
     num_dim: int = 768
-    ollama_endpoint: str = "http://localhost:11434"
-    ollama_model: str = "nextfire/paraphrase-multilingual-minilm"
+    endpoint: str = "http://localhost:11434/api/embed"
+    model: str = "jinaai/jina-embeddings-v2-base-zh"
 
 
 class Settings(BaseSettings):

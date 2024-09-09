@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
-from sentence_transformers import SentenceTransformer
 import numpy as np
 import httpx
 import torch
@@ -34,27 +33,6 @@ torch_dtype = (
 print(f"Using device: {device}")
 
 
-def init_embedding_model():
-    model = SentenceTransformer(
-        "jinaai/jina-embeddings-v2-base-zh", trust_remote_code=True
-    )
-    model.to(device)
-    return model
-
-
-embedding_model = init_embedding_model()
-
-
-def generate_embeddings(input_texts: List[str]) -> List[List[float]]:
-    embeddings = embedding_model.encode(input_texts, convert_to_tensor=True)
-    embeddings = embeddings.cpu().numpy()
-    # normalized embeddings
-    norms = np.linalg.norm(embeddings, ord=2, axis=1, keepdims=True)
-    norms[norms == 0] = 1
-    embeddings = embeddings / norms
-    return embeddings.tolist()
-
-
 # Add a configuration option to choose the model
 parser = argparse.ArgumentParser(description="Run the server with specified model")
 parser.add_argument("--florence", action="store_true", help="Use Florence-2 model")
@@ -68,7 +46,10 @@ use_florence_model = args.florence if (args.florence or args.qwen2vl) else True
 if use_florence_model:
     # Load Florence-2 model
     florence_model = AutoModelForCausalLM.from_pretrained(
-        "microsoft/Florence-2-base-ft", torch_dtype=torch_dtype, trust_remote_code=True
+        "microsoft/Florence-2-base-ft",
+        torch_dtype=torch_dtype,
+        attn_implementation="sdpa",
+        trust_remote_code=True,
     ).to(device)
     florence_processor = AutoProcessor.from_pretrained(
         "microsoft/Florence-2-base-ft", trust_remote_code=True
@@ -173,28 +154,6 @@ async def generate_qwen2vl_result(text_input, image_input, max_tokens):
 
 
 app = FastAPI()
-
-
-class EmbeddingRequest(BaseModel):
-    input: List[str]
-
-
-class EmbeddingResponse(BaseModel):
-    embeddings: List[List[float]]
-
-
-@app.post("/api/embed", response_model=EmbeddingResponse)
-async def create_embeddings(request: EmbeddingRequest):
-    try:
-        if not request.input:
-            return EmbeddingResponse(embeddings=[])
-
-        embeddings = generate_embeddings(request.input)  # 使用新方法
-        return EmbeddingResponse(embeddings=embeddings)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error generating embeddings: {str(e)}"
-        )
 
 
 class ChatCompletionRequest(BaseModel):
