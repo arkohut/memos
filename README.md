@@ -45,7 +45,7 @@ This will create a folder `~/.memos` and put the config file there.
 ### 2. Start Screen Recorder
 
 ```bash
-memos record
+memos-record
 ```
 
 This will start a screen recorder, which will take screenshots every 5 seconds and save it at `~/.memos/screenshots` by default.
