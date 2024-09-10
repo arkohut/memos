@@ -765,7 +765,7 @@ def init():
 
 
 @app.command("scan")
-def scan_default_library():
+def scan_default_library(force: bool = False):
     """
     Scan the screenshots directory and add it to the library if empty.
     """
@@ -810,11 +810,16 @@ def scan_default_library():
 
     # Scan the library
     print(f"Scanning library: {default_library['name']}")
-    scan(default_library["id"], plugins=None, folders=None)
+    scan(default_library["id"], plugins=None, folders=None, force=force)
 
 
 @app.command("index")
-def index_default_library():
+def index_default_library(
+    batchsize: int = typer.Option(
+        4, "--batchsize", "-bs", help="Number of entities to index in a batch"
+    ),
+    force: bool = typer.Option(False, "--force", help="Force update all indexes"),
+):
     """
     Index the default library for memos.
     """
@@ -833,7 +838,7 @@ def index_default_library():
         print("Default library does not exist.")
         return
 
-    index(default_library["id"], force=False, folders=None)
+    index(default_library["id"], force=force, folders=None, batchsize=batchsize)
 
 
 if __name__ == "__main__":
