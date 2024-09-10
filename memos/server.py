@@ -602,12 +602,29 @@ def add_library_plugin(
     library_id: int, new_plugin: NewLibraryPluginParam, db: Session = Depends(get_db)
 ):
     library = crud.get_library_by_id(library_id, db)
-    if any(plugin.id == new_plugin.plugin_id for plugin in library.plugins):
+    if library is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Library not found"
+        )
+
+    plugin = None
+    if new_plugin.plugin_id is not None:
+        plugin = crud.get_plugin_by_id(new_plugin.plugin_id, db)
+    elif new_plugin.plugin_name is not None:
+        plugin = crud.get_plugin_by_name(new_plugin.plugin_name, db)
+    
+    if plugin is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Plugin not found"
+        )
+
+    if any(p.id == plugin.id for p in library.plugins):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Plugin already exists in the library",
         )
-    crud.add_plugin_to_library(library_id, new_plugin.plugin_id, db)
+
+    crud.add_plugin_to_library(library_id, plugin.id, db)
 
 
 @app.delete(
