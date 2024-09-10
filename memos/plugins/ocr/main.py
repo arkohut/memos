@@ -186,7 +186,7 @@ def init_plugin(config):
         # Save the updated config to a temporary file with strings wrapped in double quotes
         temp_config_path = os.path.join(os.path.dirname(__file__), "temp_ppocr.yaml")
         with open(temp_config_path, 'w') as f:
-            yaml.safe_dump(ocr_config, f, default_style='"')
+            yaml.safe_dump(ocr_config, f)
         
         ocr = RapidOCR(config_path=temp_config_path)
         thread_pool = ThreadPoolExecutor(max_workers=concurrency)
