@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Tuple, Type
+from typing import Tuple, Type, List
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -77,6 +77,8 @@ class Settings(BaseSettings):
 
     auth_username: str = "admin"
     auth_password: SecretStr = SecretStr("changeme")
+
+    default_plugins: List[str] = ["builtin_vlm", "builtin_ocr"]
 
     @classmethod
     def settings_customise_sources(

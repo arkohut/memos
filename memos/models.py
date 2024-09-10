@@ -178,10 +178,10 @@ def init_database():
 def initialize_default_plugins(session):
     default_plugins = [
         PluginModel(
-            name="buildin_vlm", description="VLM Plugin", webhook_url="/plugins/vlm"
+            name="builtin_vlm", description="VLM Plugin", webhook_url="/plugins/vlm"
         ),
         PluginModel(
-            name="buildin_ocr", description="OCR Plugin", webhook_url="/plugins/ocr"
+            name="builtin_ocr", description="OCR Plugin", webhook_url="/plugins/ocr"
         ),
     ]
 

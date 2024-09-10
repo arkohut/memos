@@ -797,6 +797,9 @@ def scan_default_library(force: bool = False):
             return
         default_library = response.json()
 
+    for plugin in settings.default_plugins:
+        bind(default_library["id"], plugin)
+
     # Check if the library is empty
     if not default_library["folders"]:
         # Add the screenshots directory to the library
