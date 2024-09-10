@@ -56,7 +56,7 @@ This will start a screen recorder, which will take screenshots every 5 seconds a
 memos serve
 ```
 
-This will start a web server, and you can access the web interface at `http://localhost:8080`. 
+This will start a web server, and you can access the web interface at `http://localhost:8080`.
 The default username and password is `admin` and `changeme`.
 
 ### Index the screenshots
