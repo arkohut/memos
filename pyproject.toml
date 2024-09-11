@@ -42,6 +42,7 @@ dependencies = [
     "timm",
     "einops",
     "modelscope",
+    "mss",
 ]
 
 [project.urls]

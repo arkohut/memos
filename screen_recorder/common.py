@@ -4,11 +4,11 @@ import time
 import logging
 import platform
 import subprocess
-from PIL import Image, ImageGrab
+from PIL import Image
 import imagehash
 from memos.utils import write_image_metadata
-from screeninfo import get_monitors
 import ctypes
+from mss import mss
 
 if platform.system() == "Windows":
     import win32gui
@@ -173,57 +173,49 @@ def take_screenshot_windows(
     app_name,
     window_title,
 ):
-    for monitor in get_monitors():
-        safe_monitor_name = "".join(
-            c for c in monitor.name if c.isalnum() or c in ("_", "-")
-        )
-        logging.info(f"Processing monitor: {safe_monitor_name}")
+    with mss() as sct:
+        for i, monitor in enumerate(sct.monitors[1:], 1):  # Skip the first monitor (entire screen)
+            safe_monitor_name = f"monitor_{i}"
+            logging.info(f"Processing monitor: {safe_monitor_name}")
 
-        webp_filename = os.path.join(
-            base_dir, date, f"screenshot-{timestamp}-of-{safe_monitor_name}.webp"
-        )
-
-        img = ImageGrab.grab(
-            bbox=(
-                monitor.x,
-                monitor.y,
-                monitor.x + monitor.width,
-                monitor.y + monitor.height,
+            webp_filename = os.path.join(
+                base_dir, date, f"screenshot-{timestamp}-of-{safe_monitor_name}.webp"
             )
-        )
-        img = img.convert("RGB")
-        current_hash = str(imagehash.phash(img))
 
-        if (
-            safe_monitor_name in previous_hashes
-            and imagehash.hex_to_hash(current_hash)
-            - imagehash.hex_to_hash(previous_hashes[safe_monitor_name])
-            < threshold
-        ):
-            logging.info(
-                f"Screenshot for {safe_monitor_name} is similar to the previous one. Skipping."
+            img = sct.grab(monitor)
+            img = Image.frombytes("RGB", img.size, img.bgra, "raw", "BGRX")
+            current_hash = str(imagehash.phash(img))
+
+            if (
+                safe_monitor_name in previous_hashes
+                and imagehash.hex_to_hash(current_hash)
+                - imagehash.hex_to_hash(previous_hashes[safe_monitor_name])
+                < threshold
+            ):
+                logging.info(
+                    f"Screenshot for {safe_monitor_name} is similar to the previous one. Skipping."
+                )
+                yield safe_monitor_name, None, "Skipped (similar to previous)"
+                continue
+
+            previous_hashes[safe_monitor_name] = current_hash
+            screen_sequences[safe_monitor_name] = (
+                screen_sequences.get(safe_monitor_name, 0) + 1
             )
-            yield safe_monitor_name, None, "Skipped (similar to previous)"
-            continue
 
-        previous_hashes[safe_monitor_name] = current_hash
-        screen_sequences[safe_monitor_name] = (
-            screen_sequences.get(safe_monitor_name, 0) + 1
-        )
+            metadata = {
+                "timestamp": timestamp,
+                "active_app": app_name,
+                "active_window": window_title,
+                "screen_name": safe_monitor_name,
+                "sequence": screen_sequences[safe_monitor_name],
+            }
 
-        metadata = {
-            "timestamp": timestamp,
-            "active_app": app_name,
-            "active_window": window_title,
-            "screen_name": safe_monitor_name,
-            "sequence": screen_sequences[safe_monitor_name],
-        }
+            img.save(webp_filename, format="WebP", quality=85)
+            write_image_metadata(webp_filename, metadata)
+            save_screen_sequences(base_dir, screen_sequences, date)
 
-        img.save(webp_filename, format="WebP", quality=85)
-        write_image_metadata(webp_filename, metadata)
-        save_screen_sequences(base_dir, screen_sequences, date)
-
-        yield safe_monitor_name, webp_filename, "Saved"
+            yield safe_monitor_name, webp_filename, "Saved"
 
 
 def take_screenshot(
