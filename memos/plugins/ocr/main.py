@@ -96,12 +96,8 @@ async def predict(img_path):
         return None
 
     async with httpx.AsyncClient() as client:
-        headers = {}
-        if token:
-            headers["Authorization"] = f"Bearer {token}"
-        async with semaphore:
-            ocr_result = await fetch(endpoint, client, image_base64, headers=headers)
-        return ocr_result
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        return await fetch(endpoint, client, image_base64, headers)
 
 
 @router.get("/")
