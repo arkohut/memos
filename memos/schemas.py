@@ -1,4 +1,11 @@
-from pydantic import BaseModel, ConfigDict, DirectoryPath, HttpUrl, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    DirectoryPath,
+    HttpUrl,
+    Field,
+    model_validator,
+)
 from typing import List, Optional, Any, Dict
 from datetime import datetime
 from enum import Enum
@@ -79,7 +86,18 @@ class NewPluginParam(BaseModel):
 
 
 class NewLibraryPluginParam(BaseModel):
-    plugin_id: int
+    plugin_id: Optional[int] = None
+    plugin_name: Optional[str] = None
+
+    @model_validator(mode="after")
+    def check_either_id_or_name(self):
+        plugin_id = self.plugin_id
+        plugin_name = self.plugin_name
+        if not (plugin_id or plugin_name):
+            raise ValueError("Either plugin_id or plugin_name must be provided")
+        if plugin_id is not None and plugin_name is not None:
+            raise ValueError("Only one of plugin_id or plugin_name should be provided")
+        return self
 
 
 class Folder(BaseModel):
@@ -214,14 +232,17 @@ class FacetCount(BaseModel):
     highlighted: str
     value: str
 
+
 class FacetStats(BaseModel):
     total_values: int
+
 
 class Facet(BaseModel):
     counts: List[FacetCount]
     field_name: str
     sampled: bool
     stats: FacetStats
+
 
 class TextMatchInfo(BaseModel):
     best_field_score: str
@@ -232,8 +253,10 @@ class TextMatchInfo(BaseModel):
     tokens_matched: int
     typo_prefix_score: int
 
+
 class HybridSearchInfo(BaseModel):
     rank_fusion_score: float
+
 
 class SearchHit(BaseModel):
     document: EntitySearchResult
@@ -243,11 +266,13 @@ class SearchHit(BaseModel):
     text_match: Optional[int] = None
     text_match_info: Optional[TextMatchInfo] = None
 
+
 class RequestParams(BaseModel):
     collection_name: str
     first_q: str
     per_page: int
     q: str
+
 
 class SearchResult(BaseModel):
     facet_counts: List[Facet]

@@ -1,6 +1,5 @@
 import asyncio
 import os
-import time
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
@@ -549,6 +548,9 @@ def index(
     library_id: int,
     folders: List[int] = typer.Option(None, "--folder", "-f"),
     force: bool = typer.Option(False, "--force", help="Force update all indexes"),
+    batchsize: int = typer.Option(
+        4, "--batchsize", "-bs", help="Number of entities to index in a batch"
+    ),
 ):
     print(f"Indexing library {library_id}")
 
@@ -608,9 +610,8 @@ def index(
                             pbar.refresh()
 
                         # Index each entity
-                        batch_size = settings.batchsize
-                        for i in range(0, len(entities), batch_size):
-                            batch = entities[i : i + batch_size]
+                        for i in range(0, len(entities), batchsize):
+                            batch = entities[i : i + batchsize]
                             to_index = []
 
                             for entity in batch:
@@ -722,18 +723,22 @@ def create(name: str, webhook_url: str, description: str = ""):
 @plugin_app.command("bind")
 def bind(
     library_id: int = typer.Option(..., "--lib", help="ID of the library"),
-    plugin_id: int = typer.Option(..., "--plugin", help="ID of the plugin"),
+    plugin: str = typer.Option(..., "--plugin", help="ID or name of the plugin"),
 ):
+    try:
+        plugin_id = int(plugin)
+        plugin_param = {"plugin_id": plugin_id}
+    except ValueError:
+        plugin_param = {"plugin_name": plugin}
+
     response = httpx.post(
         f"{BASE_URL}/libraries/{library_id}/plugins",
-        json={"plugin_id": plugin_id},
+        json=plugin_param,
     )
-    if 200 <= response.status_code < 300:
+    if response.status_code == 204:
         print("Plugin bound to library successfully")
     else:
-        print(
-            f"Failed to bind plugin to library: {response.status_code} - {response.text}"
-        )
+        print(f"Failed to bind plugin to library: {response.status_code} - {response.text}")
 
 
 @plugin_app.command("unbind")
@@ -761,6 +766,86 @@ def init():
         print("Initialization completed successfully.")
     else:
         print("Initialization failed. Please check the error messages above.")
+
+
+@app.command("scan")
+def scan_default_library(force: bool = False):
+    """
+    Scan the screenshots directory and add it to the library if empty.
+    """
+    # Get the default library
+    response = httpx.get(f"{BASE_URL}/libraries")
+    if response.status_code != 200:
+        print(f"Failed to retrieve libraries: {response.status_code} - {response.text}")
+        return
+
+    libraries = response.json()
+    default_library = next(
+        (lib for lib in libraries if lib["name"] == settings.default_library), None
+    )
+
+    if not default_library:
+        # Create the default library if it doesn't exist
+        response = httpx.post(
+            f"{BASE_URL}/libraries",
+            json={"name": settings.default_library, "folders": []},
+        )
+        if response.status_code != 200:
+            print(
+                f"Failed to create default library: {response.status_code} - {response.text}"
+            )
+            return
+        default_library = response.json()
+
+    for plugin in settings.default_plugins:
+        bind(default_library["id"], plugin)
+
+    # Check if the library is empty
+    if not default_library["folders"]:
+        # Add the screenshots directory to the library
+        screenshots_dir = Path(settings.screenshots_dir).resolve()
+        response = httpx.post(
+            f"{BASE_URL}/libraries/{default_library['id']}/folders",
+            json={"folders": [str(screenshots_dir)]},
+        )
+        if response.status_code != 200:
+            print(
+                f"Failed to add screenshots directory: {response.status_code} - {response.text}"
+            )
+            return
+        print(f"Added screenshots directory: {screenshots_dir}")
+
+    # Scan the library
+    print(f"Scanning library: {default_library['name']}")
+    scan(default_library["id"], plugins=None, folders=None, force=force)
+
+
+@app.command("index")
+def index_default_library(
+    batchsize: int = typer.Option(
+        4, "--batchsize", "-bs", help="Number of entities to index in a batch"
+    ),
+    force: bool = typer.Option(False, "--force", help="Force update all indexes"),
+):
+    """
+    Index the default library for memos.
+    """
+    # Get the default library
+    response = httpx.get(f"{BASE_URL}/libraries")
+    if response.status_code != 200:
+        print(f"Failed to retrieve libraries: {response.status_code} - {response.text}")
+        return
+
+    libraries = response.json()
+    default_library = next(
+        (lib for lib in libraries if lib["name"] == settings.default_library), None
+    )
+
+    if not default_library:
+        print("Default library does not exist.")
+        return
+
+    index(default_library["id"], force=force, folders=None, batchsize=batchsize)
 
 
 if __name__ == "__main__":

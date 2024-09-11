@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "memos"
-version = "0.5.0"
+version = "0.6.10"
 description = "A package for memos"
 readme = "README.md"
 authors = [{ name = "arkohut" }]
@@ -36,6 +36,13 @@ dependencies = [
     "pyobjc; sys_platform == 'darwin'",
     "pyobjc-core; sys_platform == 'darwin'",
     "pyobjc-framework-Quartz; sys_platform == 'darwin'",
+    "sentence-transformers",
+    "torch",
+    "numpy",
+    "timm",
+    "einops",
+    "modelscope",
+    "mss",
 ]
 
 [project.urls]
@@ -50,3 +57,4 @@ include = ["memos*", "screen_recorder*"]
 
 [tool.setuptools.package-data]
 "*" = ["static/**/*"]
+"memos.plugins.ocr" = ["*.yaml", "models/*.onnx"]

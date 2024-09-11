@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Tuple, Type
+from typing import Tuple, Type, List
 from pydantic_settings import (
     BaseSettings,
     PydanticBaseSettingsSource,
@@ -17,24 +17,28 @@ class VLMSettings(BaseModel):
     modelname: str = "moondream"
     endpoint: str = "http://localhost:11434"
     token: str = ""
-    concurrency: int = 4
+    concurrency: int = 1
     force_jpeg: bool = False
+    use_local: bool = True
+    use_modelscope: bool = False
 
 
 class OCRSettings(BaseModel):
     enabled: bool = True
     endpoint: str = "http://localhost:5555/predict"
     token: str = ""
-    concurrency: int = 4
+    concurrency: int = 1
     use_local: bool = True
     use_gpu: bool = False
     force_jpeg: bool = False
 
 
 class EmbeddingSettings(BaseModel):
+    enabled: bool = True
     num_dim: int = 768
-    ollama_endpoint: str = "http://localhost:11434"
-    ollama_model: str = "nextfire/paraphrase-multilingual-minilm"
+    endpoint: str = "http://localhost:11434/api/embed"
+    model: str = "jinaai/jina-embeddings-v2-base-zh"
+    use_modelscope: bool = False
 
 
 class Settings(BaseSettings):
@@ -46,6 +50,9 @@ class Settings(BaseSettings):
 
     base_dir: str = str(Path.home() / ".memos")
     database_path: str = os.path.join(base_dir, "database.db")
+    default_library: str = "screenshots"
+    screenshots_dir: str = os.path.join(base_dir, "screenshots")
+
     typesense_host: str = "localhost"
     typesense_port: str = "8108"
     typesense_protocol: str = "http"
@@ -66,10 +73,12 @@ class Settings(BaseSettings):
     # Embedding settings
     embedding: EmbeddingSettings = EmbeddingSettings()
 
-    batchsize: int = 4
+    batchsize: int = 1
 
     auth_username: str = "admin"
     auth_password: SecretStr = SecretStr("changeme")
+
+    default_plugins: List[str] = ["builtin_vlm", "builtin_ocr"]
 
     @classmethod
     def settings_customise_sources(
@@ -91,6 +100,19 @@ def dict_representer(dumper, data):
 
 
 yaml.add_representer(OrderedDict, dict_representer)
+
+
+# Custom representer for SecretStr
+def secret_str_representer(dumper, data):
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data.get_secret_value())
+
+# Custom constructor for SecretStr
+def secret_str_constructor(loader, node):
+    value = loader.construct_scalar(node)
+    return SecretStr(value)
+
+# Register the representer and constructor only for specific fields
+yaml.add_representer(SecretStr, secret_str_representer)
 
 
 def create_default_config():

@@ -46,14 +46,19 @@ def parse_date_fields(entity):
     }
 
 
-def get_embeddings(texts: List[str]) -> List[List[float]]:
+async def get_embeddings(texts: List[str]) -> List[List[float]]:
     print(f"Getting embeddings for {len(texts)} texts")
-    ollama_endpoint = settings.embedding.ollama_endpoint
-    ollama_model = settings.embedding.ollama_model
-    with httpx.Client() as client:
-        response = client.post(
-            f"{ollama_endpoint}/api/embed",
-            json={"model": ollama_model, "input": texts},
+    
+    if settings.embedding.enabled:
+        endpoint = f"http://{settings.server_host}:{settings.server_port}/plugins/embed"
+    else:
+        endpoint = settings.embedding.endpoint
+    
+    model = settings.embedding.model
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            endpoint,
+            json={"model": model, "input": texts},
             timeout=30
         )
     if response.status_code == 200:
@@ -99,7 +104,7 @@ def generate_metadata_text(metadata_entries):
     return metadata_text
 
 
-def bulk_upsert(client, entities):
+async def bulk_upsert(client, entities):
     documents = []
     metadata_texts = []
     entities_with_metadata = []
@@ -142,7 +147,7 @@ def bulk_upsert(client, entities):
             ).model_dump(mode="json")
         )
 
-    embeddings = get_embeddings(metadata_texts)
+    embeddings = await get_embeddings(metadata_texts)
     for doc, embedding, entity in zip(documents, embeddings, entities):
         if entity in entities_with_metadata:
             doc["embedding"] = embedding
@@ -259,7 +264,7 @@ def list_all_entities(
         )
 
 
-def search_entities(
+async def search_entities(
     client,
     q: str,
     library_ids: List[int] = None,
@@ -287,7 +292,7 @@ def search_entities(
         filter_by_str = " && ".join(filter_by) if filter_by else ""
 
         # Convert q to embedding using get_embeddings and take the first embedding
-        embedding = get_embeddings([q])[0]
+        embedding = (await get_embeddings([q]))[0]
 
         common_search_params = {
             "collection": TYPESENSE_COLLECTION_NAME,

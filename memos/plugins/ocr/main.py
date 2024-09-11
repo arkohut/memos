@@ -141,6 +141,7 @@ async def ocr(entity: Entity, request: Request):
                     }
                 ]
             },
+            timeout=30,
         )
 
     # Check if the patch request was successful
@@ -178,7 +179,7 @@ def init_plugin(config):
         ocr_config['Cls']['model_path'] = os.path.join(model_dir, os.path.basename(ocr_config['Cls']['model_path']))
         ocr_config['Rec']['model_path'] = os.path.join(model_dir, os.path.basename(ocr_config['Rec']['model_path']))
         
-        # Save the updated config to a temporary file
+        # Save the updated config to a temporary file with strings wrapped in double quotes
         temp_config_path = os.path.join(os.path.dirname(__file__), "temp_ppocr.yaml")
         with open(temp_config_path, 'w') as f:
             yaml.safe_dump(ocr_config, f)

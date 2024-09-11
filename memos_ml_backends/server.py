@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
-from sentence_transformers import SentenceTransformer
 import numpy as np
 import httpx
 import torch
@@ -25,29 +24,13 @@ elif torch.backends.mps.is_available():
 else:
     device = torch.device("cpu")
 
-torch_dtype = "auto"
+torch_dtype = (
+    torch.float32
+    if (torch.cuda.is_available() and torch.cuda.get_device_capability()[0] <= 6)
+    or (not torch.cuda.is_available() and not torch.backends.mps.is_available())
+    else torch.float16
+)
 print(f"Using device: {device}")
-
-
-def init_embedding_model():
-    model = SentenceTransformer(
-        "jinaai/jina-embeddings-v2-base-zh", trust_remote_code=True
-    )
-    model.to(device)
-    return model
-
-
-embedding_model = init_embedding_model()  # 初始化模型
-
-
-def generate_embeddings(input_texts: List[str]) -> List[List[float]]:
-    embeddings = embedding_model.encode(input_texts, convert_to_tensor=True)
-    embeddings = embeddings.cpu().numpy()
-    # normalized embeddings
-    norms = np.linalg.norm(embeddings, ord=2, axis=1, keepdims=True)
-    norms[norms == 0] = 1
-    embeddings = embeddings / norms
-    return embeddings.tolist()
 
 
 # Add a configuration option to choose the model
@@ -63,8 +46,11 @@ use_florence_model = args.florence if (args.florence or args.qwen2vl) else True
 if use_florence_model:
     # Load Florence-2 model
     florence_model = AutoModelForCausalLM.from_pretrained(
-        "microsoft/Florence-2-base-ft", torch_dtype=torch_dtype, trust_remote_code=True
-    ).to(device)
+        "microsoft/Florence-2-base-ft",
+        torch_dtype=torch_dtype,
+        attn_implementation="sdpa",
+        trust_remote_code=True,
+    ).to(device, torch_dtype)
     florence_processor = AutoProcessor.from_pretrained(
         "microsoft/Florence-2-base-ft", trust_remote_code=True
     )
@@ -74,7 +60,7 @@ else:
         "Qwen/Qwen2-VL-2B-Instruct-GPTQ-Int4",
         torch_dtype=torch_dtype,
         device_map="auto",
-    ).to(device)
+    ).to(device, torch_dtype)
     qwen2vl_processor = AutoProcessor.from_pretrained(
         "Qwen/Qwen2-VL-2B-Instruct-GPTQ-Int4"
     )
@@ -139,9 +125,9 @@ async def generate_qwen2vl_result(text_input, image_input, max_tokens):
     text = qwen2vl_processor.apply_chat_template(
         messages, tokenize=False, add_generation_prompt=True
     )
-    
+
     image_inputs, video_inputs = process_vision_info(messages)
-    
+
     inputs = qwen2vl_processor(
         text=[text],
         images=image_inputs,
@@ -152,12 +138,12 @@ async def generate_qwen2vl_result(text_input, image_input, max_tokens):
     inputs = inputs.to(device)
 
     generated_ids = qwen2vl_model.generate(**inputs, max_new_tokens=(max_tokens or 512))
-    
+
     generated_ids_trimmed = [
         out_ids[len(in_ids) :]
         for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
     ]
-    
+
     output_text = qwen2vl_processor.batch_decode(
         generated_ids_trimmed,
         skip_special_tokens=True,
@@ -168,28 +154,6 @@ async def generate_qwen2vl_result(text_input, image_input, max_tokens):
 
 
 app = FastAPI()
-
-
-class EmbeddingRequest(BaseModel):
-    input: List[str]
-
-
-class EmbeddingResponse(BaseModel):
-    embeddings: List[List[float]]
-
-
-@app.post("/api/embed", response_model=EmbeddingResponse)
-async def create_embeddings(request: EmbeddingRequest):
-    try:
-        if not request.input:
-            return EmbeddingResponse(embeddings=[])
-
-        embeddings = generate_embeddings(request.input)  # 使用新方法
-        return EmbeddingResponse(embeddings=embeddings)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error generating embeddings: {str(e)}"
-        )
 
 
 class ChatCompletionRequest(BaseModel):
@@ -275,10 +239,14 @@ async def chat_completions(request: ChatCompletionRequest):
 if __name__ == "__main__":
     import uvicorn
 
-    parser = argparse.ArgumentParser(description="Run the server with specified model and port")
+    parser = argparse.ArgumentParser(
+        description="Run the server with specified model and port"
+    )
     parser.add_argument("--florence", action="store_true", help="Use Florence-2 model")
     parser.add_argument("--qwen2vl", action="store_true", help="Use Qwen2VL model")
-    parser.add_argument("--port", type=int, default=8000, help="Port to run the server on")
+    parser.add_argument(
+        "--port", type=int, default=8000, help="Port to run the server on"
+    )
     args = parser.parse_args()
 
     if args.florence and args.qwen2vl:
