@@ -157,7 +157,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
         tasks = []
         for root, _, files in os.walk(folder_path):
             with tqdm(
-                total=len(files), desc=f"Scanning {folder_path}", leave=False
+                total=len(files), desc=f"Scanning {root}", leave=True
             ) as pbar:
                 candidate_files = []
                 for file in files:
@@ -309,6 +309,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                                 )
                             )
                     pbar.update(len(batch))
+                    pbar.set_postfix({"Candidates": len(tasks)}, refresh=True)
 
         # Process all tasks after they've been created
         for future in tqdm(
