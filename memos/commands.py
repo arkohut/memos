@@ -17,6 +17,7 @@ from magika import Magika
 from .config import settings
 from .models import init_database
 from .initialize_typesense import init_typesense
+import pathspec
 
 IS_THUMBNAIL = "is_thumbnail"
 
@@ -141,6 +142,13 @@ def show(library_id: int):
 
 
 async def loop_files(library_id, folder, folder_path, force, plugins):
+    # Read .memosignore file
+    ignore_spec = None
+    memosignore_path = Path(folder_path) / '.memosignore'
+    if memosignore_path.exists():
+        with open(memosignore_path, 'r') as ignore_file:
+            ignore_spec = pathspec.PathSpec.from_lines('gitwildmatch', ignore_file)
+
     updated_file_count = 0
     added_file_count = 0
     scanned_files = set()
@@ -155,7 +163,9 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                 for file in files:
                     file_path = Path(root) / file
                     absolute_file_path = file_path.resolve()  # Get absolute path
-                    if file in ignore_files:
+                    relative_path = absolute_file_path.relative_to(folder_path)
+
+                    if file in ignore_files or (ignore_spec and ignore_spec.match_file(str(relative_path))):
                         continue
 
                     scanned_files.add(str(absolute_file_path))

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "memos"
-version = "0.6.11"
+version = "0.6.12"
 description = "A package for memos"
 readme = "README.md"
 authors = [{ name = "arkohut" }]
@@ -43,6 +43,7 @@ dependencies = [
     "einops",
     "modelscope",
     "mss",
+    "pathspec",
 ]
 
 [project.urls]
