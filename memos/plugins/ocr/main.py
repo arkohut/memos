@@ -111,7 +111,17 @@ async def ocr(entity: Entity, request: Request):
     if not entity.file_type_group == "image":
         return {METADATA_FIELD_NAME: "{}"}
 
-    # Get the URL to patch the entity's metadata from the "Location" header
+    # Check if the metadata field already exists and has a non-empty value
+    existing_metadata = entity.get_metadata_by_key(METADATA_FIELD_NAME)
+    if existing_metadata and existing_metadata.value and existing_metadata.value.strip():
+        logger.info(f"Skipping OCR processing for file: {entity.filepath} due to existing metadata")
+        return {METADATA_FIELD_NAME: existing_metadata.value}
+
+    # Check if the entity contains the tag "low_info"
+    if any(tag.name == "low_info" for tag in entity.tags):
+        logger.info(f"Skipping OCR processing for file: {entity.filepath} due to 'low_info' tag")
+        return {METADATA_FIELD_NAME: "{}"}
+
     location_url = request.headers.get("Location")
     if not location_url:
         raise HTTPException(status_code=400, detail="Location header is missing")
@@ -120,7 +130,8 @@ async def ocr(entity: Entity, request: Request):
 
     ocr_result = await predict(entity.filepath)
 
-    if ocr_result is None or not ocr_result:
+    logger.info(ocr_result)
+    if not ocr_result:
         logger.info(f"No OCR result found for file: {entity.filepath}")
         return {METADATA_FIELD_NAME: "{}"}
 
