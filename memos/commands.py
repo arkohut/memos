@@ -7,7 +7,6 @@ from typing import List, Tuple
 
 import httpx
 import typer
-from .server import run_server
 from .read_metadata import read_metadata
 from .schemas import MetadataSource
 from tabulate import tabulate
@@ -90,6 +89,7 @@ def serve():
     db_success = init_database()
     ts_success = init_typesense()
     if db_success and ts_success:
+        from .server import run_server
         run_server()
     else:
         print("Server initialization failed. Unable to start the server.")
