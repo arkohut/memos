@@ -98,7 +98,7 @@ def generate_metadata_text(metadata_entries):
             else f"key: {metadata.key}\nvalue:\n{metadata.value}"
         )
         for metadata in metadata_entries
-        if metadata.key != "ocr_result" and not metadata.key.startswith(("internvl", "minicpm"))
+        if metadata.key != "ocr_result"
     ]
     metadata_text = "\n\n".join(non_ocr_metadata)
     return metadata_text
