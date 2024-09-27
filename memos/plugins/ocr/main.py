@@ -6,11 +6,6 @@ import httpx
 import json
 import base64
 from PIL import Image
-import numpy as np
-from rapidocr_onnxruntime import RapidOCR
-from concurrent.futures import ThreadPoolExecutor
-from functools import partial
-import yaml
 
 from fastapi import APIRouter, FastAPI, Request, HTTPException
 from memos.schemas import Entity, MetadataType
@@ -23,10 +18,6 @@ endpoint = None
 token = None
 concurrency = None
 semaphore = None
-use_local = False
-use_gpu = False
-ocr = None
-thread_pool = None
 
 # Configure logger
 logging.basicConfig(level=logging.INFO)
@@ -58,39 +49,7 @@ async def fetch(endpoint: str, client, image_base64, headers: Optional[dict] = N
         return response.json()
 
 
-def convert_ocr_results(results):
-    if results is None:
-        return []
-    
-    converted = []
-    for result in results:
-        item = {"dt_boxes": result[0], "rec_txt": result[1], "score": result[2]}
-        converted.append(item)
-    return converted
-
-
-def predict_local(img_path):
-    try:
-        with Image.open(img_path) as img:
-            img_array = np.array(img)
-        results, _ = ocr(img_array)
-        return convert_ocr_results(results)
-    except Exception as e:
-        logger.error(f"Error processing image {img_path}: {str(e)}")
-        return None
-
-
-async def async_predict_local(img_path):
-    loop = asyncio.get_running_loop()
-    results = await loop.run_in_executor(thread_pool, partial(predict_local, img_path))
-    return results
-
-
-# Modify the predict function to use semaphore
 async def predict(img_path):
-    if use_local:
-        return await async_predict_local(img_path)
-    
     image_base64 = image2base64(img_path)
     if not image_base64:
         return None
@@ -170,41 +129,16 @@ async def ocr(entity: Entity, request: Request):
 
 
 def init_plugin(config):
-    global endpoint, token, concurrency, semaphore, use_local, use_gpu, ocr, thread_pool
+    global endpoint, token, concurrency, semaphore
     endpoint = config.endpoint
     token = config.token
     concurrency = config.concurrency
-    use_local = config.use_local
-    use_gpu = config.use_gpu
     semaphore = asyncio.Semaphore(concurrency)
-    
-    if use_local:
-        config_path = os.path.join(os.path.dirname(__file__), "ppocr-gpu.yaml" if use_gpu else "ppocr.yaml")
-        
-        # Load and update the config file with absolute model paths
-        with open(config_path, 'r') as f:
-            ocr_config = yaml.safe_load(f)
-        
-        model_dir = os.path.join(os.path.dirname(__file__), "models")
-        ocr_config['Det']['model_path'] = os.path.join(model_dir, os.path.basename(ocr_config['Det']['model_path']))
-        ocr_config['Cls']['model_path'] = os.path.join(model_dir, os.path.basename(ocr_config['Cls']['model_path']))
-        ocr_config['Rec']['model_path'] = os.path.join(model_dir, os.path.basename(ocr_config['Rec']['model_path']))
-        
-        # Save the updated config to a temporary file with strings wrapped in double quotes
-        temp_config_path = os.path.join(os.path.dirname(__file__), "temp_ppocr.yaml")
-        with open(temp_config_path, 'w') as f:
-            yaml.safe_dump(ocr_config, f)
-        
-        ocr = RapidOCR(config_path=temp_config_path)
-        thread_pool = ThreadPoolExecutor(max_workers=concurrency)
 
     logger.info("OCR plugin initialized")
     logger.info(f"Endpoint: {endpoint}")
     logger.info(f"Token: {token}")
     logger.info(f"Concurrency: {concurrency}")
-    logger.info(f"Use local: {use_local}")
-    logger.info(f"Use GPU: {use_gpu}")
-
 
 if __name__ == "__main__":
     import uvicorn
@@ -226,12 +160,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--port", type=int, default=8000, help="The port number to run the server on"
-    )
-    parser.add_argument(
-        "--use-local", action="store_true", help="Use local OCR processing"
-    )
-    parser.add_argument(
-        "--use-gpu", action="store_true", help="Use GPU for local OCR processing"
     )
 
     args = parser.parse_args()
