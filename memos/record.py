@@ -4,12 +4,16 @@ import time
 import logging
 import platform
 import subprocess
+import argparse
 from PIL import Image
 import imagehash
 from memos.utils import write_image_metadata
 import ctypes
 from mss import mss
+from pathlib import Path
+from memos.config import settings
 
+# Import platform-specific modules
 if platform.system() == "Windows":
     import win32gui
     import win32process
@@ -23,7 +27,12 @@ elif platform.system() == "Darwin":
         CGSessionCopyCurrentDictionary,
     )
 
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
+
+# Functions moved from common.py
 def load_screen_sequences(base_dir, date):
     try:
         with open(os.path.join(base_dir, date, ".screen_sequences"), "r") as f:
@@ -174,7 +183,9 @@ def take_screenshot_windows(
     window_title,
 ):
     with mss() as sct:
-        for i, monitor in enumerate(sct.monitors[1:], 1):  # Skip the first monitor (entire screen)
+        for i, monitor in enumerate(
+            sct.monitors[1:], 1
+        ):  # Skip the first monitor (entire screen)
             safe_monitor_name = f"monitor_{i}"
             logging.info(f"Processing monitor: {safe_monitor_name}")
 
@@ -272,3 +283,74 @@ def is_screen_locked():
     elif platform.system() == "Windows":
         user32 = ctypes.windll.User32
         return user32.GetForegroundWindow() == 0
+
+
+def run_screen_recorder_once(threshold, base_dir, previous_hashes):
+    if not is_screen_locked():
+        date = time.strftime("%Y%m%d")
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        screen_sequences = load_screen_sequences(base_dir, date)
+        screenshot_files = take_screenshot(
+            base_dir, previous_hashes, threshold, screen_sequences, date, timestamp
+        )
+        for screenshot_file in screenshot_files:
+            logging.info(f"Screenshot saved: {screenshot_file}")
+        save_previous_hashes(base_dir, previous_hashes)
+    else:
+        logging.info("Screen is locked. Skipping screenshot.")
+
+
+def run_screen_recorder(threshold, base_dir, previous_hashes):
+    while True:
+        try:
+            if not is_screen_locked():
+                date = time.strftime("%Y%m%d")
+                timestamp = time.strftime("%Y%m%d-%H%M%S")
+                screen_sequences = load_screen_sequences(base_dir, date)
+                screenshot_files = take_screenshot(
+                    base_dir,
+                    previous_hashes,
+                    threshold,
+                    screen_sequences,
+                    date,
+                    timestamp,
+                )
+                for screenshot_file in screenshot_files:
+                    logging.info(f"Screenshot saved: {screenshot_file}")
+            else:
+                logging.info("Screen is locked. Skipping screenshot.")
+        except Exception as e:
+            logging.error(f"An error occurred: {str(e)}. Skipping this iteration.")
+
+        time.sleep(5)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Screen Recorder")
+    parser.add_argument(
+        "--threshold", type=int, default=4, help="Threshold for image similarity"
+    )
+    parser.add_argument("--base-dir", type=str, help="Base directory for screenshots")
+    parser.add_argument("--once", action="store_true", help="Run once and exit")
+    args = parser.parse_args()
+
+    base_dir = (
+        os.path.expanduser(args.base_dir) if args.base_dir else settings.screenshots_dir
+    )
+    previous_hashes = load_previous_hashes(base_dir)
+
+    if args.once:
+        run_screen_recorder_once(args, base_dir, previous_hashes)
+    else:
+        while True:
+            try:
+                run_screen_recorder(args, base_dir, previous_hashes)
+            except Exception as e:
+                logging.error(
+                    f"Critical error occurred, program will restart in 10 seconds: {str(e)}"
+                )
+                time.sleep(10)
+
+
+if __name__ == "__main__":
+    main()

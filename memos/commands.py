@@ -17,6 +17,13 @@ from .config import settings
 from .models import init_database
 from .initialize_typesense import init_typesense
 import pathspec
+from .record import (
+    run_screen_recorder_once,
+    run_screen_recorder,
+    load_previous_hashes,
+    save_previous_hashes,
+)
+import time  # Add this import at the top of the file
 
 IS_THUMBNAIL = "is_thumbnail"
 
@@ -857,6 +864,31 @@ def index_default_library(
         return
 
     index(default_library["id"], force=force, folders=None, batchsize=batchsize)
+
+
+@app.command("record")
+def record(
+    threshold: int = typer.Option(4, help="Threshold for image similarity"),
+    base_dir: str = typer.Option(None, help="Base directory for screenshots"),
+    once: bool = typer.Option(False, help="Run once and exit"),
+):
+    """
+    Record screenshots of the screen.
+    """
+    base_dir = os.path.expanduser(base_dir) if base_dir else settings.screenshots_dir
+    previous_hashes = load_previous_hashes(base_dir)
+
+    if once:
+        run_screen_recorder_once(threshold, base_dir, previous_hashes)
+    else:
+        while True:
+            try:
+                run_screen_recorder(threshold, base_dir, previous_hashes)
+            except Exception as e:
+                logging.error(
+                    f"Critical error occurred, program will restart in 10 seconds: {str(e)}"
+                )
+                time.sleep(10)
 
 
 if __name__ == "__main__":

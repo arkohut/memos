@@ -51,10 +51,9 @@ Homepage = "https://github.com/arkohut/memos"
 
 [project.scripts]
 memos = "memos.commands:app"
-memos-record = "screen_recorder.record:main"
 
 [tool.setuptools.packages.find]
-include = ["memos*", "screen_recorder*"]
+include = ["memos*"]
 
 [tool.setuptools.package-data]
 "*" = ["static/**/*"]
