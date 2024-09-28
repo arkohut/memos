@@ -29,7 +29,6 @@ dependencies = [
     "pillow",
     "piexif",
     "imagehash",
-    "rapidocr_onnxruntime",
     "screeninfo",
     "pywin32; sys_platform == 'win32'",
     "psutil; sys_platform == 'win32'",
