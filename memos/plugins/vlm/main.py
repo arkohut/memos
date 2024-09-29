@@ -9,12 +9,9 @@ import logging
 import uvicorn
 import os
 import io
-import torch
-from transformers import AutoModelForCausalLM, AutoProcessor
 
 from unittest.mock import patch
 from transformers.dynamic_module_utils import get_imports
-from modelscope import snapshot_download
 
 def fixed_get_imports(filename: str | os.PathLike) -> list[str]:
     if not str(filename).endswith("modeling_florence2.py"):
