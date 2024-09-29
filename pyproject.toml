@@ -56,4 +56,4 @@ include = ["memos*"]
 
 [tool.setuptools.package-data]
 "*" = ["static/**/*"]
-"memos.plugins.ocr" = ["*.yaml", "models/*.onnx"]
+
