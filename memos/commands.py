@@ -24,6 +24,9 @@ from .record import (
     save_previous_hashes,
 )
 import time  # Add this import at the top of the file
+import sys
+import subprocess
+import platform
 
 IS_THUMBNAIL = "is_thumbnail"
 
@@ -97,6 +100,7 @@ def serve():
     ts_success = init_typesense()
     if db_success and ts_success:
         from .server import run_server
+
         run_server()
     else:
         print("Server initialization failed. Unable to start the server.")
@@ -151,10 +155,10 @@ def show(library_id: int):
 async def loop_files(library_id, folder, folder_path, force, plugins):
     # Read .memosignore file
     ignore_spec = None
-    memosignore_path = Path(folder_path) / '.memosignore'
+    memosignore_path = Path(folder_path) / ".memosignore"
     if memosignore_path.exists():
-        with open(memosignore_path, 'r') as ignore_file:
-            ignore_spec = pathspec.PathSpec.from_lines('gitwildmatch', ignore_file)
+        with open(memosignore_path, "r") as ignore_file:
+            ignore_spec = pathspec.PathSpec.from_lines("gitwildmatch", ignore_file)
 
     updated_file_count = 0
     added_file_count = 0
@@ -163,16 +167,16 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
     async with httpx.AsyncClient(timeout=60) as client:
         tasks = []
         for root, _, files in os.walk(folder_path):
-            with tqdm(
-                total=len(files), desc=f"Scanning {root}", leave=True
-            ) as pbar:
+            with tqdm(total=len(files), desc=f"Scanning {root}", leave=True) as pbar:
                 candidate_files = []
                 for file in files:
                     file_path = Path(root) / file
                     absolute_file_path = file_path.resolve()  # Get absolute path
                     relative_path = absolute_file_path.relative_to(folder_path)
 
-                    if file in ignore_files or (ignore_spec and ignore_spec.match_file(str(relative_path))):
+                    if file in ignore_files or (
+                        ignore_spec and ignore_spec.match_file(str(relative_path))
+                    ):
                         continue
 
                     scanned_files.add(str(absolute_file_path))
@@ -756,7 +760,9 @@ def bind(
     if response.status_code == 204:
         print("Plugin bound to library successfully")
     else:
-        print(f"Failed to bind plugin to library: {response.status_code} - {response.text}")
+        print(
+            f"Failed to bind plugin to library: {response.status_code} - {response.text}"
+        )
 
 
 @plugin_app.command("unbind")
@@ -889,6 +895,126 @@ def record(
                     f"Critical error occurred, program will restart in 10 seconds: {str(e)}"
                 )
                 time.sleep(10)
+
+
+def get_python_path():
+    return sys.executable
+
+
+def get_memos_dir():
+    return Path.home() / ".memos"
+
+
+def generate_launch_sh():
+    memos_dir = get_memos_dir()
+    python_path = get_python_path()
+    content = f"""#!/bin/bash
+# activate current python environment
+if [ -f "$(dirname "$python_path")/activate" ]; then
+    source "$(dirname "$python_path")/activate"
+fi
+
+# run memos record
+{python_path} -m memos.commands record &
+
+# run memos serve
+{python_path} -m memos.commands serve &
+
+# wait for all background processes
+wait
+"""
+    launch_sh_path = memos_dir / "launch.sh"
+    with open(launch_sh_path, "w") as f:
+        f.write(content)
+    launch_sh_path.chmod(0o755)
+
+
+def generate_plist():
+    memos_dir = get_memos_dir()
+    python_dir = os.path.dirname(get_python_path())
+    plist_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.user.memos</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>{memos_dir}/launch.sh</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/memos.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/memos.err</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>{python_dir}:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+</dict>
+</plist>
+"""
+    plist_path = Path.home() / "Library/LaunchAgents/com.user.memos.plist"
+    with open(plist_path, "w") as f:
+        f.write(plist_content)
+    return plist_path
+
+
+def load_plist(plist_path):
+    subprocess.run(["launchctl", "unload", str(plist_path)], check=False)
+    subprocess.run(["launchctl", "load", str(plist_path)], check=True)
+
+
+def is_macos():
+    return platform.system() == "Darwin"
+
+
+@app.command()
+def enable():
+    """Enable memos to run at startup"""
+    if not is_macos():
+        typer.echo("Error: This feature is only supported on macOS.")
+        raise typer.Exit(code=1)
+
+    if not sys.executable:
+        typer.echo("Error: Unable to detect Python environment.")
+        raise typer.Exit(code=1)
+
+    memos_dir = get_memos_dir()
+    memos_dir.mkdir(parents=True, exist_ok=True)
+
+    generate_launch_sh()
+    typer.echo(f"Generated launch script at {memos_dir}/launch.sh")
+
+    plist_path = generate_plist()
+    typer.echo(f"Generated plist file at {plist_path}")
+
+    load_plist(plist_path)
+    typer.echo("Loaded plist file. Memos will now run at startup.")
+
+
+@app.command()
+def disable():
+    """Disable memos from running at startup"""
+    if not is_macos():
+        typer.echo("Error: This feature is only supported on macOS.")
+        raise typer.Exit(code=1)
+
+    plist_path = Path.home() / "Library/LaunchAgents/com.user.memos.plist"
+    if plist_path.exists():
+        subprocess.run(["launchctl", "unload", str(plist_path)], check=False)
+        plist_path.unlink()
+        typer.echo(
+            "Unloaded and removed plist file. Memos will no longer run at startup."
+        )
+    else:
+        typer.echo("Plist file does not exist. Memos is not set to run at startup.")
 
 
 if __name__ == "__main__":
