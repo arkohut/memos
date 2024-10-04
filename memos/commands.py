@@ -905,6 +905,32 @@ def get_memos_dir():
     return Path.home() / ".memos"
 
 
+def generate_windows_bat():
+    memos_dir = get_memos_dir()
+    python_path = get_python_path()
+    conda_prefix = os.environ.get("CONDA_PREFIX")
+
+    if conda_prefix:
+        # If we're in a Conda environment
+        activate_path = os.path.join(conda_prefix, "Scripts", "activate.bat")
+        content = f"""@echo off
+call "{activate_path}"
+start "" "{python_path}" -m memos record
+start "" "{python_path}" -m memos serve
+"""
+    else:
+        # If we're not in a Conda environment, use the original content
+        content = f"""@echo off
+start "" "{python_path}" -m memos record
+start "" "{python_path}" -m memos serve
+"""
+
+    bat_path = memos_dir / "launch.bat"
+    with open(bat_path, "w") as f:
+        f.write(content)
+    return bat_path
+
+
 def generate_launch_sh():
     memos_dir = get_memos_dir()
     python_path = get_python_path()
@@ -927,6 +953,21 @@ wait
     with open(launch_sh_path, "w") as f:
         f.write(content)
     launch_sh_path.chmod(0o755)
+
+
+def setup_windows_autostart(bat_path):
+    import win32com.client
+
+    startup_folder = (
+        Path(os.getenv("APPDATA")) / r"Microsoft\Windows\Start Menu\Programs\Startup"
+    )
+    shortcut_path = startup_folder / "Memos.lnk"
+
+    shell = win32com.client.Dispatch("WScript.Shell")
+    shortcut = shell.CreateShortCut(str(shortcut_path))
+    shortcut.Targetpath = str(bat_path)
+    shortcut.WorkingDirectory = str(bat_path.parent)
+    shortcut.save()
 
 
 def generate_plist():
@@ -975,13 +1016,13 @@ def is_macos():
     return platform.system() == "Darwin"
 
 
+def is_windows():
+    return platform.system() == "Windows"
+
+
 @app.command()
 def enable():
     """Enable memos to run at startup"""
-    if not is_macos():
-        typer.echo("Error: This feature is only supported on macOS.")
-        raise typer.Exit(code=1)
-
     if not sys.executable:
         typer.echo("Error: Unable to detect Python environment.")
         raise typer.Exit(code=1)
@@ -989,14 +1030,20 @@ def enable():
     memos_dir = get_memos_dir()
     memos_dir.mkdir(parents=True, exist_ok=True)
 
-    generate_launch_sh()
-    typer.echo(f"Generated launch script at {memos_dir}/launch.sh")
-
-    plist_path = generate_plist()
-    typer.echo(f"Generated plist file at {plist_path}")
-
-    load_plist(plist_path)
-    typer.echo("Loaded plist file. Memos will now run at startup.")
+    if is_windows():
+        bat_path = generate_windows_bat()
+        typer.echo(f"Generated launch script at {bat_path}")
+        setup_windows_autostart(bat_path)
+        typer.echo("Created startup shortcut for Windows.")
+    elif is_macos():
+        launch_sh_path = generate_launch_sh()
+        typer.echo(f"Generated launch script at {launch_sh_path}")
+        plist_path = generate_plist()
+        typer.echo(f"Generated plist file at {plist_path}")
+        load_plist(plist_path)
+        typer.echo("Loaded plist file. Memos will now run at startup.")
+    else:
+        typer.echo("Unsupported operating system.")
 
 
 @app.command()
