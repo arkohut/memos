@@ -1,6 +1,7 @@
 import os
 import logging
 from pathlib import Path
+from datetime import datetime
 
 import httpx
 import typer
@@ -97,9 +98,13 @@ def scan_default_library(force: bool = False):
     if not default_library["folders"]:
         # Add the screenshots directory to the library
         screenshots_dir = Path(settings.screenshots_dir).resolve()
+        folder = {
+            "path": str(screenshots_dir),
+            "last_modified_at": datetime.fromtimestamp(screenshots_dir.stat().st_mtime).isoformat(),
+        }
         response = httpx.post(
             f"{BASE_URL}/libraries/{default_library['id']}/folders",
-            json={"folders": [str(screenshots_dir)]},
+            json={"folders": [folder]},
         )
         if response.status_code != 200:
             print(

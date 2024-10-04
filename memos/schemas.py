@@ -11,6 +11,11 @@ from datetime import datetime
 from enum import Enum
 
 
+class FolderType(Enum):
+    DEFAULT = "default"
+    DUMMY = "dummy"
+
+
 class MetadataSource(Enum):
     USER_GENERATED = "user_generated"
     SYSTEM_GENERATED = "system_generated"
@@ -23,17 +28,19 @@ class MetadataType(Enum):
     NUMBER_DATA = "number"
 
 
-class NewLibraryParam(BaseModel):
-    name: str
-    folders: List[DirectoryPath] = []
-
-
 class NewFolderParam(BaseModel):
     path: DirectoryPath
+    last_modified_at: datetime
+    type: str = FolderType.DEFAULT
+
+
+class NewLibraryParam(BaseModel):
+    name: str
+    folders: List[NewFolderParam] = []
 
 
 class NewFoldersParam(BaseModel):
-    folders: List[DirectoryPath] = []
+    folders: List[NewFolderParam] = []
 
 
 class EntityMetadataParam(BaseModel):
@@ -103,6 +110,8 @@ class NewLibraryPluginParam(BaseModel):
 class Folder(BaseModel):
     id: int
     path: str
+    last_modified_at: datetime
+    type: FolderType
 
     model_config = ConfigDict(from_attributes=True)
 

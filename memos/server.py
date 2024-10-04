@@ -146,8 +146,14 @@ def new_library(library_param: NewLibraryParam, db: Session = Depends(get_db)):
         )
 
     # Remove duplicate folders from the library_param
-    unique_folders = list(set(library_param.folders))
+    unique_folders = []
+    seen_paths = set()
+    for folder in library_param.folders:
+        if folder.path not in seen_paths:
+            seen_paths.add(folder.path)
+            unique_folders.append(folder)
     library_param.folders = unique_folders
+
     library = crud.create_library(library_param, db)
     return library
 

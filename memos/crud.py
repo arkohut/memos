@@ -37,8 +37,13 @@ def create_library(library: NewLibraryParam, db: Session) -> Library:
     db.commit()
     db.refresh(db_library)
 
-    for folder_path in library.folders:
-        db_folder = FolderModel(path=str(folder_path), library_id=db_library.id)
+    for folder in library.folders:
+        db_folder = FolderModel(
+            path=str(folder.path),
+            library_id=db_library.id,
+            last_modified_at=folder.last_modified_at,
+            type=folder.type,
+        )
         db.add(db_folder)
 
     db.commit()
@@ -46,7 +51,12 @@ def create_library(library: NewLibraryParam, db: Session) -> Library:
         id=db_library.id,
         name=db_library.name,
         folders=[
-            Folder(id=db_folder.id, path=db_folder.path)
+            Folder(
+                id=db_folder.id,
+                path=db_folder.path,
+                last_modified_at=db_folder.last_modified_at,
+                type=db_folder.type,
+            )
             for db_folder in db_library.folders
         ],
         plugins=[],
@@ -66,13 +76,16 @@ def get_library_by_name(library_name: str, db: Session) -> Library | None:
 
 
 def add_folders(library_id: int, folders: NewFoldersParam, db: Session) -> Library:
-    db_folders = []
-    for folder_path in folders.folders:
-        db_folder = FolderModel(path=str(folder_path), library_id=library_id)
+    for folder in folders.folders:
+        db_folder = FolderModel(
+            path=str(folder.path),
+            library_id=library_id,
+            last_modified_at=folder.last_modified_at,
+            type=folder.type,
+        )
         db.add(db_folder)
         db.commit()
         db.refresh(db_folder)
-        db_folders.append(Folder(id=db_folder.id, path=db_folder.path))
 
     db_library = db.query(LibraryModel).filter(LibraryModel.id == library_id).first()
     return Library(**db_library.__dict__)
@@ -86,7 +99,9 @@ def create_entity(library_id: int, entity: NewEntityParam, db: Session) -> Entit
     entity.tags = None
     entity.metadata_entries = None
 
-    db_entity = EntityModel(**entity.model_dump(exclude_none=True), library_id=library_id)
+    db_entity = EntityModel(
+        **entity.model_dump(exclude_none=True), library_id=library_id
+    )
     db.add(db_entity)
     db.commit()
     db.refresh(db_entity)
@@ -371,12 +386,17 @@ def update_entity_metadata_entries(
 def get_plugin_by_id(plugin_id: int, db: Session) -> Plugin | None:
     return db.query(PluginModel).filter(PluginModel.id == plugin_id).first()
 
+
 def remove_plugin_from_library(library_id: int, plugin_id: int, db: Session):
-    library_plugin = db.query(LibraryPluginModel).filter(
-        LibraryPluginModel.library_id == library_id,
-        LibraryPluginModel.plugin_id == plugin_id
-    ).first()
-    
+    library_plugin = (
+        db.query(LibraryPluginModel)
+        .filter(
+            LibraryPluginModel.library_id == library_id,
+            LibraryPluginModel.plugin_id == plugin_id,
+        )
+        .first()
+    )
+
     if library_plugin:
         db.delete(library_plugin)
         db.commit()

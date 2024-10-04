@@ -13,7 +13,7 @@ from sqlalchemy import (
 from datetime import datetime
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column, Session
 from typing import List
-from .schemas import MetadataSource, MetadataType
+from .schemas import MetadataSource, MetadataType, FolderType
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from .config import get_database_path, settings
@@ -51,6 +51,12 @@ class FolderModel(Base):
     )
     entities: Mapped[List["EntityModel"]] = relationship(
         "EntityModel", back_populates="folder"
+    )
+    type: Mapped[FolderType] = mapped_column(
+        Enum(FolderType), nullable=False
+    )
+    last_modified_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=False
     )
 
 

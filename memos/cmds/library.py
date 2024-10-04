@@ -75,8 +75,14 @@ def ls():
 
 @lib_app.command("create")
 def add(name: str, folders: List[str]):
+    absolute_folders = []
+    for folder in folders:
+        folder_path = Path(folder).resolve()
+        absolute_folders.append({
+            "path": str(folder_path),
+            "last_modified_at": datetime.fromtimestamp(folder_path.stat().st_mtime).isoformat(),
+        })
 
-    absolute_folders = [str(Path(folder).resolve()) for folder in folders]
     response = httpx.post(
         f"{BASE_URL}/libraries",
         json={"name": name, "folders": absolute_folders},
@@ -89,7 +95,14 @@ def add(name: str, folders: List[str]):
 
 @lib_app.command("add-folder")
 def add_folder(library_id: int, folders: List[str]):
-    absolute_folders = [str(Path(folder).resolve()) for folder in folders]
+    absolute_folders = []
+    for folder in folders:
+        folder_path = Path(folder).resolve()
+        absolute_folders.append({
+            "path": str(folder_path),
+            "last_modified_at": datetime.fromtimestamp(folder_path.stat().st_mtime).isoformat(),
+        })
+
     response = httpx.post(
         f"{BASE_URL}/libraries/{library_id}/folders",
         json={"folders": absolute_folders},
