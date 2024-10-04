@@ -11,6 +11,9 @@ from rapidocr_onnxruntime import RapidOCR
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 import yaml
+import io
+
+MAX_THUMBNAIL_SIZE = (1920, 1920)
 
 from fastapi import APIRouter, Request, HTTPException
 from memos.schemas import Entity, MetadataType
@@ -35,9 +38,11 @@ logger = logging.getLogger(__name__)
 def image2base64(img_path):
     try:
         with Image.open(img_path) as img:
-            img.convert("RGB")  # Check if image is not broken
-        with open(img_path, "rb") as image_file:
-            encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
+            img = img.convert("RGB")
+            img.thumbnail(MAX_THUMBNAIL_SIZE)
+            buffered = io.BytesIO()
+            img.save(buffered, format="JPEG")
+            encoded_string = base64.b64encode(buffered.getvalue()).decode("utf-8")
         return encoded_string
     except Exception as e:
         logger.error(f"Error processing image {img_path}: {str(e)}")
@@ -71,6 +76,8 @@ def convert_ocr_results(results):
 def predict_local(img_path):
     try:
         with Image.open(img_path) as img:
+            img = img.convert("RGB")
+            img.thumbnail(MAX_THUMBNAIL_SIZE)
             img_array = np.array(img)
         results, _ = ocr(img_array)
         return convert_ocr_results(results)
@@ -128,7 +135,6 @@ async def ocr(entity: Entity, request: Request):
     patch_url = f"{location_url}/metadata"
 
     ocr_result = await predict(entity.filepath)
-
     logger.info(ocr_result)
     if not ocr_result:
         logger.info(f"No OCR result found for file: {entity.filepath}")
