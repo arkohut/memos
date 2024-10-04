@@ -1,7 +1,7 @@
 import asyncio
 import os
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple
 
@@ -21,19 +21,18 @@ from .record import (
     run_screen_recorder_once,
     run_screen_recorder,
     load_previous_hashes,
-    save_previous_hashes,
 )
-import time  # Add this import at the top of the file
+import time
 import sys
 import subprocess
 import platform
+from .cmds.plugin import plugin_app
 
 IS_THUMBNAIL = "is_thumbnail"
 
 app = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
 
 lib_app = typer.Typer()
-plugin_app = typer.Typer()
 
 app.add_typer(plugin_app, name="plugin")
 app.add_typer(lib_app, name="lib")
@@ -182,7 +181,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                     scanned_files.add(str(absolute_file_path))
                     candidate_files.append(str(absolute_file_path))
 
-                batching = 100
+                batching = 200
                 for i in range(0, len(candidate_files), batching):
                     batch = candidate_files[i : i + batching]
 
@@ -708,77 +707,6 @@ def index(
     print("Indexing completed")
 
 
-def display_plugins(plugins):
-    table = []
-    for plugin in plugins:
-        table.append(
-            [plugin["id"], plugin["name"], plugin["description"], plugin["webhook_url"]]
-        )
-    print(
-        tabulate(
-            table,
-            headers=["ID", "Name", "Description", "Webhook URL"],
-            tablefmt="plain",
-        )
-    )
-
-
-@plugin_app.command("ls")
-def ls():
-    response = httpx.get(f"{BASE_URL}/plugins")
-    plugins = response.json()
-    display_plugins(plugins)
-
-
-@plugin_app.command("create")
-def create(name: str, webhook_url: str, description: str = ""):
-    response = httpx.post(
-        f"{BASE_URL}/plugins",
-        json={"name": name, "description": description, "webhook_url": webhook_url},
-    )
-    if 200 <= response.status_code < 300:
-        print("Plugin created successfully")
-    else:
-        print(f"Failed to create plugin: {response.status_code} - {response.text}")
-
-
-@plugin_app.command("bind")
-def bind(
-    library_id: int = typer.Option(..., "--lib", help="ID of the library"),
-    plugin: str = typer.Option(..., "--plugin", help="ID or name of the plugin"),
-):
-    try:
-        plugin_id = int(plugin)
-        plugin_param = {"plugin_id": plugin_id}
-    except ValueError:
-        plugin_param = {"plugin_name": plugin}
-
-    response = httpx.post(
-        f"{BASE_URL}/libraries/{library_id}/plugins",
-        json=plugin_param,
-    )
-    if response.status_code == 204:
-        print("Plugin bound to library successfully")
-    else:
-        print(
-            f"Failed to bind plugin to library: {response.status_code} - {response.text}"
-        )
-
-
-@plugin_app.command("unbind")
-def unbind(
-    library_id: int = typer.Option(..., "--lib", help="ID of the library"),
-    plugin_id: int = typer.Option(..., "--plugin", help="ID of the plugin"),
-):
-    response = httpx.delete(
-        f"{BASE_URL}/libraries/{library_id}/plugins/{plugin_id}",
-    )
-    if response.status_code == 204:
-        print("Plugin unbound from library successfully")
-    else:
-        print(
-            f"Failed to unbind plugin from library: {response.status_code} - {response.text}"
-        )
 
 
 @app.command()
