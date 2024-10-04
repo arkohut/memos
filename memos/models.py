@@ -33,7 +33,10 @@ class LibraryModel(Base):
     __tablename__ = "libraries"
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     folders: Mapped[List["FolderModel"]] = relationship(
-        "FolderModel", back_populates="library", lazy="joined"
+        "FolderModel",
+        back_populates="library",
+        lazy="joined",
+        primaryjoin="and_(LibraryModel.id==FolderModel.library_id, FolderModel.type=='default')",
     )
     plugins: Mapped[List["PluginModel"]] = relationship(
         "PluginModel", secondary="library_plugins", lazy="joined"
@@ -52,12 +55,8 @@ class FolderModel(Base):
     entities: Mapped[List["EntityModel"]] = relationship(
         "EntityModel", back_populates="folder"
     )
-    type: Mapped[FolderType] = mapped_column(
-        Enum(FolderType), nullable=False
-    )
-    last_modified_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=False
-    )
+    type: Mapped[FolderType] = mapped_column(Enum(FolderType), nullable=False)
+    last_modified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=False)
 
 
 class EntityModel(Base):
