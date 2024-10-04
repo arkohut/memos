@@ -915,14 +915,14 @@ def generate_windows_bat():
         activate_path = os.path.join(conda_prefix, "Scripts", "activate.bat")
         content = f"""@echo off
 call "{activate_path}"
-start "" "{python_path}" -m memos record
-start "" "{python_path}" -m memos serve
+start "" "{python_path}" -m memos.commands record
+start "" "{python_path}" -m memos.commands serve
 """
     else:
         # If we're not in a Conda environment, use the original content
         content = f"""@echo off
-start "" "{python_path}" -m memos record
-start "" "{python_path}" -m memos serve
+start "" "{python_path}" -m memos.commands record
+start "" "{python_path}" -m memos.commands serve
 """
 
     bat_path = memos_dir / "launch.bat"
