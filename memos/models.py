@@ -8,9 +8,10 @@ from sqlalchemy import (
     ForeignKey,
     func,
     Index,
+    event,
 )
 from datetime import datetime
-from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column, Session
 from typing import List
 from .schemas import MetadataSource, MetadataType
 from sqlalchemy.exc import OperationalError
@@ -93,6 +94,11 @@ class EntityModel(Base):
         Index("idx_library_id", "library_id"),
         Index("idx_folder_id", "folder_id"),
     )
+
+    @classmethod
+    def update_last_scan_at(cls, session: Session, entity: "EntityModel"):
+        entity.last_scan_at = func.now()
+        session.add(entity)
 
 
 class TagModel(Base):
@@ -215,4 +221,25 @@ def init_default_libraries(session, default_plugins):
             )  # Assuming library_id=1 for default libraries
             session.add(library_plugin)
 
+    session.commit()
+
+
+@event.listens_for(EntityTagModel, "after_insert")
+@event.listens_for(EntityTagModel, "after_delete")
+def update_entity_last_scan_at_for_tags(mapper, connection, target):
+    session = Session(bind=connection)
+    entity = session.query(EntityModel).get(target.entity_id)
+    if entity:
+        EntityModel.update_last_scan_at(session, entity)
+    session.commit()
+
+
+@event.listens_for(EntityMetadataModel, "after_insert")
+@event.listens_for(EntityMetadataModel, "after_update")
+@event.listens_for(EntityMetadataModel, "after_delete")
+def update_entity_last_scan_at_for_metadata(mapper, connection, target):
+    session = Session(bind=connection)
+    entity = session.query(EntityModel).get(target.entity_id)
+    if entity:
+        EntityModel.update_last_scan_at(session, entity)
     session.commit()
