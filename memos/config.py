@@ -29,7 +29,6 @@ class OCRSettings(BaseModel):
     token: str = ""
     concurrency: int = 1
     use_local: bool = True
-    use_gpu: bool = False
     force_jpeg: bool = False
 
 
