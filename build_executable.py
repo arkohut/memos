@@ -38,7 +38,7 @@ def build_executable():
             f"{magika_path}:magika",
             f"--add-data",
             f"{modelscope_path}:modelscope",
-            "--onedir",
+            "--onefile",
             "--noupx",
             "--clean",
             "--strip",
