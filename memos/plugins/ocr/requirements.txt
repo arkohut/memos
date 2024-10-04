@@ -1,0 +1,4 @@
+rapidocr_onnxruntime
+httpx
+fastapi
+# Note: If you are using GPU, you should add onnxruntime-gpu to the requirements
