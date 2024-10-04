@@ -10,19 +10,9 @@ import uvicorn
 import os
 import io
 
-from unittest.mock import patch
-from transformers.dynamic_module_utils import get_imports
-
-def fixed_get_imports(filename: str | os.PathLike) -> list[str]:
-    if not str(filename).endswith("modeling_florence2.py"):
-        return get_imports(filename)
-    imports = get_imports(filename)
-    imports.remove("flash_attn")
-    return imports
-
 
 PLUGIN_NAME = "vlm"
-PROMPT = "描述这张图片的内容"
+PROMPT = "请帮我尽量详尽的描述这个图片中的内容，包括文字内容、视觉元素等"
 
 router = APIRouter(tags=[PLUGIN_NAME], responses={404: {"description": "Not found"}})
 
@@ -33,8 +23,6 @@ concurrency = None
 semaphore = None
 force_jpeg = None
 use_local = None
-florence_model = None
-florence_processor = None
 torch_dtype = None
 
 # Configure logger
