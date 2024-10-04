@@ -19,6 +19,8 @@ class VLMSettings(BaseModel):
     token: str = ""
     concurrency: int = 1
     force_jpeg: bool = False
+    use_local: bool = True
+    use_modelscope: bool = False
 
 
 class OCRSettings(BaseModel):
@@ -26,6 +28,8 @@ class OCRSettings(BaseModel):
     endpoint: str = "http://localhost:5555/predict"
     token: str = ""
     concurrency: int = 1
+    use_local: bool = True
+    use_gpu: bool = False
     force_jpeg: bool = False
 
 
