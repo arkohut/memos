@@ -10,6 +10,7 @@ from pydantic_settings import (
 from pydantic import BaseModel, SecretStr
 import yaml
 from collections import OrderedDict
+import io
 
 
 class VLMSettings(BaseModel):
@@ -19,6 +20,7 @@ class VLMSettings(BaseModel):
     token: str = ""
     concurrency: int = 1
     force_jpeg: bool = False
+    prompt: str = "请帮描述这个图片中的内容，包括画面格局、出现的视觉元素等"
 
 
 class OCRSettings(BaseModel):
@@ -123,14 +125,21 @@ def create_default_config():
     if not config_path.exists():
         settings = Settings()
         os.makedirs(config_path.parent, exist_ok=True)
-        with open(config_path, "w") as f:
-            # Convert settings to a dictionary and ensure order
-            settings_dict = settings.model_dump()
-            ordered_settings = OrderedDict(
-                (key, settings_dict[key]) for key in settings.model_fields.keys()
-            )
-            yaml.dump(ordered_settings, f, Dumper=yaml.Dumper)
-
+        
+        # 将设置转换为字典并确保顺序
+        settings_dict = settings.model_dump()
+        ordered_settings = OrderedDict(
+            (key, settings_dict[key]) for key in settings.model_fields.keys()
+        )
+        
+        # 使用 io.StringIO 作为中间步骤
+        with io.StringIO() as string_buffer:
+            yaml.dump(ordered_settings, string_buffer, allow_unicode=True, Dumper=yaml.Dumper)
+            yaml_content = string_buffer.getvalue()
+        
+        # 将内容写入文件，确保使用 UTF-8 编码
+        with open(config_path, "w", encoding="utf-8") as f:
+            f.write(yaml_content)
 
 # Create default config if it doesn't exist
 create_default_config()

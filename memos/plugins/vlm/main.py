@@ -13,7 +13,6 @@ import numpy as np
 
 
 PLUGIN_NAME = "vlm"
-PROMPT = "请帮我尽量详尽的描述这个图片中的内容，包括文字内容、视觉元素等"
 
 router = APIRouter(tags=[PLUGIN_NAME], responses={404: {"description": "Not found"}})
 
@@ -23,6 +22,7 @@ token = None
 concurrency = None
 semaphore = None
 force_jpeg = None
+prompt = None
 
 # Configure logger
 logging.basicConfig(level=logging.INFO)
@@ -133,7 +133,7 @@ async def predict_remote(
                         "type": "image_url",
                         "image_url": {"url": f"data:{mime_type};base64,{img_base64}"},
                     },
-                    {"type": "text", "text": PROMPT},
+                    {"type": "text", "text": prompt},  # Use the global prompt variable here
                 ],
             }
         ],
@@ -224,13 +224,14 @@ async def vlm(entity: Entity, request: Request):
 
 
 def init_plugin(config):
-    global modelname, endpoint, token, concurrency, semaphore, force_jpeg
+    global modelname, endpoint, token, concurrency, semaphore, force_jpeg, prompt
 
     modelname = config.modelname
     endpoint = config.endpoint
     token = config.token
     concurrency = config.concurrency
     force_jpeg = config.force_jpeg
+    prompt = config.prompt
     semaphore = asyncio.Semaphore(concurrency)
 
     # Print the parameters
@@ -240,4 +241,5 @@ def init_plugin(config):
     logger.info(f"Token: {token}")
     logger.info(f"Concurrency: {concurrency}")
     logger.info(f"Force JPEG: {force_jpeg}")
+    logger.info(f"Prompt: {prompt}")
 
