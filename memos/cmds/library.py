@@ -11,7 +11,6 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Tuple
 import os
-import pathspec
 
 from memos.read_metadata import read_metadata
 from memos.schemas import MetadataSource
@@ -25,7 +24,7 @@ IS_THUMBNAIL = "is_thumbnail"
 
 BASE_URL = f"http://{settings.server_host}:{settings.server_port}"
 
-ignore_files = [".DS_Store", ".screen_sequences", "worklog"]
+include_files = [".jpg", ".jpeg", ".png", ".webp"]
 
 
 class FileStatus(Enum):
@@ -126,13 +125,6 @@ def show(library_id: int):
 
 
 async def loop_files(library_id, folder, folder_path, force, plugins):
-    # Read .memosignore file
-    ignore_spec = None
-    memosignore_path = Path(folder_path) / ".memosignore"
-    if memosignore_path.exists():
-        with open(memosignore_path, "r") as ignore_file:
-            ignore_spec = pathspec.PathSpec.from_lines("gitwildmatch", ignore_file)
-
     updated_file_count = 0
     added_file_count = 0
     scanned_files = set()
@@ -147,13 +139,10 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                     absolute_file_path = file_path.resolve()  # Get absolute path
                     relative_path = absolute_file_path.relative_to(folder_path)
 
-                    if file in ignore_files or (
-                        ignore_spec and ignore_spec.match_file(str(relative_path))
-                    ):
-                        continue
-
-                    scanned_files.add(str(absolute_file_path))
-                    candidate_files.append(str(absolute_file_path))
+                    # Check if the file extension is in the include_files list
+                    if file_path.suffix.lower() in include_files:
+                        scanned_files.add(str(absolute_file_path))
+                        candidate_files.append(str(absolute_file_path))
 
                 batching = 200
                 for i in range(0, len(candidate_files), batching):
