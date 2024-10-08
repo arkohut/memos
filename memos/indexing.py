@@ -17,7 +17,8 @@ from .schemas import (
     RequestParams,
 )
 from .config import settings, TYPESENSE_COLLECTION_NAME
-from .embedding import generate_embeddings
+from .embedding import get_embeddings
+
 
 def convert_metadata_value(metadata: EntityMetadata):
     if metadata.data_type == MetadataType.JSON_DATA:
@@ -44,20 +45,6 @@ def parse_date_fields(entity):
         "created_month": dt.strftime("%Y-%m"),
         "created_year": dt.strftime("%Y"),
     }
-
-
-async def get_embeddings(texts: List[str]) -> List[List[float]]:
-    print(f"Getting embeddings for {len(texts)} texts")
-    
-    try:
-        embeddings = generate_embeddings(texts)
-        print("Successfully generated embeddings.")
-        return [
-            [round(float(x), 5) for x in embedding]
-            for embedding in embeddings
-        ]
-    except Exception as e:
-        raise Exception(f"Failed to generate embeddings: {str(e)}")
 
 
 def generate_metadata_text(metadata_entries):
@@ -102,7 +89,7 @@ async def bulk_upsert(client, entities):
         if metadata_text:
             metadata_texts.append(metadata_text)
             entities_with_metadata.append(entity)
-        
+
         documents.append(
             EntityIndexItem(
                 id=str(entity.id),
@@ -151,10 +138,10 @@ async def bulk_upsert(client, entities):
         )
 
 
-def upsert(client, entity):
+async def upsert(client, entity):
     date_fields = parse_date_fields(entity)
     metadata_text = generate_metadata_text(entity.metadata_entries)
-    embedding = get_embeddings([metadata_text])[0]
+    embedding = (await get_embeddings([metadata_text]))[0]
 
     entity_data = EntityIndexItem(
         id=str(entity.id),

@@ -24,8 +24,7 @@ import typesense
 from .config import get_database_path, settings
 from memos.plugins.vlm import main as vlm_main
 from memos.plugins.ocr import main as ocr_main
-from . import crud
-from . import indexing
+from . import crud, indexing
 from .schemas import (
     Library,
     Folder,
@@ -767,7 +766,7 @@ async def search_entities_v2(
     library_ids = [int(id) for id in library_ids.split(",")] if library_ids else None
 
     try:
-        entities = crud.hybrid_search(
+        entities = await crud.hybrid_search(
             query=q, db=db, limit=limit, library_ids=library_ids, start=start, end=end
         )
 

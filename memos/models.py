@@ -25,8 +25,9 @@ import os
 import sys
 from pathlib import Path
 import json
-from .embedding import generate_embeddings
+from .embedding import get_embeddings
 from sqlite_vec import serialize_float32
+import asyncio
 
 
 class Base(DeclarativeBase):
@@ -307,7 +308,7 @@ def update_entity_last_scan_at_for_metadata(mapper, connection, target):
     session.commit()
 
 
-def update_fts_and_vec(mapper, connection, target):
+async def update_fts_and_vec(mapper, connection, target):
     session = Session(bind=connection)
 
     # Prepare FTS data
@@ -379,10 +380,13 @@ def update_fts_and_vec(mapper, connection, target):
     metadata_text = "\n".join(
         [
             f"{entry.key}: {entry.value}"
-            for entry in target.metadata_entries if entry.key != 'ocr_result'
+            for entry in target.metadata_entries
+            if entry.key != "ocr_result"
         ]
     )
-    embeddings = generate_embeddings([metadata_text])
+
+    # Use the new get_embeddings function
+    embeddings = await get_embeddings([metadata_text])
     if not embeddings:
         embedding = []
     else:
@@ -428,6 +432,12 @@ def delete_fts_and_vec(mapper, connection, target):
     )
 
 
-event.listen(EntityModel, "after_insert", update_fts_and_vec)
-event.listen(EntityModel, "after_update", update_fts_and_vec)
+# Update the event listener to use asyncio
+def update_fts_and_vec_sync(mapper, connection, target):
+    asyncio.run(update_fts_and_vec(mapper, connection, target))
+
+
+# Replace the old event listener with the new sync version
+event.listen(EntityModel, "after_insert", update_fts_and_vec_sync)
+event.listen(EntityModel, "after_update", update_fts_and_vec_sync)
 event.listen(EntityModel, "after_delete", delete_fts_and_vec)

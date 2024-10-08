@@ -38,6 +38,7 @@ class EmbeddingSettings(BaseModel):
     endpoint: str = "http://localhost:11434/api/embed"
     model: str = "jinaai/jina-embeddings-v2-base-zh"
     use_modelscope: bool = False
+    use_local: bool = True
 
 
 class TypesenseSettings(BaseModel):

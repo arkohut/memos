@@ -27,10 +27,11 @@ from .models import (
 )
 import numpy as np
 from collections import defaultdict
-from .embedding import generate_embeddings
+from .embedding import get_embeddings
 import logging
 from sqlite_vec import serialize_float32
 import time
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -458,17 +459,19 @@ def full_text_search(
     return ids
 
 
-def vec_search(
+async def vec_search(
     query: str,
     db: Session,
     limit: int = 200,
     library_ids: Optional[List[int]] = None,
     start: Optional[int] = None,
-    end: Optional[int] = None,
+    end: Optional[int] = None
 ) -> List[int]:
-    query_embedding = generate_embeddings([query])[0]
+    query_embedding = await get_embeddings([query])
     if not query_embedding:
         return []
+    
+    query_embedding = query_embedding[0]
 
     sql_query = """
     SELECT entities.id FROM entities
@@ -514,7 +517,7 @@ def reciprocal_rank_fusion(
     return sorted_results
 
 
-def hybrid_search(
+async def hybrid_search(
     query: str,
     db: Session,
     limit: int = 200,
@@ -530,7 +533,7 @@ def hybrid_search(
     logger.info(f"Full-text search took {fts_end - fts_start:.4f} seconds")
 
     vec_start = time.time()
-    vec_results = vec_search(query, db, limit, library_ids, start, end)
+    vec_results = await vec_search(query, db, limit, library_ids, start, end)
     vec_end = time.time()
     logger.info(f"Vector search took {vec_end - vec_start:.4f} seconds")
 
