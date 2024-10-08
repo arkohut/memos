@@ -30,8 +30,8 @@ from collections import defaultdict
 from .embedding import generate_embeddings
 import logging
 from sqlite_vec import serialize_float32
+import time
 
-# 在文件顶部添加这行代码来设置日志记录器
 logger = logging.getLogger(__name__)
 
 
@@ -440,18 +440,19 @@ def full_text_search(
     if library_ids:
         library_ids_str = ", ".join(f"'{id}'" for id in library_ids)
         sql_query += f" AND entities.library_id IN ({library_ids_str})"
-
     if start is not None and end is not None:
         sql_query += (
             " AND strftime('%s', entities.file_created_at) BETWEEN :start AND :end"
         )
-        params["start"] = start
-        params["end"] = end
+        params["start"] = str(start)
+        params["end"] = str(end)
 
     sql_query += " ORDER BY bm25(entities_fts) LIMIT :limit"
 
     result = db.execute(text(sql_query), params).fetchall()
 
+    logger.info(f"Full-text search sql: {sql_query}")
+    logger.info(f"Full-text search params: {params}")
     ids = [row[0] for row in result]
     logger.debug(f"Full-text search results: {ids}")
     return ids
@@ -486,8 +487,8 @@ def vec_search(
         sql_query += (
             " AND strftime('%s', entities.file_created_at) BETWEEN :start AND :end"
         )
-        params["start"] = start
-        params["end"] = end
+        params["start"] = str(start)
+        params["end"] = str(end)
 
     sql_query += " AND K = :limit ORDER BY distance"
 
@@ -521,18 +522,41 @@ def hybrid_search(
     start: Optional[int] = None,
     end: Optional[int] = None,
 ) -> List[Entity]:
-    fts_results = full_text_search(query, db, limit, library_ids, start, end)
-    vec_results = vec_search(query, db, limit, library_ids, start, end)
+    start_time = time.time()
 
+    fts_start = time.time()
+    fts_results = full_text_search(query, db, limit, library_ids, start, end)
+    fts_end = time.time()
+    logger.info(f"Full-text search took {fts_end - fts_start:.4f} seconds")
+
+    vec_start = time.time()
+    vec_results = vec_search(query, db, limit, library_ids, start, end)
+    vec_end = time.time()
+    logger.info(f"Vector search took {vec_end - vec_start:.4f} seconds")
+
+    fusion_start = time.time()
     combined_results = reciprocal_rank_fusion(fts_results, vec_results)
+    fusion_end = time.time()
+    logger.info(f"Reciprocal rank fusion took {fusion_end - fusion_start:.4f} seconds")
 
     sorted_ids = [id for id, _ in combined_results][:limit]
-    logger.debug(f"Hybrid search results (sorted IDs): {sorted_ids}")
+    logger.info(f"Hybrid search results (sorted IDs): {sorted_ids}")
 
+    entities_start = time.time()
     entities = find_entities_by_ids(sorted_ids, db)
+    entities_end = time.time()
+    logger.info(
+        f"Finding entities by IDs took {entities_end - entities_start:.4f} seconds"
+    )
 
     # Create a dictionary mapping entity IDs to entities
     entity_dict = {entity.id: entity for entity in entities}
 
     # Return entities in the order of sorted_ids
-    return [entity_dict[id] for id in sorted_ids if id in entity_dict]
+    result = [entity_dict[id] for id in sorted_ids if id in entity_dict]
+
+    end_time = time.time()
+    total_time = end_time - start_time
+    logger.info(f"Total hybrid search time: {total_time:.4f} seconds")
+
+    return result

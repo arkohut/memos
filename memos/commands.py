@@ -42,10 +42,11 @@ logging.getLogger("typer").setLevel(logging.ERROR)
 def serve():
     """Run the server after initializing if necessary."""
     db_success = init_database()
-    ts_success = init_typesense()
-    if db_success and ts_success:
+    ts_success = True
+    if settings.typesense.enabled:
+        ts_success = init_typesense()
+    if db_success and (ts_success or not settings.typesense.enabled):
         from .server import run_server
-
         run_server()
     else:
         print("Server initialization failed. Unable to start the server.")
@@ -53,10 +54,12 @@ def serve():
 
 @app.command()
 def init():
-    """Initialize the database and Typesense collection."""
+    """Initialize the database and Typesense collection if enabled."""
     db_success = init_database()
-    ts_success = init_typesense()
-    if db_success and ts_success:
+    ts_success = True
+    if settings.typesense.enabled:
+        ts_success = init_typesense()
+    if db_success and (ts_success or not settings.typesense.enabled):
         print("Initialization completed successfully.")
     else:
         print("Initialization failed. Please check the error messages above.")

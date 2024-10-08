@@ -1,26 +1,11 @@
 import typesense
 from .config import settings, TYPESENSE_COLLECTION_NAME
 import sys
+import logging
 
-# Check if Typesense is enabled
-if not settings.typesense.enabled:
-    print("Error: Typesense is not enabled. Please enable it in the configuration.")
-    sys.exit(1)
-
-# Initialize Typesense client
-client = typesense.Client(
-    {
-        "nodes": [
-            {
-                "host": settings.typesense_host,
-                "port": settings.typesense_port,
-                "protocol": settings.typesense_protocol,
-            }
-        ],
-        "api_key": settings.typesense_api_key,
-        "connection_timeout_seconds": settings.typesense_connection_timeout_seconds,
-    }
-)
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Define the schema for the Typesense collection
 schema = {
@@ -87,7 +72,6 @@ schema = {
     "token_separators": [":", "/", " ", "\\"],
 }
 
-
 def update_collection_fields(client, schema):
     existing_collection = client.collections[TYPESENSE_COLLECTION_NAME].retrieve()
     existing_fields = {field["name"]: field for field in existing_collection["fields"]}
@@ -115,49 +99,72 @@ def update_collection_fields(client, schema):
             f"No new fields to add or update in the '{TYPESENSE_COLLECTION_NAME}' collection."
         )
 
-
 def init_typesense():
     """Initialize the Typesense collection."""
     if not settings.typesense.enabled:
-        print("Error: Typesense is not enabled. Please enable it in the configuration.")
+        logger.warning("Typesense is not enabled. Skipping initialization.")
         return False
 
     try:
+        client = typesense.Client(
+            {
+                "nodes": [
+                    {
+                        "host": settings.typesense_host,
+                        "port": settings.typesense_port,
+                        "protocol": settings.typesense_protocol,
+                    }
+                ],
+                "api_key": settings.typesense_api_key,
+                "connection_timeout_seconds": settings.typesense_connection_timeout_seconds,
+            }
+        )
+
         existing_collections = client.collections.retrieve()
         collection_names = [c["name"] for c in existing_collections]
         if TYPESENSE_COLLECTION_NAME not in collection_names:
             client.collections.create(schema)
-            print(
-                f"Typesense collection '{TYPESENSE_COLLECTION_NAME}' created successfully."
-            )
+            logger.info(f"Typesense collection '{TYPESENSE_COLLECTION_NAME}' created successfully.")
         else:
             update_collection_fields(client, schema)
-            print(
-                f"Typesense collection '{TYPESENSE_COLLECTION_NAME}' already exists. Updated fields if necessary."
-            )
+            logger.info(f"Typesense collection '{TYPESENSE_COLLECTION_NAME}' already exists. Updated fields if necessary.")
+        return True
     except Exception as e:
-        print(f"Error initializing Typesense collection: {e}")
+        logger.error(f"Error initializing Typesense collection: {e}")
         return False
-    return True
-
 
 if __name__ == "__main__":
     import argparse
-
-    if not settings.typesense.enabled:
-        print("Error: Typesense is not enabled. Please enable it in the configuration.")
-        sys.exit(1)
+    import sys
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="Drop the collection before initializing")
     args = parser.parse_args()
 
+    if not settings.typesense.enabled:
+        logger.warning("Typesense is not enabled. Please enable it in the configuration if you want to use Typesense.")
+        sys.exit(0)
+
+    client = typesense.Client(
+        {
+            "nodes": [
+                {
+                    "host": settings.typesense_host,
+                    "port": settings.typesense_port,
+                    "protocol": settings.typesense_protocol,
+                }
+            ],
+            "api_key": settings.typesense_api_key,
+            "connection_timeout_seconds": settings.typesense_connection_timeout_seconds,
+        }
+    )
+
     if args.force:
         try:
             client.collections[TYPESENSE_COLLECTION_NAME].delete()
-            print(f"Dropped collection '{TYPESENSE_COLLECTION_NAME}'.")
+            logger.info(f"Dropped collection '{TYPESENSE_COLLECTION_NAME}'.")
         except Exception as e:
-            print(f"Error dropping collection: {e}")
+            logger.error(f"Error dropping collection: {e}")
 
     if not init_typesense():
         sys.exit(1)
