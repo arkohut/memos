@@ -234,30 +234,32 @@
 
 <div class="mx-auto flex flex-col sm:flex-row">
 	<!-- Left panel for tags and created_date -->
+	{#if searchResult && searchResult.facet_counts && searchResult.facet_counts.length > 0}
 	<div class="xl:w-1/7 lg:w-1/6 md:w-1/5 sm:w-full pr-4">
-		{#if searchResult && searchResult.facet_counts}
-			{#each searchResult.facet_counts as facet}
-				{#if facet.field_name === 'tags' || facet.field_name === 'created_date'}
-					<FacetFilter
-						{facet}
-						selectedItems={facet.field_name === 'tags' ? selectedTags : selectedDates}
-						onItemChange={facet.field_name === 'tags' ? handleTagChange : handleDateChange}
-					/>
-				{/if}
-			{/each}
-		{/if}
+		{#each searchResult.facet_counts as facet}
+			{#if facet.field_name === 'tags' || facet.field_name === 'created_date'}
+				<FacetFilter
+					{facet}
+					selectedItems={facet.field_name === 'tags' ? selectedTags : selectedDates}
+					onItemChange={facet.field_name === 'tags' ? handleTagChange : handleDateChange}
+				/>
+			{/if}
+		{/each}
 	</div>
+	{/if}
 
 	<!-- Right panel for search results -->
-	<div class="xl:w-6/7 lg:w-5/6 md:w-4/5">
+	<div class="{searchResult && searchResult.facet_counts && searchResult.facet_counts.length > 0 ? 'xl:w-6/7 lg:w-5/6 md:w-4/5' : 'w-full'}">
 		{#if isLoading}
-			<p>Loading...</p>
+			<p class="text-center">Loading...</p>
 		{:else if searchResult && searchResult.hits.length > 0}
-			<p class="search-summary mb-4">
-				✨ {searchResult['found'].toLocaleString()} results found - Searched {searchResult[
-					'out_of'
-				].toLocaleString()} recipes in {searchResult['search_time_ms']}ms.
-			</p>
+			{#if searchResult['search_time_ms'] > 0}
+				<p class="search-summary mb-4 text-center">
+					✨ {searchResult['found'].toLocaleString()} results found - Searched {searchResult[
+						'out_of'
+					].toLocaleString()} recipes in {searchResult['search_time_ms']}ms.
+				</p>
+			{/if}
 			<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 				{#each searchResult.hits as hit, index}
 					<!-- svelte-ignore a11y-click-events-have-key-events -->
@@ -298,9 +300,9 @@
 				{/each}
 			</div>
 		{:else if searchString}
-			<p>No results found.</p>
+			<p class="text-center">No results found.</p>
 		{:else}
-			<p>Type something to start searching...</p>
+			<p class="text-center">Type something to start searching...</p>
 		{/if}
 	</div>
 </div>
