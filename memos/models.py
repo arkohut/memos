@@ -9,6 +9,7 @@ from sqlalchemy import (
     func,
     Index,
     event,
+    DDL,
 )
 from datetime import datetime
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column, Session
@@ -17,6 +18,15 @@ from .schemas import MetadataSource, MetadataType, FolderType
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from .config import get_database_path, settings
+import numpy as np
+from sqlalchemy import text
+import sqlite_vec
+import os
+import sys
+from pathlib import Path
+import json
+from .embedding import generate_embeddings
+from sqlite_vec import serialize_float32
 
 
 class Base(DeclarativeBase):
@@ -36,7 +46,7 @@ class LibraryModel(Base):
         "FolderModel",
         back_populates="library",
         lazy="joined",
-        primaryjoin="and_(LibraryModel.id==FolderModel.library_id, FolderModel.type=='default')",
+        primaryjoin="and_(LibraryModel.id==FolderModel.library_id, FolderModel.type=='DEFAULT')",
     )
     plugins: Mapped[List["PluginModel"]] = relationship(
         "PluginModel", secondary="library_plugins", lazy="joined"
@@ -165,14 +175,61 @@ class LibraryPluginModel(Base):
     )
 
 
+def load_extension(dbapi_conn, connection_record):
+    dbapi_conn.enable_load_extension(True)
+
+    # load simple tokenizer
+    current_dir = Path(__file__).parent.resolve()
+    if sys.platform.startswith("linux"):
+        lib_path = current_dir / "simple_tokenizer" / "linux" / "libsimple"
+    elif sys.platform == "win32":
+        lib_path = current_dir / "simple_tokenizer" / "windows" / "simple"
+    elif sys.platform == "darwin":
+        lib_path = current_dir / "simple_tokenizer" / "macos" / "libsimple"
+    else:
+        raise OSError(f"Unsupported operating system: {sys.platform}")
+
+    dbapi_conn.load_extension(str(lib_path))
+    dict_path = current_dir / "simple_tokenizer" / "dict"
+    dbapi_conn.execute(f"SELECT jieba_dict('{dict_path}')")
+
+    # load vector ext
+    sqlite_vec.load(dbapi_conn)
+
+
 def init_database():
     """Initialize the database."""
     db_path = get_database_path()
     engine = create_engine(f"sqlite:///{db_path}")
 
+    event.listen(engine, "connect", load_extension)
+
     try:
         Base.metadata.create_all(engine)
         print(f"Database initialized successfully at {db_path}")
+
+        with engine.connect() as conn:
+            conn.execute(
+                DDL(
+                    """
+            CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(
+                id, filepath, tags, metadata,
+                tokenize = 'simple 0'
+            )
+            """
+                )
+            )
+
+        with engine.connect() as conn:
+            conn.execute(
+                DDL(
+                    """
+            CREATE VIRTUAL TABLE IF NOT EXISTS entities_vec USING vec0(
+                embedding float[768]
+            )
+            """
+                )
+            )
 
         # Initialize default plugins
         Session = sessionmaker(bind=engine)
@@ -248,3 +305,129 @@ def update_entity_last_scan_at_for_metadata(mapper, connection, target):
     if entity:
         EntityModel.update_last_scan_at(session, entity)
     session.commit()
+
+
+def update_fts_and_vec(mapper, connection, target):
+    session = Session(bind=connection)
+
+    # Prepare FTS data
+    tags = ", ".join([tag.name for tag in target.tags])
+
+    # Process metadata entries
+    def process_ocr_result(value):
+        try:
+            ocr_data = json.loads(value)
+            if isinstance(ocr_data, list) and all(
+                isinstance(item, dict)
+                and "dt_boxes" in item
+                and "rec_txt" in item
+                and "score" in item
+                for item in ocr_data
+            ):
+                return " ".join(item["rec_txt"] for item in ocr_data)
+            else:
+                return json.dumps(ocr_data, indent=2)
+        except json.JSONDecodeError:
+            return value
+
+    metadata = "\n".join(
+        [
+            f"{entry.key}: {process_ocr_result(entry.value) if entry.key == 'ocr_result' else entry.value}"
+            for entry in target.metadata_entries
+        ]
+    )
+
+    # Update FTS table
+    try:
+        # First, try to update the existing row
+        result = connection.execute(
+            text(
+                """
+                UPDATE entities_fts 
+                SET filepath = :filepath, tags = :tags, metadata = :metadata 
+                WHERE id = :id
+                """
+            ),
+            {
+                "id": target.id,
+                "filepath": target.filepath,
+                "tags": tags,
+                "metadata": metadata,
+            },
+        )
+
+        # If no row was updated (i.e., the row doesn't exist), then insert a new row
+        if result.rowcount == 0:
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO entities_fts(id, filepath, tags, metadata)
+                    VALUES(:id, :filepath, :tags, :metadata)
+                    """
+                ),
+                {
+                    "id": target.id,
+                    "filepath": target.filepath,
+                    "tags": tags,
+                    "metadata": metadata,
+                },
+            )
+    except Exception as e:
+        print(f"Error updating entities_fts: {e}")
+
+    # Prepare vector data
+    metadata_text = "\n".join(
+        [
+            f"{entry.key}: {entry.value}"
+            for entry in target.metadata_entries if entry.key != 'ocr_result'
+        ]
+    )
+    embeddings = generate_embeddings([metadata_text])
+    if not embeddings:
+        embedding = []
+    else:
+        embedding = embeddings[0]
+
+    # Update vector table
+    if embedding:
+        try:
+            # First, try to update the existing row
+            result = connection.execute(
+                text(
+                    "UPDATE entities_vec SET embedding = :embedding WHERE rowid = :id"
+                ),
+                {
+                    "id": target.id,
+                    "embedding": serialize_float32(embedding),
+                },
+            )
+
+            # If no row was updated (i.e., the row doesn't exist), then insert a new row
+            if result.rowcount == 0:
+                connection.execute(
+                    text(
+                        "INSERT INTO entities_vec (rowid, embedding) VALUES (:id, :embedding)"
+                    ),
+                    {
+                        "id": target.id,
+                        "embedding": serialize_float32(embedding),
+                    },
+                )
+        except Exception as e:
+            print(f"Error updating entities_vec: {e}")
+
+    session.commit()
+
+
+def delete_fts_and_vec(mapper, connection, target):
+    connection.execute(
+        text("DELETE FROM entities_fts WHERE id = :id"), {"id": target.id}
+    )
+    connection.execute(
+        text("DELETE FROM entities_vec WHERE rowid = :id"), {"id": target.id}
+    )
+
+
+event.listen(EntityModel, "after_insert", update_fts_and_vec)
+event.listen(EntityModel, "after_update", update_fts_and_vec)
+event.listen(EntityModel, "after_delete", delete_fts_and_vec)

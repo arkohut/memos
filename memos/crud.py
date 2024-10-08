@@ -1,6 +1,6 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from .schemas import (
     Library,
     NewLibraryParam,
@@ -25,6 +25,14 @@ from .models import (
     EntityMetadataModel,
     EntityTagModel,
 )
+import numpy as np
+from collections import defaultdict
+from .embedding import generate_embeddings
+import logging
+from sqlite_vec import serialize_float32
+
+# 在文件顶部添加这行代码来设置日志记录器
+logger = logging.getLogger(__name__)
 
 
 def get_library_by_id(library_id: int, db: Session) -> Library | None:
@@ -402,3 +410,129 @@ def remove_plugin_from_library(library_id: int, plugin_id: int, db: Session):
         db.commit()
     else:
         raise ValueError(f"Plugin {plugin_id} not found in library {library_id}")
+
+
+def or_words(input_string):
+    words = input_string.split()
+    result = " OR ".join(words)
+    return result
+
+
+def full_text_search(
+    query: str,
+    db: Session,
+    limit: int = 200,
+    library_ids: Optional[List[int]] = None,
+    start: Optional[int] = None,
+    end: Optional[int] = None,
+) -> List[int]:
+    or_query = or_words(query)
+
+    sql_query = """
+    SELECT entities.id FROM entities
+    JOIN entities_fts ON entities.id = entities_fts.id
+    WHERE entities_fts MATCH jieba_query(:query)
+    AND entities.file_type_group = 'image'
+    """
+
+    params = {"query": or_query, "limit": limit}
+
+    if library_ids:
+        library_ids_str = ", ".join(f"'{id}'" for id in library_ids)
+        sql_query += f" AND entities.library_id IN ({library_ids_str})"
+
+    if start is not None and end is not None:
+        sql_query += (
+            " AND strftime('%s', entities.file_created_at) BETWEEN :start AND :end"
+        )
+        params["start"] = start
+        params["end"] = end
+
+    sql_query += " ORDER BY bm25(entities_fts) LIMIT :limit"
+
+    result = db.execute(text(sql_query), params).fetchall()
+
+    ids = [row[0] for row in result]
+    logger.debug(f"Full-text search results: {ids}")
+    return ids
+
+
+def vec_search(
+    query: str,
+    db: Session,
+    limit: int = 200,
+    library_ids: Optional[List[int]] = None,
+    start: Optional[int] = None,
+    end: Optional[int] = None,
+) -> List[int]:
+    query_embedding = generate_embeddings([query])[0]
+    if not query_embedding:
+        return []
+
+    sql_query = """
+    SELECT entities.id FROM entities
+    JOIN entities_vec ON entities.id = entities_vec.rowid
+    WHERE entities_vec.embedding MATCH :embedding
+    AND entities.file_type_group = 'image'
+    """
+
+    params = {"embedding": serialize_float32(query_embedding), "limit": limit}
+
+    if library_ids:
+        library_ids_str = ", ".join(f"'{id}'" for id in library_ids)
+        sql_query += f" AND entities.library_id IN ({library_ids_str})"
+
+    if start is not None and end is not None:
+        sql_query += (
+            " AND strftime('%s', entities.file_created_at) BETWEEN :start AND :end"
+        )
+        params["start"] = start
+        params["end"] = end
+
+    sql_query += " AND K = :limit ORDER BY distance"
+
+    result = db.execute(text(sql_query), params).fetchall()
+
+    ids = [row[0] for row in result]
+    logger.debug(f"Vector search results: {ids}")
+    return ids
+
+
+def reciprocal_rank_fusion(
+    fts_results: List[int], vec_results: List[int], k: int = 60
+) -> List[Tuple[int, float]]:
+    rank_dict = defaultdict(float)
+
+    for rank, result_id in enumerate(fts_results):
+        rank_dict[result_id] += 1 / (k + rank + 1)
+
+    for rank, result_id in enumerate(vec_results):
+        rank_dict[result_id] += 1 / (k + rank + 1)
+
+    sorted_results = sorted(rank_dict.items(), key=lambda x: x[1], reverse=True)
+    return sorted_results
+
+
+def hybrid_search(
+    query: str,
+    db: Session,
+    limit: int = 200,
+    library_ids: Optional[List[int]] = None,
+    start: Optional[int] = None,
+    end: Optional[int] = None,
+) -> List[Entity]:
+    fts_results = full_text_search(query, db, limit, library_ids, start, end)
+    vec_results = vec_search(query, db, limit, library_ids, start, end)
+
+    combined_results = reciprocal_rank_fusion(fts_results, vec_results)
+
+    sorted_ids = [id for id, _ in combined_results][:limit]
+    logger.debug(f"Hybrid search results (sorted IDs): {sorted_ids}")
+
+    entities = find_entities_by_ids(sorted_ids, db)
+
+    # Create a dictionary mapping entity IDs to entities
+    entity_dict = {entity.id: entity for entity in entities}
+
+    # Return entities in the order of sorted_ids
+    return [entity_dict[id] for id in sorted_ids if id in entity_dict]

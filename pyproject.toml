@@ -43,7 +43,7 @@ dependencies = [
     "einops",
     "modelscope",
     "mss",
-    "pathspec",
+    "sqlite_vec",
 ]
 
 [project.urls]
@@ -58,3 +58,4 @@ include = ["memos*"]
 [tool.setuptools.package-data]
 "*" = ["static/**/*"]
 "memos.plugins.ocr" = ["*.yaml", "models/*.onnx"]
+"memos" = ["simple_tokenizer/**/*"]

@@ -8,12 +8,12 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from typing import List, Annotated
 from pathlib import Path
 import asyncio
-import logging
+import json
 import cv2
 from PIL import Image
 from secrets import compare_digest
@@ -23,7 +23,6 @@ import typesense
 from .config import get_database_path, settings
 from memos.plugins.vlm import main as vlm_main
 from memos.plugins.ocr import main as ocr_main
-from memos.plugins.embedding import main as embedding_main
 from . import crud
 from . import indexing
 from .schemas import (
@@ -44,15 +43,19 @@ from .schemas import (
     MetadataIndexItem,
     EntitySearchResult,
     SearchResult,
+    SearchHit,
+    RequestParams,
 )
 from .read_metadata import read_metadata
 from .logging_config import LOGGING_CONFIG
+from .models import load_extension
 
 # Initialize FastAPI app and other global variables
 app = FastAPI()
 security = HTTPBasic()
 
 engine = create_engine(f"sqlite:///{get_database_path()}")
+event.listen(engine, "connect", load_extension)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Initialize Typesense client
@@ -187,7 +190,7 @@ def new_folders(
         )
 
     existing_folders = [folder.path for folder in library.folders]
-    if any(str(folder) in existing_folders for folder in folders.folders):
+    if any(str(folder.path) in existing_folders for folder in folders.folders):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Folder already exists in the library",
@@ -475,8 +478,8 @@ def list_entitiy_indices_in_folder(
     return indexing.list_all_entities(client, library_id, folder_id, limit, offset)
 
 
-@app.get("/search", response_model=SearchResult, tags=["search"])
-async def search_entities_route(
+@app.get("/search/v2", response_model=SearchResult, tags=["search"])
+async def search_entities(
     q: str,
     library_ids: str = Query(None, description="Comma-separated list of library IDs"),
     folder_ids: str = Query(None, description="Comma-separated list of folder IDs"),
@@ -618,7 +621,7 @@ def add_library_plugin(
         plugin = crud.get_plugin_by_id(new_plugin.plugin_id, db)
     elif new_plugin.plugin_name is not None:
         plugin = crud.get_plugin_by_name(new_plugin.plugin_name, db)
-    
+
     if plugin is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Plugin not found"
@@ -731,6 +734,91 @@ async def get_file(file_path: str):
         raise HTTPException(status_code=404, detail="File not found")
 
 
+@app.get("/search", response_model=SearchResult, tags=["search"])
+async def search_entities_v2(
+    q: str,
+    library_ids: str = Query(None, description="Comma-separated list of library IDs"),
+    limit: Annotated[int, Query(ge=1, le=200)] = 48,
+    start: int = None,
+    end: int = None,
+    db: Session = Depends(get_db),
+):
+    library_ids = [int(id) for id in library_ids.split(",")] if library_ids else None
+
+    try:
+        entities = crud.hybrid_search(
+            query=q, db=db, limit=limit, library_ids=library_ids, start=start, end=end
+        )
+
+        # Convert Entity list to SearchHit list
+        hits = []
+        for entity in entities:
+            entity_search_result = EntitySearchResult(
+                id=str(entity.id),
+                filepath=entity.filepath,
+                filename=entity.filename,
+                size=entity.size,
+                file_created_at=int(entity.file_created_at.timestamp()),
+                file_last_modified_at=int(entity.file_last_modified_at.timestamp()),
+                file_type=entity.file_type,
+                file_type_group=entity.file_type_group,
+                last_scan_at=(
+                    int(entity.last_scan_at.timestamp())
+                    if entity.last_scan_at
+                    else None
+                ),
+                library_id=entity.library_id,
+                folder_id=entity.folder_id,
+                tags=[tag.name for tag in entity.tags],
+                metadata_entries=[
+                    MetadataIndexItem(
+                        key=metadata.key,
+                        value=(
+                            json.loads(metadata.value)
+                            if metadata.data_type == MetadataType.JSON_DATA
+                            else metadata.value
+                        ),
+                        source=metadata.source,
+                    )
+                    for metadata in entity.metadata_entries
+                ],
+            )
+
+            hits.append(
+                SearchHit(
+                    document=entity_search_result,
+                    highlight={},
+                    highlights=[],
+                    text_match=None,
+                    hybrid_search_info=None,
+                    text_match_info=None,
+                )
+            )
+
+        # Build SearchResult
+        search_result = SearchResult(
+            facet_counts=[],
+            found=len(hits),
+            hits=hits,
+            out_of=len(hits),
+            page=1,
+            request_params=RequestParams(
+                collection_name="entities", first_q=q, per_page=limit, q=q
+            ),
+            search_cutoff=False,
+            search_time_ms=0,
+        )
+
+        return search_result
+
+    except Exception as e:
+        print(f"Error searching entities: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
 def run_server():
     print("Database path:", get_database_path())
     print(
@@ -753,7 +841,7 @@ def run_server():
 
     uvicorn.run(
         "memos.server:app",
-        host=settings.server_host,  # Use the new server_host setting
+        host=settings.server_host,
         port=settings.server_port,
         reload=False,
         log_config=LOGGING_CONFIG,
