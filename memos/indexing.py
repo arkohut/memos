@@ -17,7 +17,7 @@ from .schemas import (
     RequestParams,
 )
 from .config import settings, TYPESENSE_COLLECTION_NAME
-
+from .embedding import generate_embeddings
 
 def convert_metadata_value(metadata: EntityMetadata):
     if metadata.data_type == MetadataType.JSON_DATA:
@@ -49,28 +49,15 @@ def parse_date_fields(entity):
 async def get_embeddings(texts: List[str]) -> List[List[float]]:
     print(f"Getting embeddings for {len(texts)} texts")
     
-    if settings.embedding.enabled:
-        endpoint = f"http://{settings.server_host}:{settings.server_port}/plugins/embed"
-    else:
-        endpoint = settings.embedding.endpoint
-    
-    model = settings.embedding.model
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            endpoint,
-            json={"model": model, "input": texts},
-            timeout=30
-        )
-    if response.status_code == 200:
-        print("Successfully retrieved embeddings from the embedding service.")
+    try:
+        embeddings = generate_embeddings(texts)
+        print("Successfully generated embeddings.")
         return [
             [round(float(x), 5) for x in embedding]
-            for embedding in response.json()["embeddings"]
+            for embedding in embeddings
         ]
-    else:
-        raise Exception(
-            f"Failed to get embeddings: {response.text} {response.status_code}"
-        )
+    except Exception as e:
+        raise Exception(f"Failed to generate embeddings: {str(e)}")
 
 
 def generate_metadata_text(metadata_entries):

@@ -751,12 +751,6 @@ def run_server():
         ocr_main.init_plugin(settings.ocr)
         app.include_router(ocr_main.router, prefix="/plugins/ocr")
 
-    # Add Embedding plugin router
-    if settings.embedding.enabled:
-        print("Embedding plugin is enabled")
-        embedding_main.init_plugin(settings.embedding)
-        app.include_router(embedding_main.router, prefix="/plugins/embed")
-
     uvicorn.run(
         "memos.server:app",
         host=settings.server_host,  # Use the new server_host setting
