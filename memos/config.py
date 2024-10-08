@@ -38,6 +38,16 @@ class EmbeddingSettings(BaseModel):
     use_modelscope: bool = False
 
 
+class TypesenseSettings(BaseModel):
+    enabled: bool = False
+    host: str = "localhost"
+    port: str = "8108"
+    protocol: str = "http"
+    api_key: str = "xyz"
+    connection_timeout_seconds: int = 10
+    collection_name: str = "entities"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         yaml_file=str(Path.home() / ".memos" / "config.yaml"),
@@ -49,13 +59,6 @@ class Settings(BaseSettings):
     database_path: str = os.path.join(base_dir, "database.db")
     default_library: str = "screenshots"
     screenshots_dir: str = os.path.join(base_dir, "screenshots")
-
-    typesense_host: str = "localhost"
-    typesense_port: str = "8108"
-    typesense_protocol: str = "http"
-    typesense_api_key: str = "xyz"
-    typesense_connection_timeout_seconds: int = 10
-    typesense_collection_name: str = "entities"
 
     # Server settings
     server_host: str = "0.0.0.0"
@@ -69,6 +72,9 @@ class Settings(BaseSettings):
 
     # Embedding settings
     embedding: EmbeddingSettings = EmbeddingSettings()
+
+    # Typesense settings
+    typesense: TypesenseSettings = TypesenseSettings()
 
     batchsize: int = 1
 
@@ -136,7 +142,7 @@ settings = Settings()
 os.makedirs(settings.base_dir, exist_ok=True)
 
 # Global variable for Typesense collection name
-TYPESENSE_COLLECTION_NAME = settings.typesense_collection_name
+TYPESENSE_COLLECTION_NAME = settings.typesense.collection_name
 
 
 # Function to get the database path from environment variable or default

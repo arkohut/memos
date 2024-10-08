@@ -223,9 +223,9 @@ def init_database():
         with engine.connect() as conn:
             conn.execute(
                 DDL(
-                    """
+                    f"""
             CREATE VIRTUAL TABLE IF NOT EXISTS entities_vec USING vec0(
-                embedding float[768]
+                embedding float[{settings.embedding.num_dim}]
             )
             """
                 )

@@ -17,6 +17,7 @@ import json
 import cv2
 from PIL import Image
 from secrets import compare_digest
+import functools
 
 import typesense
 
@@ -58,20 +59,22 @@ engine = create_engine(f"sqlite:///{get_database_path()}")
 event.listen(engine, "connect", load_extension)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Initialize Typesense client
-client = typesense.Client(
-    {
-        "nodes": [
-            {
-                "host": settings.typesense_host,
-                "port": settings.typesense_port,
-                "protocol": settings.typesense_protocol,
-            }
-        ],
-        "api_key": settings.typesense_api_key,
-        "connection_timeout_seconds": settings.typesense_connection_timeout_seconds,
-    }
-)
+# Initialize Typesense client only if enabled
+client = None
+if settings.typesense.enabled:
+    client = typesense.Client(
+        {
+            "nodes": [
+                {
+                    "host": settings.typesense.host,
+                    "port": settings.typesense.port,
+                    "protocol": settings.typesense.protocol,
+                }
+            ],
+            "api_key": settings.typesense.api_key,
+            "connection_timeout_seconds": settings.typesense.connection_timeout_seconds,
+        }
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -370,11 +373,24 @@ async def update_entity(
     return entity
 
 
+def typesense_required(func):
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        if not settings.typesense.enabled:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Typesense is not enabled",
+            )
+        return await func(*args, **kwargs)
+    return wrapper
+
+
 @app.post(
     "/entities/{entity_id}/index",
     status_code=status.HTTP_204_NO_CONTENT,
     tags=["entity"],
 )
+@typesense_required
 async def sync_entity_to_typesense(entity_id: int, db: Session = Depends(get_db)):
     entity = crud.get_entity_by_id(entity_id, db)
     if entity is None:
@@ -398,6 +414,7 @@ async def sync_entity_to_typesense(entity_id: int, db: Session = Depends(get_db)
     status_code=status.HTTP_204_NO_CONTENT,
     tags=["entity"],
 )
+@typesense_required
 async def batch_sync_entities_to_typesense(
     entity_ids: List[int], db: Session = Depends(get_db)
 ):
@@ -423,6 +440,7 @@ async def batch_sync_entities_to_typesense(
     response_model=EntitySearchResult,
     tags=["entity"],
 )
+@typesense_required
 async def get_entity_index(entity_id: int) -> EntityIndexItem:
     try:
         entity_index_item = indexing.fetch_entity_by_id(client, entity_id)
@@ -440,6 +458,7 @@ async def get_entity_index(entity_id: int) -> EntityIndexItem:
     status_code=status.HTTP_204_NO_CONTENT,
     tags=["entity"],
 )
+@typesense_required
 async def remove_entity_from_typesense(entity_id: int, db: Session = Depends(get_db)):
     try:
         indexing.remove_entity_by_id(client, entity_id)
@@ -456,6 +475,7 @@ async def remove_entity_from_typesense(entity_id: int, db: Session = Depends(get
     response_model=List[EntityIndexItem],
     tags=["entity"],
 )
+@typesense_required
 def list_entitiy_indices_in_folder(
     library_id: int,
     folder_id: int,
@@ -479,6 +499,7 @@ def list_entitiy_indices_in_folder(
 
 
 @app.get("/search/v2", response_model=SearchResult, tags=["search"])
+@typesense_required
 async def search_entities(
     q: str,
     library_ids: str = Query(None, description="Comma-separated list of library IDs"),
@@ -821,9 +842,12 @@ async def search_entities_v2(
 
 def run_server():
     print("Database path:", get_database_path())
-    print(
-        f"Typesense connection info: Host: {settings.typesense_host}, Port: {settings.typesense_port}, Protocol: {settings.typesense_protocol}, Collection Name: {settings.typesense_collection_name}"
-    )
+    if settings.typesense.enabled:
+        print(
+            f"Typesense connection info: Host: {settings.typesense.host}, Port: {settings.typesense.port}, Protocol: {settings.typesense.protocol}, Collection Name: {settings.typesense.collection_name}"
+        )
+    else:
+        print("Typesense is disabled")
     print(f"VLM plugin enabled: {settings.vlm}")
     print(f"OCR plugin enabled: {settings.ocr}")
 

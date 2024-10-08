@@ -1,5 +1,11 @@
 import typesense
 from .config import settings, TYPESENSE_COLLECTION_NAME
+import sys
+
+# Check if Typesense is enabled
+if not settings.typesense.enabled:
+    print("Error: Typesense is not enabled. Please enable it in the configuration.")
+    sys.exit(1)
 
 # Initialize Typesense client
 client = typesense.Client(
@@ -112,6 +118,10 @@ def update_collection_fields(client, schema):
 
 def init_typesense():
     """Initialize the Typesense collection."""
+    if not settings.typesense.enabled:
+        print("Error: Typesense is not enabled. Please enable it in the configuration.")
+        return False
+
     try:
         existing_collections = client.collections.retrieve()
         collection_names = [c["name"] for c in existing_collections]
@@ -134,6 +144,10 @@ def init_typesense():
 if __name__ == "__main__":
     import argparse
 
+    if not settings.typesense.enabled:
+        print("Error: Typesense is not enabled. Please enable it in the configuration.")
+        sys.exit(1)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="Drop the collection before initializing")
     args = parser.parse_args()
@@ -145,4 +159,5 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Error dropping collection: {e}")
 
-    init_typesense()
+    if not init_typesense():
+        sys.exit(1)
