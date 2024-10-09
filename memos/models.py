@@ -28,6 +28,7 @@ import json
 from .embedding import get_embeddings
 from sqlite_vec import serialize_float32
 import asyncio
+import threading
 
 
 class Base(DeclarativeBase):
@@ -197,12 +198,16 @@ def load_extension(dbapi_conn, connection_record):
     # load vector ext
     sqlite_vec.load(dbapi_conn)
 
+    # Set WAL mode after loading extensions
+    dbapi_conn.execute("PRAGMA journal_mode=WAL")
+
 
 def init_database():
     """Initialize the database."""
     db_path = get_database_path()
     engine = create_engine(f"sqlite:///{db_path}")
 
+    # Use a single event listener for both extension loading and WAL mode setting
     event.listen(engine, "connect", load_extension)
 
     try:
@@ -432,9 +437,19 @@ def delete_fts_and_vec(mapper, connection, target):
     )
 
 
-# Update the event listener to use asyncio
+def run_async(coro):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coro)
+
+
 def update_fts_and_vec_sync(mapper, connection, target):
-    asyncio.run(update_fts_and_vec(mapper, connection, target))
+    def run_in_thread():
+        run_async(update_fts_and_vec(mapper, connection, target))
+
+    thread = threading.Thread(target=run_in_thread)
+    thread.start()
+    thread.join()
 
 
 # Replace the old event listener with the new sync version
