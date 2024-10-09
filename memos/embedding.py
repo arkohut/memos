@@ -47,7 +47,7 @@ def generate_embeddings(texts: List[str]) -> List[List[float]]:
     if not texts:
         return []
 
-    embeddings = model.encode(texts, convert_to_tensor=True)
+    embeddings = model.encode(texts, convert_to_tensor=True, show_progress_bar=False)
     embeddings = embeddings.cpu().numpy()
 
     # Normalize embeddings
