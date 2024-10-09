@@ -77,10 +77,14 @@ def add(name: str, folders: List[str]):
     absolute_folders = []
     for folder in folders:
         folder_path = Path(folder).resolve()
-        absolute_folders.append({
-            "path": str(folder_path),
-            "last_modified_at": datetime.fromtimestamp(folder_path.stat().st_mtime).isoformat(),
-        })
+        absolute_folders.append(
+            {
+                "path": str(folder_path),
+                "last_modified_at": datetime.fromtimestamp(
+                    folder_path.stat().st_mtime
+                ).isoformat(),
+            }
+        )
 
     response = httpx.post(
         f"{BASE_URL}/libraries",
@@ -97,10 +101,14 @@ def add_folder(library_id: int, folders: List[str]):
     absolute_folders = []
     for folder in folders:
         folder_path = Path(folder).resolve()
-        absolute_folders.append({
-            "path": str(folder_path),
-            "last_modified_at": datetime.fromtimestamp(folder_path.stat().st_mtime).isoformat(),
-        })
+        absolute_folders.append(
+            {
+                "path": str(folder_path),
+                "last_modified_at": datetime.fromtimestamp(
+                    folder_path.stat().st_mtime
+                ).isoformat(),
+            }
+        )
 
     response = httpx.post(
         f"{BASE_URL}/libraries/{library_id}/folders",
@@ -668,3 +676,120 @@ def index(
 
     asyncio.run(process_folders())
     print("Indexing completed")
+
+
+@lib_app.command("sync")
+def sync(
+    library_id: int,
+    filepath: str,
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Force update the file even if it hasn't changed"
+    ),
+):
+    """
+    Sync a specific file with the library.
+    """
+    # 1. Get library by id and check if it exists
+    response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
+    if response.status_code != 200:
+        typer.echo(f"Error: Library with id {library_id} not found.")
+        raise typer.Exit(code=1)
+
+    library = response.json()
+
+    # Convert filepath to absolute path
+    file_path = Path(filepath).resolve()
+
+    if not file_path.is_file():
+        typer.echo(f"Error: File {file_path} does not exist.")
+        raise typer.Exit(code=1)
+
+    # 2. Check if the file exists in the library
+    response = httpx.get(
+        f"{BASE_URL}/libraries/{library_id}/entities/by-filepath",
+        params={"filepath": str(file_path)},
+    )
+
+    if response.status_code == 200:
+        # File exists, update it
+        existing_entity = response.json()
+        file_stat = file_path.stat()
+        file_type, file_type_group = get_file_type(file_path)
+
+        new_entity = {
+            "filename": file_path.name,
+            "filepath": str(file_path),
+            "size": file_stat.st_size,
+            "file_created_at": format_timestamp(file_stat.st_ctime),
+            "file_last_modified_at": format_timestamp(file_stat.st_mtime),
+            "file_type": file_type,
+            "file_type_group": file_type_group,
+            "folder_id": existing_entity["folder_id"],
+        }
+
+        if force or (
+            existing_entity["file_last_modified_at"]
+            != new_entity["file_last_modified_at"]
+            or existing_entity["size"] != new_entity["size"]
+        ):
+            update_response = httpx.put(
+                f"{BASE_URL}/entities/{existing_entity['id']}",
+                json=new_entity,
+                params={"trigger_webhooks_flag": "true"},
+                timeout=60,
+            )
+            if update_response.status_code == 200:
+                typer.echo(f"Updated file: {file_path}")
+            else:
+                typer.echo(
+                    f"Error updating file: {update_response.status_code} - {update_response.text}"
+                )
+        else:
+            typer.echo(f"File {file_path} is up to date. No changes made.")
+
+    else:
+        # 3. File doesn't exist, check if it belongs to a folder in the library
+        folder = next(
+            (
+                folder
+                for folder in library["folders"]
+                if str(file_path).startswith(folder["path"])
+            ),
+            None,
+        )
+
+        if folder:
+            # Create new entity
+            file_stat = file_path.stat()
+            file_type, file_type_group = get_file_type(file_path)
+
+            new_entity = {
+                "filename": file_path.name,
+                "filepath": str(file_path),
+                "size": file_stat.st_size,
+                "file_created_at": format_timestamp(file_stat.st_ctime),
+                "file_last_modified_at": format_timestamp(file_stat.st_mtime),
+                "file_type": file_type,
+                "file_type_group": file_type_group,
+                "folder_id": folder["id"],
+            }
+
+            create_response = httpx.post(
+                f"{BASE_URL}/libraries/{library_id}/entities",
+                json=new_entity,
+                timeout=60,
+            )
+
+            if create_response.status_code == 200:
+                typer.echo(f"Created new entity for file: {file_path}")
+            else:
+                typer.echo(
+                    f"Error creating entity: {create_response.status_code} - {create_response.text}"
+                )
+
+        else:
+            # 4. File doesn't belong to any folder in the library
+            typer.echo(
+                f"Error: File {file_path} does not belong to any folder in the library."
+            )
+            raise typer.Exit(code=1)
