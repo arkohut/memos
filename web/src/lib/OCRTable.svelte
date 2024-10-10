@@ -4,19 +4,22 @@
 	 */
 	export let ocrData = [];
 </script>
-<table class="min-w-full bg-white">
-	<thead>
-		<tr>
-			<th class="py-2">Text</th>
-			<th class="py-2" style="width: 50px;">Score</th>
-		</tr>
-	</thead>
-	<tbody>
-		{#each ocrData as { dt_boxes, rec_txt, score }}
-			<tr class="hover:bg-gray-100">
-				<td class="border px-4 py-2">{rec_txt}</td>
-				<td class="border px-4 py-2" style="width: 50px;">{score.toFixed(3)}</td>
+
+<div class="overflow-x-auto">
+	<table class="w-full max-w-3xl bg-white table-fixed">
+		<thead>
+			<tr>
+				<th class="py-2 w-4/5">Text</th>
+				<th class="py-2 w-1/5">Score</th>
 			</tr>
-		{/each}
-	</tbody>
-</table>
+		</thead>
+		<tbody>
+			{#each ocrData as { dt_boxes, rec_txt, score }}
+				<tr class="hover:bg-gray-100">
+					<td class="border px-4 py-2 truncate">{rec_txt}</td>
+					<td class="border px-4 py-2 text-center">{score.toFixed(3)}</td>
+				</tr>
+			{/each}
+		</tbody>
+	</table>
+</div>
