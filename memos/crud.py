@@ -443,7 +443,7 @@ def full_text_search(
         sql_query += f" AND entities.library_id IN ({library_ids_str})"
     if start is not None and end is not None:
         sql_query += (
-            " AND strftime('%s', entities.file_created_at) BETWEEN :start AND :end"
+            " AND strftime('%s', entities.file_created_at, 'utc') BETWEEN :start AND :end"
         )
         params["start"] = str(start)
         params["end"] = str(end)
