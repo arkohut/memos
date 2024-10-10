@@ -18,7 +18,8 @@ import sys
 import subprocess
 import platform
 from .cmds.plugin import plugin_app, bind
-from .cmds.library import lib_app, scan, index
+from .cmds.library import lib_app, scan, index, watch
+
 
 app = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
 
@@ -47,6 +48,7 @@ def serve():
         ts_success = init_typesense()
     if db_success and (ts_success or not settings.typesense.enabled):
         from .server import run_server
+
         run_server()
     else:
         print("Server initialization failed. Unable to start the server.")
@@ -65,16 +67,15 @@ def init():
         print("Initialization failed. Please check the error messages above.")
 
 
-@app.command("scan")
-def scan_default_library(force: bool = False):
+def get_or_create_default_library():
     """
-    Scan the screenshots directory and add it to the library if empty.
+    Get the default library or create it if it doesn't exist.
+    Ensure the library has at least one folder.
     """
-    # Get the default library
     response = httpx.get(f"{BASE_URL}/libraries")
     if response.status_code != 200:
         print(f"Failed to retrieve libraries: {response.status_code} - {response.text}")
-        return
+        return None
 
     libraries = response.json()
     default_library = next(
@@ -91,7 +92,7 @@ def scan_default_library(force: bool = False):
             print(
                 f"Failed to create default library: {response.status_code} - {response.text}"
             )
-            return
+            return None
         default_library = response.json()
 
     for plugin in settings.default_plugins:
@@ -103,7 +104,9 @@ def scan_default_library(force: bool = False):
         screenshots_dir = Path(settings.screenshots_dir).resolve()
         folder = {
             "path": str(screenshots_dir),
-            "last_modified_at": datetime.fromtimestamp(screenshots_dir.stat().st_mtime).isoformat(),
+            "last_modified_at": datetime.fromtimestamp(
+                screenshots_dir.stat().st_mtime
+            ).isoformat(),
         }
         response = httpx.post(
             f"{BASE_URL}/libraries/{default_library['id']}/folders",
@@ -113,8 +116,20 @@ def scan_default_library(force: bool = False):
             print(
                 f"Failed to add screenshots directory: {response.status_code} - {response.text}"
             )
-            return
+            return None
         print(f"Added screenshots directory: {screenshots_dir}")
+
+    return default_library
+
+
+@app.command("scan")
+def scan_default_library(force: bool = False):
+    """
+    Scan the screenshots directory and add it to the library if empty.
+    """
+    default_library = get_or_create_default_library()
+    if not default_library:
+        return
 
     # Scan the library
     print(f"Scanning library: {default_library['name']}")
@@ -172,6 +187,32 @@ def record(
                     f"Critical error occurred, program will restart in 10 seconds: {str(e)}"
                 )
                 time.sleep(10)
+
+
+@app.command("watch")
+def watch_default_library(
+    window_size: int = typer.Option(
+        20, "--window-size", "-ws", help="Window size for rate calculation"
+    ),
+    sparsity_factor: float = typer.Option(
+        2.0, "--sparsity-factor", "-sf", help="Sparsity factor for file processing"
+    ),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging")
+):
+    """
+    Watch the default library for file changes and sync automatically.
+    """
+    default_library = get_or_create_default_library()
+    if not default_library:
+        return
+
+    watch(
+        default_library["id"],
+        folders=None,
+        window_size=window_size,
+        sparsity_factor=sparsity_factor,
+        verbose=verbose
+    )
 
 
 def get_python_path():
