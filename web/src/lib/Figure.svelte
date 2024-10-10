@@ -96,13 +96,13 @@
 		<!-- Button container -->
 		<div class="group">
 			<button
-				class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white bg-gray-300 hover:bg-gray-400 font-bold rounded-full text-xl w-12 h-12 opacity-0 group-hover:opacity-100 flex items-center justify-center"
+				class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white bg-gray-300 hover:bg-gray-400 font-bold rounded-full text-xl w-12 h-12 opacity-0 group-hover:opacity-100 flex items-center justify-center z-50"
 				on:click={onPrevious}
 			>
 				<ChevronLeft size={40} />
 			</button>
 			<button
-				class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white bg-gray-300 hover:bg-gray-400 font-bold rounded-full text-xl w-12 h-12 opacity-0 group-hover:opacity-100 flex items-center justify-center"
+				class="absolute right-4 top-1/2 transform -translate-y-1/2 text-white bg-gray-300 hover:bg-gray-400 font-bold rounded-full text-xl w-12 h-12 opacity-0 group-hover:opacity-100 flex items-center justify-center z-50"
 				on:click={onNext}
 			>
 				<ChevronRight size={40} />
