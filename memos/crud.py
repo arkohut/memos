@@ -413,9 +413,9 @@ def remove_plugin_from_library(library_id: int, plugin_id: int, db: Session):
         raise ValueError(f"Plugin {plugin_id} not found in library {library_id}")
 
 
-def or_words(input_string):
+def and_words(input_string):
     words = input_string.split()
-    result = " OR ".join(words)
+    result = " AND ".join(words)
     return result
 
 
@@ -427,7 +427,7 @@ def full_text_search(
     start: Optional[int] = None,
     end: Optional[int] = None,
 ) -> List[int]:
-    or_query = or_words(query)
+    and_query = and_words(query)
 
     sql_query = """
     SELECT entities.id FROM entities
@@ -436,7 +436,7 @@ def full_text_search(
     AND entities.file_type_group = 'image'
     """
 
-    params = {"query": or_query, "limit": limit}
+    params = {"query": and_query, "limit": limit}
 
     if library_ids:
         library_ids_str = ", ".join(f"'{id}'" for id in library_ids)
