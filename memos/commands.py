@@ -197,7 +197,9 @@ def watch_default_library(
     sparsity_factor: float = typer.Option(
         2.0, "--sparsity-factor", "-sf", help="Sparsity factor for file processing"
     ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging")
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose logging"
+    ),
 ):
     """
     Watch the default library for file changes and sync automatically.
@@ -211,7 +213,7 @@ def watch_default_library(
         folders=None,
         window_size=window_size,
         sparsity_factor=sparsity_factor,
-        verbose=verbose
+        verbose=verbose,
     )
 
 
@@ -233,14 +235,12 @@ def generate_windows_bat():
         activate_path = os.path.join(conda_prefix, "Scripts", "activate.bat")
         content = f"""@echo off
 call "{activate_path}"
-start "" "{python_path}" -m memos.commands record
-start "" "{python_path}" -m memos.commands serve
+start "Memos" cmd /c ""{python_path}" -m memos.commands record & "{python_path}" -m memos.commands serve & timeout /t 5 /nobreak >nul & "{python_path}" -m memos.commands watch"
 """
     else:
         # If we're not in a Conda environment, use the original content
         content = f"""@echo off
-start "" "{python_path}" -m memos.commands record
-start "" "{python_path}" -m memos.commands serve
+start "Memos" cmd /c ""{python_path}" -m memos.commands record & "{python_path}" -m memos.commands serve & timeout /t 5 /nobreak >nul & "{python_path}" -m memos.commands watch"
 """
 
     bat_path = memos_dir / "launch.bat"
@@ -263,6 +263,12 @@ fi
 
 # run memos serve
 {python_path} -m memos.commands serve &
+
+# wait for 5 seconds before starting memos watch
+sleep 5
+
+# run memos watch
+{python_path} -m memos.commands watch &
 
 # wait for all background processes
 wait
@@ -325,9 +331,29 @@ def generate_plist():
     return plist_path
 
 
+def is_service_loaded(service_name):
+    try:
+        result = subprocess.run(
+            ["launchctl", "list", service_name],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return "0" in result.stdout
+    except subprocess.CalledProcessError:
+        return False
+
+
 def load_plist(plist_path):
-    subprocess.run(["launchctl", "unload", str(plist_path)], check=False)
-    subprocess.run(["launchctl", "load", str(plist_path)], check=True)
+    user_domain = f"gui/{os.getuid()}"
+    service_name = "com.user.memos"
+
+    if is_service_loaded(service_name):
+        subprocess.run(
+            ["launchctl", "bootout", user_domain, str(plist_path)], check=False
+        )
+
+    subprocess.run(["launchctl", "bootstrap", user_domain, str(plist_path)], check=True)
 
 
 def is_macos():
@@ -373,11 +399,19 @@ def disable():
 
     plist_path = Path.home() / "Library/LaunchAgents/com.user.memos.plist"
     if plist_path.exists():
-        subprocess.run(["launchctl", "unload", str(plist_path)], check=False)
+        user_domain = f"gui/{os.getuid()}"
+        service_name = "com.user.memos"
+
+        if is_service_loaded(service_name):
+            subprocess.run(
+                ["launchctl", "bootout", user_domain, str(plist_path)], check=False
+            )
+            typer.echo("Unloaded Memos service.")
+        else:
+            typer.echo("Memos service was not running.")
+
         plist_path.unlink()
-        typer.echo(
-            "Unloaded and removed plist file. Memos will no longer run at startup."
-        )
+        typer.echo("Removed plist file. Memos will no longer run at startup.")
     else:
         typer.echo("Plist file does not exist. Memos is not set to run at startup.")
 
