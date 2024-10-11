@@ -89,7 +89,7 @@
 	}
 </script>
 
-<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full" id="my-modal">
+<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40" id="my-modal">
 	<div
 		class="relative top-10 mx-auto px-16 py-10 border w-11/12 max-w-10xl shadow-lg rounded-md bg-white group h-5/6"
 	>

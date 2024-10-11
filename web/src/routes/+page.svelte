@@ -6,6 +6,8 @@
 	import { PUBLIC_API_ENDPOINT } from '$env/static/public';
 	import FacetFilter from '$lib/components/FacetFilter.svelte';
 	import { formatDistanceToNow } from 'date-fns';
+	import Logo from '$lib/components/Logo.svelte';
+	import { onMount } from 'svelte';
 
 	let searchString = '';
 	/**
@@ -49,6 +51,30 @@
 		typeof PUBLIC_API_ENDPOINT !== 'undefined' ? PUBLIC_API_ENDPOINT : window.location.origin;
 
 	let facetCounts: Facet[] | null = null;
+
+	let isScrolled = false;
+	let headerElement: HTMLElement;
+
+	// 添加一个计算属性来生成输入框的类名
+	$: inputClasses = `w-full p-2 text-lg border-gray-500 transition-all duration-300 ${
+		!isScrolled ? 'mt-4' : ''
+	}`;
+
+	onMount(() => {
+		const handleScroll = () => {
+			if (window.scrollY > 200) {
+				isScrolled = true;
+			} else if (isScrolled && window.scrollY < 50) {
+				isScrolled = false;
+			}
+		};
+
+		window.addEventListener('scroll', handleScroll);
+
+		return () => {
+			window.removeEventListener('scroll', handleScroll);
+		};
+	});
 
 	async function searchItems(
 		query: string,
@@ -219,18 +245,32 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="mx-auto my-4 max-w-screen-lg">
-	<Input
-		type="text"
-		class="w-full my-4 p-2 text-lg border-gray-500"
-		bind:value={searchString}
-		placeholder="Type to search..."
-	/>
-	<div class="flex space-x-2">
-		<LibraryFilter bind:selectedLibraryIds={selectedLibraries} />
-		<TimeFilter bind:start={startTimestamp} bind:end={endTimestamp} />
+<header
+	class="sticky top-0 z-10 transition-all duration-300"
+	bind:this={headerElement}
+>
+	<div class="mx-auto max-w-screen-lg flex items-center justify-between p-4 transition-all duration-300"
+		 class:flex-col={!isScrolled}
+		 class:flex-row={isScrolled}
+	>
+		<Logo size={isScrolled ? 48 : 128} withBorder={!isScrolled} class_="transition-transform duration-300 ease-in-out mr-4" />
+		<Input
+			type="text"
+			class={inputClasses}
+			bind:value={searchString}
+			placeholder="Type to search..."
+		/>
+		<div class="mx-auto max-w-screen-lg">
+			<div class="flex space-x-2" class:mt-4={!isScrolled} class:ml-4={isScrolled}>
+				<LibraryFilter bind:selectedLibraryIds={selectedLibraries} />
+				<TimeFilter bind:start={startTimestamp} bind:end={endTimestamp} />
+			</div>
+		</div>
 	</div>
-</div>
+</header>
+
+<!-- 添加一个动态调整高度的空白区域 -->
+<div style="height: {isScrolled ? '50px' : '0px'}"></div>
 
 <div class="mx-auto flex flex-col sm:flex-row">
 	<!-- Left panel for tags and created_date -->
@@ -302,7 +342,7 @@
 		{:else if searchString}
 			<p class="text-center">No results found.</p>
 		{:else}
-			<p class="text-center">Type something to start searching...</p>
+			<p class="text-center"></p>
 		{/if}
 	</div>
 </div>
@@ -327,10 +367,10 @@
 	/>
 {/if}
 
-<footer class="mx-auto mt-32 w-full container">
+<footer class="mx-auto mt-32 w-full container text-center">
 	<div class="border-t border-slate-900/5 py-10">
-		<p class="mt-2 text-sm leading-6 text-slate-500">© 2023 Labs Inc. All rights reserved.</p>
-		<div class="mt-2 flex items-center space-x-4 text-sm font-semibold leading-6 text-slate-700">
+		<p class="mt-2 text-sm leading-6 text-slate-500">© 2024 Arkohut Qinini. All rights reserved.</p>
+		<div class="mt-2 flex justify-center items-center space-x-4 text-sm font-semibold leading-6 text-slate-700">
 			<a href="/privacy-policy">Privacy policy</a>
 			<div class="h-4 w-px bg-slate-500/20" />
 			<a href="/changelog">Changelog</a>
