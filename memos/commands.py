@@ -1,7 +1,7 @@
 import os
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import httpx
 import typer
@@ -19,6 +19,7 @@ import subprocess
 import platform
 from .cmds.plugin import plugin_app, bind
 from .cmds.library import lib_app, scan, index, watch
+import psutil
 
 
 app = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
@@ -228,19 +229,28 @@ def get_memos_dir():
 def generate_windows_bat():
     memos_dir = get_memos_dir()
     python_path = get_python_path()
+    pythonw_path = python_path.replace("python.exe", "pythonw.exe")
     conda_prefix = os.environ.get("CONDA_PREFIX")
+    log_dir = memos_dir / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
 
     if conda_prefix:
         # If we're in a Conda environment
         activate_path = os.path.join(conda_prefix, "Scripts", "activate.bat")
         content = f"""@echo off
 call "{activate_path}"
-start "Memos" cmd /c ""{python_path}" -m memos.commands record & "{python_path}" -m memos.commands serve & timeout /t 5 /nobreak >nul & "{python_path}" -m memos.commands watch"
+start /B "" "{pythonw_path}" -m memos.commands record > "{log_dir / 'record.log'}" 2>&1
+start /B "" "{pythonw_path}" -m memos.commands serve > "{log_dir / 'serve.log'}" 2>&1
+timeout /t 5 /nobreak >nul
+start /B "" "{pythonw_path}" -m memos.commands watch > "{log_dir / 'watch.log'}" 2>&1
 """
     else:
-        # If we're not in a Conda environment, use the original content
+        # If we're not in a Conda environment
         content = f"""@echo off
-start "Memos" cmd /c ""{python_path}" -m memos.commands record & "{python_path}" -m memos.commands serve & timeout /t 5 /nobreak >nul & "{python_path}" -m memos.commands watch"
+start /B "" "{pythonw_path}" -m memos.commands record > "{log_dir / 'record.log'}" 2>&1
+start /B "" "{pythonw_path}" -m memos.commands serve > "{log_dir / 'serve.log'}" 2>&1
+timeout /t 5 /nobreak >nul
+start /B "" "{pythonw_path}" -m memos.commands watch > "{log_dir / 'watch.log'}" 2>&1
 """
 
     bat_path = memos_dir / "launch.bat"
@@ -291,6 +301,7 @@ def setup_windows_autostart(bat_path):
     shortcut = shell.CreateShortCut(str(shortcut_path))
     shortcut.Targetpath = str(bat_path)
     shortcut.WorkingDirectory = str(bat_path.parent)
+    shortcut.WindowStyle = 7  # Minimized
     shortcut.save()
 
 
@@ -364,6 +375,46 @@ def is_windows():
     return platform.system() == "Windows"
 
 
+def remove_windows_autostart():
+    startup_folder = Path(os.getenv("APPDATA")) / r"Microsoft\Windows\Start Menu\Programs\Startup"
+    shortcut_path = startup_folder / "Memos.lnk"
+    
+    if shortcut_path.exists():
+        shortcut_path.unlink()
+        return True
+    return False
+
+
+@app.command()
+def disable():
+    """Disable memos from running at startup"""
+    if is_windows():
+        if remove_windows_autostart():
+            typer.echo("Removed Memos shortcut from startup folder. Memos will no longer run at startup.")
+        else:
+            typer.echo("Memos shortcut not found in startup folder. Memos is not set to run at startup.")
+    elif is_macos():
+        plist_path = Path.home() / "Library/LaunchAgents/com.user.memos.plist"
+        if plist_path.exists():
+            user_domain = f"gui/{os.getuid()}"
+            service_name = "com.user.memos"
+
+            if is_service_loaded(service_name):
+                subprocess.run(
+                    ["launchctl", "bootout", user_domain, str(plist_path)], check=False
+                )
+                typer.echo("Unloaded Memos service.")
+            else:
+                typer.echo("Memos service was not running.")
+
+            plist_path.unlink()
+            typer.echo("Removed plist file. Memos will no longer run at startup.")
+        else:
+            typer.echo("Plist file does not exist. Memos is not set to run at startup.")
+    else:
+        typer.echo("Unsupported operating system.")
+
+
 @app.command()
 def enable():
     """Enable memos to run at startup"""
@@ -391,29 +442,27 @@ def enable():
 
 
 @app.command()
-def disable():
-    """Disable memos from running at startup"""
-    if not is_macos():
-        typer.echo("Error: This feature is only supported on macOS.")
-        raise typer.Exit(code=1)
-
-    plist_path = Path.home() / "Library/LaunchAgents/com.user.memos.plist"
-    if plist_path.exists():
-        user_domain = f"gui/{os.getuid()}"
-        service_name = "com.user.memos"
-
-        if is_service_loaded(service_name):
-            subprocess.run(
-                ["launchctl", "bootout", user_domain, str(plist_path)], check=False
-            )
-            typer.echo("Unloaded Memos service.")
+def ps():
+    """Show the status of Memos processes"""
+    services = ["serve", "watch", "record"]
+    
+    for service in services:
+        processes = [p for p in psutil.process_iter(['pid', 'name', 'cmdline', 'create_time']) 
+                     if 'python' in p.info['name'].lower() and 
+                     'memos.commands' in p.info['cmdline'] and 
+                     service in p.info['cmdline']]
+        
+        if processes:
+            for process in processes:
+                create_time = datetime.fromtimestamp(process.info['create_time']).strftime('%Y-%m-%d %H:%M:%S')
+                running_time = str(timedelta(seconds=int(time.time() - process.info['create_time'])))
+                typer.echo(f"{service.capitalize()} is running:")
+                typer.echo(f"  PID: {process.info['pid']}")
+                typer.echo(f"  Started at: {create_time}")
+                typer.echo(f"  Running for: {running_time}")
         else:
-            typer.echo("Memos service was not running.")
-
-        plist_path.unlink()
-        typer.echo("Removed plist file. Memos will no longer run at startup.")
-    else:
-        typer.echo("Plist file does not exist. Memos is not set to run at startup.")
+            typer.echo(f"{service.capitalize()} is not running")
+        typer.echo("---")
 
 
 if __name__ == "__main__":
