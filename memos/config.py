@@ -15,16 +15,19 @@ import io
 
 class VLMSettings(BaseModel):
     enabled: bool = True
-    modelname: str = "moondream"
+    modelname: str = "minicpm-v"
     endpoint: str = "http://localhost:11434"
     token: str = ""
     concurrency: int = 1
-    force_jpeg: bool = False
-    prompt: str = "请帮描述这个图片中的内容，包括画面格局、出现的视觉元素等"
+    # some vlm models do not support webp
+    force_jpeg: bool = True
+    # prompt for vlm to extract caption
+    prompt: str = "请帮描述这个图片中的内容，包括画面格局、出现的视觉元素等" 
 
 
 class OCRSettings(BaseModel):
     enabled: bool = True
+    # will by ignored if use_local is True
     endpoint: str = "http://localhost:5555/predict"
     token: str = ""
     concurrency: int = 1
@@ -35,13 +38,16 @@ class OCRSettings(BaseModel):
 class EmbeddingSettings(BaseModel):
     enabled: bool = True
     num_dim: int = 768
+    # will be ignored if use_local is True
     endpoint: str = "http://localhost:11434/api/embed"
     model: str = "jinaai/jina-embeddings-v2-base-zh"
+    # pull model from huggingface by default, make it true if you want to pull from modelscope
     use_modelscope: bool = False
     use_local: bool = True
 
 
 class TypesenseSettings(BaseModel):
+    # is disabled by default, and right now is quite unnecessary
     enabled: bool = False
     host: str = "localhost"
     port: str = "8108"
@@ -65,7 +71,7 @@ class Settings(BaseSettings):
 
     # Server settings
     server_host: str = "0.0.0.0"
-    server_port: int = 8080
+    server_port: int = 8839
 
     # VLM plugin settings
     vlm: VLMSettings = VLMSettings()
