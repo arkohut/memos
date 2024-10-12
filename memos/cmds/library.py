@@ -532,6 +532,71 @@ async def update_entity(
                     return new_entity["filepath"], FileStatus.UPDATED, False, None
 
 
+@lib_app.command("reindex")
+def reindex(
+    library_id: int,
+    folders: List[int] = typer.Option(None, "--folder", "-f"),
+):
+    print(f"Reindexing library {library_id}")
+
+    # Get the library
+    response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
+    if response.status_code != 200:
+        print(f"Failed to get library: {response.status_code} - {response.text}")
+        return
+
+    library = response.json()
+    scanned_entities = set()
+
+    # Filter folders if the folders parameter is provided
+    if folders:
+        library_folders = [
+            folder for folder in library["folders"] if folder["id"] in folders
+        ]
+    else:
+        library_folders = library["folders"]
+
+    def process_folders():
+        with httpx.Client(timeout=60) as client:
+            # Iterate through folders
+            for folder in library_folders:
+                print(f"Processing folder: {folder['id']}")
+
+                # List all entities in the folder
+                limit = 200
+                offset = 0
+                while True:
+                    entities_response = client.get(
+                        f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
+                        params={"limit": limit, "offset": offset},
+                    )
+                    if entities_response.status_code != 200:
+                        print(f"Failed to get entities: {entities_response.status_code} - {entities_response.text}")
+                        break
+
+                    entities = entities_response.json()
+                    if not entities:
+                        break
+
+                    # Update last_scan_at for each entity
+                    for entity in entities:
+                        if entity["id"] in scanned_entities:
+                            continue
+
+                        update_response = client.post(f"{BASE_URL}/entities/{entity['id']}/last-scan-at")
+                        if update_response.status_code != 200:
+                            print(f"Failed to update last_scan_at for entity {entity['id']}: {update_response.status_code} - {update_response.text}")
+                        else:
+                            print(f"Updated last_scan_at for entity {entity['id']}")
+
+                        scanned_entities.add(entity["id"])
+
+                    offset += limit
+
+    process_folders()
+    print(f"Reindexing completed for library {library_id}")
+    
+
 async def check_and_index_entity(client, entity_id, entity_last_scan_at):
     try:
         index_response = await client.get(f"{BASE_URL}/entities/{entity_id}/index")
@@ -560,8 +625,8 @@ async def index_batch(client, entity_ids):
     return index_response
 
 
-@lib_app.command("index")
-def index(
+@lib_app.command("typesense-index")
+def typesense_index(
     library_id: int,
     folders: List[int] = typer.Option(None, "--folder", "-f"),
     force: bool = typer.Option(False, "--force", help="Force update all indexes"),

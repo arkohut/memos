@@ -313,10 +313,10 @@ def update_entity_last_scan_at_for_metadata(mapper, connection, target):
     session.commit()
 
 
-async def update_or_insert_entities_vec(connection, target_id, embedding):
+async def update_or_insert_entities_vec(session, target_id, embedding):
     try:
         # First, try to update the existing row
-        result = connection.execute(
+        result = session.execute(
             text(
                 "UPDATE entities_vec SET embedding = :embedding WHERE rowid = :id"
             ),
@@ -328,7 +328,7 @@ async def update_or_insert_entities_vec(connection, target_id, embedding):
 
         # If no row was updated (i.e., the row doesn't exist), then insert a new row
         if result.rowcount == 0:
-            connection.execute(
+            session.execute(
                 text(
                     "INSERT INTO entities_vec (rowid, embedding) VALUES (:id, :embedding)"
                 ),
@@ -337,14 +337,17 @@ async def update_or_insert_entities_vec(connection, target_id, embedding):
                     "embedding": serialize_float32(embedding),
                 },
             )
+        
+        session.commit()
     except Exception as e:
         print(f"Error updating entities_vec: {e}")
+        session.rollback()
 
 
-def update_or_insert_entities_fts(connection, target_id, filepath, tags, metadata):
+def update_or_insert_entities_fts(session, target_id, filepath, tags, metadata):
     try:
         # First, try to update the existing row
-        result = connection.execute(
+        result = session.execute(
             text(
                 """
                 UPDATE entities_fts 
@@ -362,7 +365,7 @@ def update_or_insert_entities_fts(connection, target_id, filepath, tags, metadat
 
         # If no row was updated (i.e., the row doesn't exist), then insert a new row
         if result.rowcount == 0:
-            connection.execute(
+            session.execute(
                 text(
                     """
                     INSERT INTO entities_fts(id, filepath, tags, metadata)
@@ -376,8 +379,11 @@ def update_or_insert_entities_fts(connection, target_id, filepath, tags, metadat
                     "metadata": metadata,
                 },
             )
+        
+        session.commit()
     except Exception as e:
         print(f"Error updating entities_fts: {e}")
+        session.rollback()
 
 
 async def update_fts_and_vec(mapper, connection, target):
@@ -411,7 +417,7 @@ async def update_fts_and_vec(mapper, connection, target):
     )
 
     # Update FTS table
-    update_or_insert_entities_fts(connection, target.id, target.filepath, tags, metadata)
+    update_or_insert_entities_fts(session, target.id, target.filepath, tags, metadata)
 
     # Prepare vector data
     metadata_text = "\n".join(
@@ -431,9 +437,7 @@ async def update_fts_and_vec(mapper, connection, target):
 
     # Update vector table
     if embedding:
-        await update_or_insert_entities_vec(connection, target.id, embedding)
-
-    session.commit()
+        await update_or_insert_entities_vec(session, target.id, embedding)
 
 
 def delete_fts_and_vec(mapper, connection, target):

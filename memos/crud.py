@@ -290,6 +290,14 @@ def update_entity(
     return Entity(**db_entity.__dict__)
 
 
+def touch_entity(entity_id: int, db: Session):
+    db_entity = db.query(EntityModel).filter(EntityModel.id == entity_id).first()
+    if db_entity:
+        db_entity.last_scan_at = func.now()
+        db.commit()
+        db.refresh(db_entity)
+        
+
 def update_entity_tags(entity_id: int, tags: List[str], db: Session) -> Entity:
     db_entity = get_entity_by_id(entity_id, db)
     if not db_entity:

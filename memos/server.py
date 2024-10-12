@@ -372,6 +372,23 @@ async def update_entity(
     return entity
 
 
+@app.post("/entities/{entity_id}/last-scan-at", response_model=Entity, tags=["entity"])
+def update_entity_last_scan_at(
+    entity_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Update the last_scan_at timestamp for an entity and trigger update for fts and vec.
+    """
+    entity = crud.touch_entity(entity_id, db)
+    if entity is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Entity not found",
+        )
+    return entity
+
+
 def typesense_required(func):
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
