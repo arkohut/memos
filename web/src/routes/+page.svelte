@@ -46,7 +46,7 @@
 	let selectedTags: Record<string, boolean> = {};
 	let selectedDates: Record<string, boolean> = {};
 
-	const debounceDelay = 300;
+	const debounceDelay = 500;
 	const apiEndpoint =
 		typeof PUBLIC_API_ENDPOINT !== 'undefined' ? PUBLIC_API_ENDPOINT : window.location.origin;
 
@@ -62,9 +62,10 @@
 
 	onMount(() => {
 		const handleScroll = () => {
-			if (window.scrollY > 200) {
+			console.log(window.scrollY)
+			if (window.scrollY > 100) {
 				isScrolled = true;
-			} else if (isScrolled && window.scrollY < 50) {
+			} else if (isScrolled && window.scrollY < 20) {
 				isScrolled = false;
 			}
 		};
@@ -270,7 +271,7 @@
 </header>
 
 <!-- 添加一个动态调整高度的空白区域 -->
-<div style="height: {isScrolled ? '50px' : '0px'}"></div>
+<div style="height: {isScrolled ? '100px' : '0px'}"></div>
 
 <div class="mx-auto flex flex-col sm:flex-row">
 	<!-- Left panel for tags and created_date -->
