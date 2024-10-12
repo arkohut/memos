@@ -313,6 +313,73 @@ def update_entity_last_scan_at_for_metadata(mapper, connection, target):
     session.commit()
 
 
+async def update_or_insert_entities_vec(connection, target_id, embedding):
+    try:
+        # First, try to update the existing row
+        result = connection.execute(
+            text(
+                "UPDATE entities_vec SET embedding = :embedding WHERE rowid = :id"
+            ),
+            {
+                "id": target_id,
+                "embedding": serialize_float32(embedding),
+            },
+        )
+
+        # If no row was updated (i.e., the row doesn't exist), then insert a new row
+        if result.rowcount == 0:
+            connection.execute(
+                text(
+                    "INSERT INTO entities_vec (rowid, embedding) VALUES (:id, :embedding)"
+                ),
+                {
+                    "id": target_id,
+                    "embedding": serialize_float32(embedding),
+                },
+            )
+    except Exception as e:
+        print(f"Error updating entities_vec: {e}")
+
+
+def update_or_insert_entities_fts(connection, target_id, filepath, tags, metadata):
+    try:
+        # First, try to update the existing row
+        result = connection.execute(
+            text(
+                """
+                UPDATE entities_fts 
+                SET filepath = :filepath, tags = :tags, metadata = :metadata 
+                WHERE id = :id
+                """
+            ),
+            {
+                "id": target_id,
+                "filepath": filepath,
+                "tags": tags,
+                "metadata": metadata,
+            },
+        )
+
+        # If no row was updated (i.e., the row doesn't exist), then insert a new row
+        if result.rowcount == 0:
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO entities_fts(id, filepath, tags, metadata)
+                    VALUES(:id, :filepath, :tags, :metadata)
+                    """
+                ),
+                {
+                    "id": target_id,
+                    "filepath": filepath,
+                    "tags": tags,
+                    "metadata": metadata,
+                },
+            )
+    except Exception as e:
+        print(f"Error updating entities_fts: {e}")
+
+
 async def update_fts_and_vec(mapper, connection, target):
     session = Session(bind=connection)
 
@@ -344,42 +411,7 @@ async def update_fts_and_vec(mapper, connection, target):
     )
 
     # Update FTS table
-    try:
-        # First, try to update the existing row
-        result = connection.execute(
-            text(
-                """
-                UPDATE entities_fts 
-                SET filepath = :filepath, tags = :tags, metadata = :metadata 
-                WHERE id = :id
-                """
-            ),
-            {
-                "id": target.id,
-                "filepath": target.filepath,
-                "tags": tags,
-                "metadata": metadata,
-            },
-        )
-
-        # If no row was updated (i.e., the row doesn't exist), then insert a new row
-        if result.rowcount == 0:
-            connection.execute(
-                text(
-                    """
-                    INSERT INTO entities_fts(id, filepath, tags, metadata)
-                    VALUES(:id, :filepath, :tags, :metadata)
-                    """
-                ),
-                {
-                    "id": target.id,
-                    "filepath": target.filepath,
-                    "tags": tags,
-                    "metadata": metadata,
-                },
-            )
-    except Exception as e:
-        print(f"Error updating entities_fts: {e}")
+    update_or_insert_entities_fts(connection, target.id, target.filepath, tags, metadata)
 
     # Prepare vector data
     metadata_text = "\n".join(
@@ -399,31 +431,7 @@ async def update_fts_and_vec(mapper, connection, target):
 
     # Update vector table
     if embedding:
-        try:
-            # First, try to update the existing row
-            result = connection.execute(
-                text(
-                    "UPDATE entities_vec SET embedding = :embedding WHERE rowid = :id"
-                ),
-                {
-                    "id": target.id,
-                    "embedding": serialize_float32(embedding),
-                },
-            )
-
-            # If no row was updated (i.e., the row doesn't exist), then insert a new row
-            if result.rowcount == 0:
-                connection.execute(
-                    text(
-                        "INSERT INTO entities_vec (rowid, embedding) VALUES (:id, :embedding)"
-                    ),
-                    {
-                        "id": target.id,
-                        "embedding": serialize_float32(embedding),
-                    },
-                )
-        except Exception as e:
-            print(f"Error updating entities_vec: {e}")
+        await update_or_insert_entities_vec(connection, target.id, embedding)
 
     session.commit()
 
