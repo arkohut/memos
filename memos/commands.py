@@ -20,6 +20,8 @@ import platform
 from .cmds.plugin import plugin_app, bind
 from .cmds.library import lib_app, scan, index, watch
 import psutil
+import signal
+from tabulate import tabulate
 
 
 app = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
@@ -249,7 +251,7 @@ start /B "" "{pythonw_path}" -m memos.commands watch > "{log_dir / 'watch.log'}"
         content = f"""@echo off
 start /B "" "{pythonw_path}" -m memos.commands record > "{log_dir / 'record.log'}" 2>&1
 start /B "" "{pythonw_path}" -m memos.commands serve > "{log_dir / 'serve.log'}" 2>&1
-timeout /t 5 /nobreak >nul
+timeout /t 10 /nobreak >nul
 start /B "" "{pythonw_path}" -m memos.commands watch > "{log_dir / 'watch.log'}" 2>&1
 """
 
@@ -445,6 +447,7 @@ def enable():
 def ps():
     """Show the status of Memos processes"""
     services = ["serve", "watch", "record"]
+    table_data = []
     
     for service in services:
         processes = [p for p in psutil.process_iter(['pid', 'name', 'cmdline', 'create_time']) 
@@ -456,13 +459,79 @@ def ps():
             for process in processes:
                 create_time = datetime.fromtimestamp(process.info['create_time']).strftime('%Y-%m-%d %H:%M:%S')
                 running_time = str(timedelta(seconds=int(time.time() - process.info['create_time'])))
-                typer.echo(f"{service.capitalize()} is running:")
-                typer.echo(f"  PID: {process.info['pid']}")
-                typer.echo(f"  Started at: {create_time}")
-                typer.echo(f"  Running for: {running_time}")
+                table_data.append([
+                    service.capitalize(),
+                    "Running",
+                    process.info['pid'],
+                    create_time,
+                    running_time
+                ])
         else:
-            typer.echo(f"{service.capitalize()} is not running")
-        typer.echo("---")
+            table_data.append([service.capitalize(), "Not Running", "-", "-", "-"])
+    
+    headers = ["Name", "Status", "PID", "Started At", "Running For"]
+    typer.echo(tabulate(table_data, headers=headers, tablefmt="plain"))
+
+
+@app.command()
+def stop():
+    """Stop all running Memos processes"""
+    services = ["serve", "watch", "record"]
+    stopped = False
+
+    for service in services:
+        processes = [p for p in psutil.process_iter(['pid', 'name', 'cmdline']) 
+                     if 'python' in p.info['name'].lower() and 
+                     'memos.commands' in p.info['cmdline'] and 
+                     service in p.info['cmdline']]
+        
+        for process in processes:
+            try:
+                os.kill(process.info['pid'], signal.SIGTERM)
+                typer.echo(f"Stopped {service} process (PID: {process.info['pid']})")
+                stopped = True
+            except ProcessLookupError:
+                typer.echo(f"Process {service} (PID: {process.info['pid']}) not found")
+            except PermissionError:
+                typer.echo(f"Permission denied to stop {service} process (PID: {process.info['pid']})")
+
+    if not stopped:
+        typer.echo("No running Memos processes found")
+    else:
+        typer.echo("All Memos processes have been stopped")
+
+
+@app.command()
+def start():
+    """Start all Memos processes"""
+    memos_dir = get_memos_dir()
+
+    if is_windows():
+        bat_path = memos_dir / "launch.bat"
+        if not bat_path.exists():
+            typer.echo("Launch script not found. Please run 'memos enable' first.")
+            return
+        
+        try:
+            subprocess.Popen([str(bat_path)], shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE)
+            typer.echo("Started Memos processes. Check the logs for more information.")
+        except Exception as e:
+            typer.echo(f"Failed to start Memos processes: {str(e)}")
+
+    elif is_macos():
+        launch_sh_path = memos_dir / "launch.sh"
+        if not launch_sh_path.exists():
+            typer.echo("Launch script not found. Please run 'memos enable' first.")
+            return
+        
+        try:
+            subprocess.Popen(["bash", str(launch_sh_path)], start_new_session=True)
+            typer.echo("Started Memos processes. Check the logs for more information.")
+        except Exception as e:
+            typer.echo(f"Failed to start Memos processes: {str(e)}")
+
+    else:
+        typer.echo("Unsupported operating system.")
 
 
 if __name__ == "__main__":

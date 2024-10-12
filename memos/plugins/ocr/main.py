@@ -7,7 +7,7 @@ import json
 import base64
 from PIL import Image
 import numpy as np
-from rapidocr_onnxruntime import RapidOCR
+from rapidocr_openvino import RapidOCR
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 import yaml
