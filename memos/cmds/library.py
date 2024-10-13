@@ -22,7 +22,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from concurrent.futures import ThreadPoolExecutor
 
-from memos.read_metadata import read_metadata
+from memos.utils import get_image_metadata
 from memos.schemas import MetadataSource
 from memos.logging_config import LOGGING_CONFIG
 import logging.config
@@ -220,7 +220,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                         is_thumbnail = False
 
                         if file_type_group == "image":
-                            metadata = read_metadata(absolute_file_path)
+                            metadata = get_image_metadata(absolute_file_path)
                             if metadata:
                                 if (
                                     "active_window" in metadata
@@ -800,22 +800,58 @@ def sync(
         params={"filepath": str(file_path)},
     )
 
+    file_stat = file_path.stat()
+    file_type, file_type_group = get_file_type(file_path)
+
+    new_entity = {
+        "filename": file_path.name,
+        "filepath": str(file_path),
+        "size": file_stat.st_size,
+        "file_created_at": format_timestamp(file_stat.st_ctime),
+        "file_last_modified_at": format_timestamp(file_stat.st_mtime),
+        "file_type": file_type,
+        "file_type_group": file_type_group,
+    }
+
+    # Handle metadata
+    is_thumbnail = False
+    if file_type_group == "image":
+        metadata = get_image_metadata(file_path)
+        if metadata:
+            if "active_window" in metadata and "active_app" not in metadata:
+                metadata["active_app"] = metadata["active_window"].split(" - ")[0]
+            new_entity["metadata_entries"] = [
+                {
+                    "key": key,
+                    "value": str(value),
+                    "source": MetadataSource.SYSTEM_GENERATED.value,
+                    "data_type": "number" if isinstance(value, (int, float)) else "text",
+                }
+                for key, value in metadata.items()
+                if key != IS_THUMBNAIL
+            ]
+            if "active_app" in metadata:
+                new_entity.setdefault("tags", []).append(metadata["active_app"])
+            is_thumbnail = metadata.get(IS_THUMBNAIL, False)
+
     if response.status_code == 200:
         # File exists, update it
         existing_entity = response.json()
-        file_stat = file_path.stat()
-        file_type, file_type_group = get_file_type(file_path)
+        new_entity["folder_id"] = existing_entity["folder_id"]
 
-        new_entity = {
-            "filename": file_path.name,
-            "filepath": str(file_path),
-            "size": file_stat.st_size,
-            "file_created_at": format_timestamp(file_stat.st_ctime),
-            "file_last_modified_at": format_timestamp(file_stat.st_mtime),
-            "file_type": file_type,
-            "file_type_group": file_type_group,
-            "folder_id": existing_entity["folder_id"],
-        }
+        if is_thumbnail:
+            new_entity["file_created_at"] = existing_entity["file_created_at"]
+            new_entity["file_last_modified_at"] = existing_entity["file_last_modified_at"]
+            new_entity["file_type"] = existing_entity["file_type"]
+            new_entity["file_type_group"] = existing_entity["file_type_group"]
+            new_entity["size"] = existing_entity["size"]
+
+        # Merge existing metadata with new metadata
+        if new_entity.get("metadata_entries"):
+            new_metadata_keys = {entry["key"] for entry in new_entity["metadata_entries"]}
+            for existing_entry in existing_entity["metadata_entries"]:
+                if existing_entry["key"] not in new_metadata_keys:
+                    new_entity["metadata_entries"].append(existing_entry)
 
         if force or (
             existing_entity["file_last_modified_at"]
@@ -850,19 +886,7 @@ def sync(
 
         if folder:
             # Create new entity
-            file_stat = file_path.stat()
-            file_type, file_type_group = get_file_type(file_path)
-
-            new_entity = {
-                "filename": file_path.name,
-                "filepath": str(file_path),
-                "size": file_stat.st_size,
-                "file_created_at": format_timestamp(file_stat.st_ctime),
-                "file_last_modified_at": format_timestamp(file_stat.st_mtime),
-                "file_type": file_type,
-                "file_type_group": file_type_group,
-                "folder_id": folder["id"],
-            }
+            new_entity["folder_id"] = folder["id"]
 
             create_response = httpx.post(
                 f"{BASE_URL}/libraries/{library_id}/entities",

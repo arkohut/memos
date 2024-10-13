@@ -134,9 +134,6 @@ def take_screenshot_macos(
 
         with Image.open(temp_filename) as img:
             img = img.convert("RGB")
-            webp_filename = os.path.join(
-                base_dir, date, f"screenshot-{timestamp}-of-{screen_name}.webp"
-            )
             current_hash = str(imagehash.phash(img))
 
             if (
@@ -163,8 +160,15 @@ def take_screenshot_macos(
                 "sequence": screen_sequences[screen_name],
             }
 
-            img.save(webp_filename, format="WebP", quality=85)
-            write_image_metadata(webp_filename, metadata)
+            # Write metadata to the temporary PNG file
+            write_image_metadata(temp_filename, metadata)
+
+            # Save as WebP with metadata included
+            webp_filename = os.path.join(
+                base_dir, date, f"screenshot-{timestamp}-of-{screen_name}.webp"
+            )
+            img.save(webp_filename, format="WebP", quality=85, exif=img.info.get("exif"))
+
             save_screen_sequences(base_dir, screen_sequences, date)
 
         os.remove(temp_filename)
