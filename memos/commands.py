@@ -18,7 +18,7 @@ import sys
 import subprocess
 import platform
 from .cmds.plugin import plugin_app, bind
-from .cmds.library import lib_app, scan, index, watch
+from .cmds.library import lib_app, scan, typesense_index, reindex, watch
 import psutil
 import signal
 from tabulate import tabulate
@@ -139,8 +139,8 @@ def scan_default_library(force: bool = False):
     scan(default_library["id"], plugins=None, folders=None, force=force)
 
 
-@app.command("index")
-def index_default_library(
+@app.command("typesense-index")
+def typsense_index_default_library(
     batchsize: int = typer.Option(
         4, "--batchsize", "-bs", help="Number of entities to index in a batch"
     ),
@@ -164,7 +164,32 @@ def index_default_library(
         print("Default library does not exist.")
         return
 
-    index(default_library["id"], force=force, folders=None, batchsize=batchsize)
+    typesense_index(default_library["id"], force=force, folders=None, batchsize=batchsize)
+
+
+@app.command("reindex")
+def reindex_default_library():
+    """
+    Reindex the default library for memos.
+    """
+    # Get the default library
+    response = httpx.get(f"{BASE_URL}/libraries")
+    if response.status_code != 200:
+        print(f"Failed to retrieve libraries: {response.status_code} - {response.text}")
+        return
+
+    libraries = response.json()
+    default_library = next(
+        (lib for lib in libraries if lib["name"] == settings.default_library), None
+    )
+
+    if not default_library:
+        print("Default library does not exist.")
+        return
+
+    # Reindex the library
+    print(f"Reindexing library: {default_library['name']}")
+    reindex(default_library["id"])
 
 
 @app.command("record")

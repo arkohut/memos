@@ -584,7 +584,7 @@ def reindex(
                             continue
 
                         update_response = client.post(f"{BASE_URL}/entities/{entity['id']}/last-scan-at")
-                        if update_response.status_code != 200:
+                        if update_response.status_code != 204:
                             print(f"Failed to update last_scan_at for entity {entity['id']}: {update_response.status_code} - {update_response.text}")
                         else:
                             print(f"Updated last_scan_at for entity {entity['id']}")

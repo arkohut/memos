@@ -33,7 +33,7 @@ def init_embedding_model():
         model_dir = settings.embedding.model
         logger.info(f"Using model: {model_dir}")
 
-    model = SentenceTransformer(model_dir, trust_remote_code=True)
+    model = SentenceTransformer(model_dir, trust_remote_code=True, truncate_dim=768)
     model.to(device)
     logger.info(f"Embedding model initialized on device: {device}")
 
