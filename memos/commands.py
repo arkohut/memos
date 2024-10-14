@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 import httpx
 import typer
-from .config import settings
+from .config import settings, display_config
 from .models import init_database
 from .initialize_typesense import init_typesense
 from .record import (
@@ -168,7 +168,9 @@ def typsense_index_default_library(
 
 
 @app.command("reindex")
-def reindex_default_library():
+def reindex_default_library(
+    force: bool = typer.Option(False, "--force", help="Force recreate FTS and vector tables before reindexing")
+):
     """
     Reindex the default library for memos.
     """
@@ -189,7 +191,7 @@ def reindex_default_library():
 
     # Reindex the library
     print(f"Reindexing library: {default_library['name']}")
-    reindex(default_library["id"])
+    reindex(default_library["id"], force=force)
 
 
 @app.command("record")
@@ -485,14 +487,14 @@ def ps():
                 create_time = datetime.fromtimestamp(process.info['create_time']).strftime('%Y-%m-%d %H:%M:%S')
                 running_time = str(timedelta(seconds=int(time.time() - process.info['create_time'])))
                 table_data.append([
-                    service.capitalize(),
+                    service,
                     "Running",
                     process.info['pid'],
                     create_time,
                     running_time
                 ])
         else:
-            table_data.append([service.capitalize(), "Not Running", "-", "-", "-"])
+            table_data.append([service, "Not Running", "-", "-", "-"])
     
     headers = ["Name", "Status", "PID", "Started At", "Running For"]
     typer.echo(tabulate(table_data, headers=headers, tablefmt="plain"))
@@ -557,6 +559,12 @@ def start():
 
     else:
         typer.echo("Unsupported operating system.")
+
+
+@app.command()
+def config():
+    """Show current configuration settings"""
+    display_config()
 
 
 if __name__ == "__main__":

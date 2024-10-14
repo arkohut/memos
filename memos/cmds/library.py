@@ -22,6 +22,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from concurrent.futures import ThreadPoolExecutor
 
+from memos.models import recreate_fts_and_vec_tables
 from memos.utils import get_image_metadata
 from memos.schemas import MetadataSource
 from memos.logging_config import LOGGING_CONFIG
@@ -536,6 +537,7 @@ async def update_entity(
 def reindex(
     library_id: int,
     folders: List[int] = typer.Option(None, "--folder", "-f"),
+    force: bool = typer.Option(False, "--force", help="Force recreate FTS and vector tables before reindexing"),
 ):
     print(f"Reindexing library {library_id}")
 
@@ -556,9 +558,27 @@ def reindex(
     else:
         library_folders = library["folders"]
 
-    def process_folders():
-        with httpx.Client(timeout=60) as client:
-            # Iterate through folders
+    if force:
+        print("Force flag is set. Recreating FTS and vector tables...")
+        recreate_fts_and_vec_tables()
+        print("FTS and vector tables have been recreated.")
+
+    with httpx.Client(timeout=60) as client:
+        total_entities = 0
+        
+        # Get total entity count for all folders
+        for folder in library_folders:
+            response = client.get(
+                f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
+                params={"limit": 1, "offset": 0},
+            )
+            if response.status_code == 200:
+                total_entities += int(response.headers.get("X-Total-Count", 0))
+            else:
+                print(f"Failed to get entity count for folder {folder['id']}: {response.status_code} - {response.text}")
+
+        # Now process entities with a progress bar
+        with tqdm(total=total_entities, desc="Reindexing entities") as pbar:
             for folder in library_folders:
                 print(f"Processing folder: {folder['id']}")
 
@@ -587,15 +607,14 @@ def reindex(
                         if update_response.status_code != 204:
                             print(f"Failed to update last_scan_at for entity {entity['id']}: {update_response.status_code} - {update_response.text}")
                         else:
-                            print(f"Updated last_scan_at for entity {entity['id']}")
-
-                        scanned_entities.add(entity["id"])
+                            scanned_entities.add(entity["id"])
+                        
+                        pbar.update(1)
 
                     offset += limit
 
-    process_folders()
     print(f"Reindexing completed for library {library_id}")
-    
+
 
 async def check_and_index_entity(client, entity_id, entity_last_scan_at):
     try:

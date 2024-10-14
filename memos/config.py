@@ -11,6 +11,7 @@ from pydantic import BaseModel, SecretStr
 import yaml
 from collections import OrderedDict
 import io
+import typer
 
 
 class VLMSettings(BaseModel):
@@ -22,7 +23,7 @@ class VLMSettings(BaseModel):
     # some vlm models do not support webp
     force_jpeg: bool = True
     # prompt for vlm to extract caption
-    prompt: str = "请帮描述这个图片中的内容，包括画面格局、出现的视觉元素等" 
+    prompt: str = "请帮描述这个图片中的内容，包括画面格局、出现的视觉元素等"
 
 
 class OCRSettings(BaseModel):
@@ -118,10 +119,12 @@ yaml.add_representer(OrderedDict, dict_representer)
 def secret_str_representer(dumper, data):
     return dumper.represent_scalar("tag:yaml.org,2002:str", data.get_secret_value())
 
+
 # Custom constructor for SecretStr
 def secret_str_constructor(loader, node):
     value = loader.construct_scalar(node)
     return SecretStr(value)
+
 
 # Register the representer and constructor only for specific fields
 yaml.add_representer(SecretStr, secret_str_representer)
@@ -132,21 +135,24 @@ def create_default_config():
     if not config_path.exists():
         settings = Settings()
         os.makedirs(config_path.parent, exist_ok=True)
-        
+
         # 将设置转换为字典并确保顺序
         settings_dict = settings.model_dump()
         ordered_settings = OrderedDict(
             (key, settings_dict[key]) for key in settings.model_fields.keys()
         )
-        
+
         # 使用 io.StringIO 作为中间步骤
         with io.StringIO() as string_buffer:
-            yaml.dump(ordered_settings, string_buffer, allow_unicode=True, Dumper=yaml.Dumper)
+            yaml.dump(
+                ordered_settings, string_buffer, allow_unicode=True, Dumper=yaml.Dumper
+            )
             yaml_content = string_buffer.getvalue()
-        
+
         # 将内容写入文件，确保使用 UTF-8 编码
         with open(config_path, "w", encoding="utf-8") as f:
             f.write(yaml_content)
+
 
 # Create default config if it doesn't exist
 create_default_config()
@@ -164,3 +170,36 @@ TYPESENSE_COLLECTION_NAME = settings.typesense.collection_name
 # Function to get the database path from environment variable or default
 def get_database_path():
     return settings.database_path
+
+
+def format_value(value):
+    if isinstance(
+        value, (VLMSettings, OCRSettings, EmbeddingSettings, TypesenseSettings)
+    ):
+        return (
+            "{\n"
+            + "\n".join(f"    {k}: {v}" for k, v in value.model_dump().items())
+            + "\n  }"
+        )
+    elif isinstance(value, (list, tuple)):
+        return f"[{', '.join(map(str, value))}]"
+    elif isinstance(value, SecretStr):
+        return "********"  # Hide the actual value of SecretStr
+    else:
+        return str(value)
+
+
+def display_config():
+    settings = Settings()
+    config_dict = settings.model_dump()
+    max_key_length = max(len(key) for key in config_dict.keys())
+
+    typer.echo("Current configuration settings:")
+    for key, value in config_dict.items():
+        formatted_value = format_value(value)
+        if "\n" in formatted_value:
+            typer.echo(f"{key}:")
+            for line in formatted_value.split("\n"):
+                typer.echo(f"  {line}")
+        else:
+            typer.echo(f"{key.ljust(max_key_length)} : {formatted_value}")

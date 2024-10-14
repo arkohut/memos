@@ -9,7 +9,6 @@ from sqlalchemy import (
     func,
     Index,
     event,
-    DDL,
 )
 from datetime import datetime
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column, Session
@@ -18,10 +17,8 @@ from .schemas import MetadataSource, MetadataType, FolderType
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from .config import get_database_path, settings
-import numpy as np
 from sqlalchemy import text
 import sqlite_vec
-import os
 import sys
 from pathlib import Path
 import json
@@ -202,6 +199,50 @@ def load_extension(dbapi_conn, connection_record):
     dbapi_conn.execute("PRAGMA journal_mode=WAL")
 
 
+def recreate_fts_and_vec_tables():
+    """Recreate the entities_fts and entities_vec tables without repopulating data."""
+    db_path = get_database_path()
+    engine = create_engine(f"sqlite:///{db_path}")
+    event.listen(engine, "connect", load_extension)
+
+    Session = sessionmaker(bind=engine)
+
+    with Session() as session:
+        try:
+            # Drop existing tables
+            session.execute(text("DROP TABLE IF EXISTS entities_fts"))
+            session.execute(text("DROP TABLE IF EXISTS entities_vec"))
+
+            # Recreate entities_fts table
+            session.execute(
+                text(
+                    """
+                CREATE VIRTUAL TABLE entities_fts USING fts5(
+                    id, filepath, tags, metadata,
+                    tokenize = 'simple 0'
+                )
+            """
+                )
+            )
+
+            # Recreate entities_vec table
+            session.execute(
+                text(
+                    f"""
+                CREATE VIRTUAL TABLE entities_vec USING vec0(
+                    embedding float[{settings.embedding.num_dim}]
+                )
+            """
+                )
+            )
+
+            session.commit()
+            print("Successfully recreated entities_fts and entities_vec tables.")
+        except Exception as e:
+            session.rollback()
+            print(f"Error recreating tables: {e}")
+
+
 def init_database():
     """Initialize the database."""
     db_path = get_database_path()
@@ -214,25 +255,25 @@ def init_database():
         Base.metadata.create_all(engine)
         print(f"Database initialized successfully at {db_path}")
 
+        # Create FTS and Vec tables
         with engine.connect() as conn:
             conn.execute(
-                DDL(
+                text(
                     """
-            CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(
-                id, filepath, tags, metadata,
-                tokenize = 'simple 0'
-            )
+                CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(
+                    id, filepath, tags, metadata,
+                    tokenize = 'simple 0'
+                )
             """
                 )
             )
 
-        with engine.connect() as conn:
             conn.execute(
-                DDL(
+                text(
                     f"""
-            CREATE VIRTUAL TABLE IF NOT EXISTS entities_vec USING vec0(
-                embedding float[{settings.embedding.num_dim}]
-            )
+                CREATE VIRTUAL TABLE IF NOT EXISTS entities_vec USING vec0(
+                    embedding float[{settings.embedding.num_dim}]
+                )
             """
                 )
             )
@@ -317,9 +358,7 @@ async def update_or_insert_entities_vec(session, target_id, embedding):
     try:
         # First, try to update the existing row
         result = session.execute(
-            text(
-                "UPDATE entities_vec SET embedding = :embedding WHERE rowid = :id"
-            ),
+            text("UPDATE entities_vec SET embedding = :embedding WHERE rowid = :id"),
             {
                 "id": target_id,
                 "embedding": serialize_float32(embedding),
@@ -337,7 +376,7 @@ async def update_or_insert_entities_vec(session, target_id, embedding):
                     "embedding": serialize_float32(embedding),
                 },
             )
-        
+
         session.commit()
     except Exception as e:
         print(f"Error updating entities_vec: {e}")
@@ -379,7 +418,7 @@ def update_or_insert_entities_fts(session, target_id, filepath, tags, metadata):
                     "metadata": metadata,
                 },
             )
-        
+
         session.commit()
     except Exception as e:
         print(f"Error updating entities_fts: {e}")
