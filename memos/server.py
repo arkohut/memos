@@ -782,9 +782,16 @@ async def search_entities_v2(
     library_ids = [int(id) for id in library_ids.split(",")] if library_ids else None
 
     try:
-        entities = await crud.hybrid_search(
-            query=q, db=db, limit=limit, library_ids=library_ids, start=start, end=end
-        )
+        if q.strip() == "":
+            # Use list_entities when q is empty
+            entities = await crud.list_entities(
+                db=db, limit=limit, library_ids=library_ids, start=start, end=end
+            )
+        else:
+            # Use hybrid_search when q is not empty
+            entities = await crud.hybrid_search(
+                query=q, db=db, limit=limit, library_ids=library_ids, start=start, end=end
+            )
 
         # Convert Entity list to SearchHit list
         hits = []

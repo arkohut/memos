@@ -242,6 +242,21 @@
 	const enableScroll = () => {
 		document.body.style.overflow = '';
 	};
+
+	function handleEnterPress(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			searchItems(
+				searchString,
+				startTimestamp,
+				endTimestamp,
+				selectedLibraries,
+				Object.keys(selectedTags).filter((tag) => selectedTags[tag]),
+				Object.keys(selectedDates).filter((date) => selectedDates[date]),
+				true
+			);
+		}
+	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -260,6 +275,7 @@
 			class={inputClasses}
 			bind:value={searchString}
 			placeholder="Type to search..."
+			on:keydown={handleEnterPress}
 		/>
 		<div class="mx-auto max-w-screen-lg">
 			<div class="flex space-x-2" class:mt-4={!isScrolled} class:ml-4={isScrolled}>

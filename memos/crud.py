@@ -299,7 +299,7 @@ def touch_entity(entity_id: int, db: Session) -> bool:
         return True
     else:
         return False
-        
+
 
 def update_entity_tags(entity_id: int, tags: List[str], db: Session) -> Entity:
     db_entity = get_entity_by_id(entity_id, db)
@@ -453,20 +453,18 @@ def full_text_search(
         library_ids_str = ", ".join(f"'{id}'" for id in library_ids)
         sql_query += f" AND entities.library_id IN ({library_ids_str})"
     if start is not None and end is not None:
-        sql_query += (
-            " AND strftime('%s', entities.file_created_at, 'utc') BETWEEN :start AND :end"
-        )
+        sql_query += " AND strftime('%s', entities.file_created_at, 'utc') BETWEEN :start AND :end"
         params["start"] = str(start)
         params["end"] = str(end)
 
-    sql_query += " ORDER BY bm25(entities_fts) LIMIT :limit"
+    sql_query += " ORDER BY bm25(entities_fts), entities.last_scan_at DESC LIMIT :limit"
 
     result = db.execute(text(sql_query), params).fetchall()
 
     logger.info(f"Full-text search sql: {sql_query}")
     logger.info(f"Full-text search params: {params}")
     ids = [row[0] for row in result]
-    logger.debug(f"Full-text search results: {ids}")
+    logger.info(f"Full-text search results: {ids}")
     return ids
 
 
@@ -476,12 +474,12 @@ async def vec_search(
     limit: int = 200,
     library_ids: Optional[List[int]] = None,
     start: Optional[int] = None,
-    end: Optional[int] = None
+    end: Optional[int] = None,
 ) -> List[int]:
     query_embedding = await get_embeddings([query])
     if not query_embedding:
         return []
-    
+
     query_embedding = query_embedding[0]
 
     sql_query = """
@@ -504,12 +502,12 @@ async def vec_search(
         params["start"] = str(start)
         params["end"] = str(end)
 
-    sql_query += " AND K = :limit ORDER BY distance"
+    sql_query += " AND K = :limit ORDER BY distance, entities.last_scan_at DESC"
 
     result = db.execute(text(sql_query), params).fetchall()
 
     ids = [row[0] for row in result]
-    logger.debug(f"Vector search results: {ids}")
+    logger.info(f"Vector search results: {ids}")
     return ids
 
 
@@ -574,3 +572,27 @@ async def hybrid_search(
     logger.info(f"Total hybrid search time: {total_time:.4f} seconds")
 
     return result
+
+
+async def list_entities(
+    db: Session,
+    limit: int = 200,
+    library_ids: Optional[List[int]] = None,
+    start: Optional[int] = None,
+    end: Optional[int] = None,
+) -> List[Entity]:
+    query = db.query(EntityModel).filter(EntityModel.file_type_group == "image")
+
+    if library_ids:
+        query = query.filter(EntityModel.library_id.in_(library_ids))
+
+    if start is not None and end is not None:
+        query = query.filter(
+            func.strftime("%s", EntityModel.file_created_at).between(
+                str(start), str(end)
+            )
+        )
+
+    entities = query.order_by(EntityModel.last_scan_at.desc()).limit(limit).all()
+
+    return [Entity(**entity.__dict__) for entity in entities]
