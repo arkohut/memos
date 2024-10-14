@@ -497,7 +497,7 @@ async def vec_search(
 
     if start is not None and end is not None:
         sql_query += (
-            " AND strftime('%s', entities.file_created_at) BETWEEN :start AND :end"
+            " AND strftime('%s', entities.file_created_at, 'utc') BETWEEN :start AND :end"
         )
         params["start"] = str(start)
         params["end"] = str(end)
@@ -588,7 +588,7 @@ async def list_entities(
 
     if start is not None and end is not None:
         query = query.filter(
-            func.strftime("%s", EntityModel.file_created_at).between(
+            func.strftime("%s", EntityModel.file_created_at, 'utc').between(
                 str(start), str(end)
             )
         )

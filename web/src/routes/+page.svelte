@@ -19,8 +19,8 @@
 	let showModal = false;
 	let selectedImage = 0;
 
-	let startTimestamp = -1;
-	let endTimestamp = -1;
+	let startTimestamp: number | null = null;
+	let endTimestamp: number | null = null;
 
 	let selectedLibraries: number[] = [];
 	let searchResult: SearchResult | null = null;
@@ -169,21 +169,19 @@
 	}
 
 	function handleFiltersChange() {
-		if (searchString.trim()) {
-			searchItems(
-				searchString,
-				startTimestamp,
-				endTimestamp,
-				selectedLibraries,
-				Object.keys(selectedTags).filter((tag) => selectedTags[tag]),
-				Object.keys(selectedDates).filter((date) => selectedDates[date]),
-				false
-			);
-		}
+		searchItems(
+			searchString,
+			startTimestamp,
+			endTimestamp,
+			selectedLibraries,
+			Object.keys(selectedTags).filter((tag) => selectedTags[tag]),
+			Object.keys(selectedDates).filter((date) => selectedDates[date]),
+			false
+		);
 	}
 
 	$: {
-		if (startTimestamp !== -1 || endTimestamp !== -1 || selectedLibraries.length > 0) {
+		if (startTimestamp != null || endTimestamp != null || selectedLibraries.length > 0) {
 			handleFiltersChange();
 		}
 	}
