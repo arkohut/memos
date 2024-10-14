@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     screenshots_dir: str = os.path.join(base_dir, "screenshots")
 
     # Server settings
-    server_host: str = "0.0.0.0"
+    server_host: str = "127.0.0.1"
     server_port: int = 8839
 
     # VLM plugin settings

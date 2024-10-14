@@ -1086,7 +1086,7 @@ def watch(
         None, "--folder", "-f", help="Specify folders to watch"
     ),
     sparsity_factor: float = typer.Option(
-        2.0, "--sparsity-factor", "-sf", help="Sparsity factor for file processing"
+        3.0, "--sparsity-factor", "-sf", help="Sparsity factor for file processing"
     ),
     window_size: int = typer.Option(
         20, "--window-size", "-ws", help="Window size for rate calculation"

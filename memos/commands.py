@@ -225,7 +225,7 @@ def watch_default_library(
         20, "--window-size", "-ws", help="Window size for rate calculation"
     ),
     sparsity_factor: float = typer.Option(
-        2.0, "--sparsity-factor", "-sf", help="Sparsity factor for file processing"
+        3.0, "--sparsity-factor", "-sf", help="Sparsity factor for file processing"
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose logging"
