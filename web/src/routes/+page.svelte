@@ -257,6 +257,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>memos {searchString ? `- ${searchString}` : ''}</title>
+</svelte:head>
+
 <svelte:window on:keydown={handleKeydown} />
 
 <header
