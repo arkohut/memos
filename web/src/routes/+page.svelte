@@ -278,6 +278,7 @@
 			bind:value={searchString}
 			placeholder="Type to search..."
 			on:keydown={handleEnterPress}
+			autofocus
 		/>
 		<div class="mx-auto max-w-screen-lg">
 			<div class="flex space-x-2" class:mt-4={!isScrolled} class:ml-4={isScrolled}>
