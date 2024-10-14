@@ -457,7 +457,7 @@ def full_text_search(
         params["start"] = str(start)
         params["end"] = str(end)
 
-    sql_query += " ORDER BY bm25(entities_fts), entities.last_scan_at DESC LIMIT :limit"
+    sql_query += " ORDER BY bm25(entities_fts), entities.file_created_at DESC LIMIT :limit"
 
     result = db.execute(text(sql_query), params).fetchall()
 
@@ -502,7 +502,7 @@ async def vec_search(
         params["start"] = str(start)
         params["end"] = str(end)
 
-    sql_query += " AND K = :limit ORDER BY distance, entities.last_scan_at DESC"
+    sql_query += " AND K = :limit ORDER BY distance, entities.file_created_at DESC"
 
     result = db.execute(text(sql_query), params).fetchall()
 
@@ -593,6 +593,6 @@ async def list_entities(
             )
         )
 
-    entities = query.order_by(EntityModel.last_scan_at.desc()).limit(limit).all()
+    entities = query.order_by(EntityModel.file_created_at.desc()).limit(limit).all()
 
     return [Entity(**entity.__dict__) for entity in entities]
