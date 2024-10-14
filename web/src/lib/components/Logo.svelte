@@ -4,18 +4,12 @@
 		return x - Math.floor(x);
 	}
 
-	export let size = 32; // 默认大小为 32
-	export let class_ = ''; // 添加一个 class prop，使用 class_ 避免与 JavaScript 关键字冲突
-	export let withBorder = true; // 新增参数，默认为 true
+	export let size = 32;
+	export let class_ = '';
+	export let withBorder = true;
 
-	function generateMemosLogo(size: number, withBorder: boolean): string {
-		const colors = ['#f0f8ff', '#d0e8ff', '#a1d2ff', '#64b5f6', '#1565c0', '#0d47a1']; // Adjusted colors
-		const cellSize = 1; // Set to 1 to make scaling easier
-		const rectSize = 0.85; // Slightly smaller than cellSize to create gaps
-		let svgContent = '';
-		let seed = 42;
-
-		// Define the 'M' shape
+	function prepareMatrixFromRandomColors(withBorder: boolean): string[][] {
+        const colors = ['#d0e8ff', '#a1d2ff', '#64b5f6', '#1565c0', '#0d47a1'];
 		const mShape = withBorder
 			? [
 					[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -47,37 +41,50 @@
 			  ];
 
 		const gridSize = withBorder ? 13 : 11;
+		let seed = 42;
+		const matrix: string[][] = [];
 
-		// Create the SVG header
-		svgContent += `<svg width="${size}" height="${size}" viewBox="0 0 ${gridSize} ${gridSize}" xmlns="http://www.w3.org/2000/svg" opacity="1">
-`;
-
-		// Generate grid of cells with rounded corners
 		for (let row = 0; row < gridSize; row++) {
+			const rowColors: string[] = [];
 			for (let col = 0; col < gridSize; col++) {
 				let colorIndex;
-
-				// Define the pattern for the 'M' shape
 				if (mShape[row][col] === 1) {
-					colorIndex = Math.floor(seededRandom(seed++) * 2) + 4;
+					colorIndex = Math.floor(seededRandom(seed++) * 2) + 3;
 				} else {
 					colorIndex = Math.floor(seededRandom(seed++) * 3);
 				}
+				rowColors.push(colors[colorIndex]);
+			}
+			matrix.push(rowColors);
+		}
 
+		return matrix;
+	}
+
+	function generateSvg(matrix: string[][], size: number): string {
+		const gridSize = matrix.length;
+		const cellSize = 1;
+		const rectSize = 0.85;
+
+		let svgContent = `<svg width="${size}" height="${size}" viewBox="0 0 ${gridSize} ${gridSize}" xmlns="http://www.w3.org/2000/svg" opacity="1">
+`;
+
+		for (let row = 0; row < gridSize; row++) {
+			for (let col = 0; col < gridSize; col++) {
 				svgContent += `  <rect x="${col * cellSize + 0.075}" y="${
 					row * cellSize + 0.075
-				}" width="${rectSize}" height="${rectSize}" rx="0.15" ry="0.15" fill="${
-					colors[colorIndex]
-				}" />
+				}" width="${rectSize}" height="${rectSize}" rx="0.15" ry="0.15" fill="${matrix[row][col]}" />
 `;
 			}
 		}
 
-		// Close the SVG tag
 		svgContent += `</svg>`;
-
-		// Instead of writing to file, return the SVG content
 		return svgContent;
+	}
+
+	function generateMemosLogo(size: number, withBorder: boolean): string {
+		const matrix = prepareMatrixFromRandomColors(withBorder);
+		return generateSvg(matrix, size);
 	}
 
 	$: logoSvg = generateMemosLogo(size, withBorder);

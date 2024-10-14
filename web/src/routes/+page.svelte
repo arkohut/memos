@@ -254,7 +254,7 @@
 		 class:flex-col={!isScrolled}
 		 class:flex-row={isScrolled}
 	>
-		<Logo size={isScrolled ? 48 : 128} withBorder={!isScrolled} class_="transition-transform duration-300 ease-in-out mr-4" />
+		<Logo size={isScrolled ? 32 : 128} withBorder={!isScrolled} class_="transition-transform duration-300 ease-in-out mr-4" />
 		<Input
 			type="text"
 			class={inputClasses}
