@@ -18,6 +18,11 @@
 			start: null,
 			end: null
 		},
+		threeHours: {
+			label: '最近3小时',
+			start: now - 3 * 60 * 60 * 1000,
+			end: now
+		},
 		today: {
 			label: '今天',
 			start: now - 24 * 60 * 60 * 1000,
@@ -98,6 +103,7 @@
 			<DropdownMenu.Separator />
 			<DropdownMenu.RadioGroup bind:value={timeFilter}>
 				<DropdownMenu.RadioItem value="unlimited">时间不限</DropdownMenu.RadioItem>
+				<DropdownMenu.RadioItem value="threeHours">最近三小时</DropdownMenu.RadioItem>
 				<DropdownMenu.RadioItem value="today">今天</DropdownMenu.RadioItem>
 				<DropdownMenu.RadioItem value="week">最近一周</DropdownMenu.RadioItem>
 				<DropdownMenu.RadioItem value="month">最近一个月</DropdownMenu.RadioItem>
