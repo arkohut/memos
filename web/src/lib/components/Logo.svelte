@@ -8,7 +8,61 @@
 	export let class_ = '';
 	export let withBorder = true;
 
-	function prepareMatrixFromRandomColors(withBorder: boolean): string[][] {
+	function prepareMatrixFromFixedIndexAndLittleRadom(withBorder: boolean): string[][] {
+        const bgColors = ['#f2f2f2', '#e9e9e9', '#d8d8d8']
+        // const colors = ['#d0e8ff', '#F2295F', '#E0A0F2', '#F2B705'];
+        const colors = ['#d0e8ff', '#BF244E', '#8C2685', '#21A650'];
+		const mShape = withBorder
+			? [
+					[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+					[0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 3, 3, 0],
+					[0, 1, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3, 0],
+					[0, 1, 1, 1, 2, 0, 0, 0, 2, 3, 3, 3, 0],
+					[0, 1, 1, 1, 2, 2, 0, 2, 2, 3, 3, 3, 0],
+					[0, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 0],
+					[0, 1, 1, 1, 0, 2, 2, 2, 0, 3, 3, 3, 0],
+					[0, 1, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3, 0],
+					[0, 1, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3, 0],
+					[0, 1, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3, 0],
+					[0, 1, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3, 0],
+					[0, 1, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3, 0],
+					[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+			  ]
+			: [
+					[1, 1, 0, 0, 0, 0, 0, 0, 0, 3, 3],
+					[1, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3],
+					[1, 1, 1, 2, 0, 0, 0, 2, 3, 3, 3],
+					[1, 1, 1, 2, 2, 0, 2, 2, 3, 3, 3],
+					[1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3],
+					[1, 1, 1, 0, 2, 2, 2, 0, 3, 3, 3],
+					[1, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3],
+					[1, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3],
+					[1, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3],
+					[1, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3],
+					[1, 1, 1, 0, 0, 0, 0, 0, 3, 3, 3]
+			  ];
+
+		const gridSize = withBorder ? 13 : 11;
+		let seed = 42;
+		const matrix: string[][] = [];
+
+		for (let row = 0; row < gridSize; row++) {
+			const rowColors: string[] = [];
+            const bgSize = bgColors.length;
+			for (let col = 0; col < gridSize; col++) {
+                if (mShape[row][col] === 0) {
+                    rowColors.push(bgColors[Math.floor(seededRandom(seed++) * bgSize)]);
+                } else {
+                    rowColors.push(colors[mShape[row][col]]);
+                }
+			}
+			matrix.push(rowColors);
+		}
+
+		return matrix;
+	}
+
+    function prepareMatrixFromRandomColors(withBorder: boolean): string[][] {
         const colors = ['#d0e8ff', '#a1d2ff', '#64b5f6', '#1565c0', '#0d47a1'];
 		const mShape = withBorder
 			? [
@@ -83,7 +137,7 @@
 	}
 
 	function generateMemosLogo(size: number, withBorder: boolean): string {
-		const matrix = prepareMatrixFromRandomColors(withBorder);
+		const matrix = prepareMatrixFromFixedIndexAndLittleRadom(withBorder);
 		return generateSvg(matrix, size);
 	}
 

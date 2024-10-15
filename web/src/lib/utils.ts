@@ -60,3 +60,31 @@ export const flyAndScale = (
 		easing: cubicOut
 	};
 };
+
+export const appIconMap: Record<string, string> = {
+	"Cursor": "Code",
+	"Google Chrome": "Chrome",
+	"IINA": "Youtube",
+	"微信": "MessageSquareCode",
+	"预览": "Eye",
+	"iTerm2": "SquareTerminal",
+	"企业微信": "MessageSquareCode",
+	"IntelliJ IDEA": "Code",
+	"Microsoft Edge": "Globe",
+	"腾讯会议": "MessagesSquare",
+	"访达": "Folder",
+	"邮件": "Mail",
+	"备忘录": "NotebookTabs",
+	"日历": "CalendarFold",
+	"UserNotificationCenter": "Bell",
+	"Electron": "Atom",
+	"Firefox": "Globe",
+	"Safari浏览器": "Compass",
+	"熊掌记": "NotebookTabs",
+	"Alacritty": "SquareTerminal",
+	"系统设置": "Settings",
+	"股市": "CircleDollarSign",
+	"活动监视器": "Activity",
+	"Brave Browser": "Globe",
+	"Code": "Code",
+};

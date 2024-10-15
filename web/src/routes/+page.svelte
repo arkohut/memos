@@ -8,6 +8,8 @@
 	import { formatDistanceToNow } from 'date-fns';
 	import Logo from '$lib/components/Logo.svelte';
 	import { onMount } from 'svelte';
+	import { appIconMap } from '$lib/utils';
+	import LucideIcon from '$lib/components/LucideIcon.svelte';
 
 	let searchString = '';
 	/**
@@ -255,6 +257,24 @@
 			);
 		}
 	}
+
+	// Add this function near the top of the <script> section
+	function getEntityTitle(document: any): string {
+		if (document.metadata_entries && 
+			document.metadata_entries.some((entry: any) => entry.key === 'active_window')) {
+			return document.metadata_entries.find((entry: any) => entry.key === 'active_window').value;
+		}
+		return filename(document.filepath);
+	}
+
+	function getAppName(document: any): string | null {
+		if (document.metadata_entries && document.metadata_entries.some((entry) => entry.key === 'active_app')) {
+			return document.metadata_entries.find((entry) => entry.key === 'active_app').value;
+		} else {
+			return null;
+		}
+	}
+
 </script>
 
 <svelte:head>
@@ -330,11 +350,7 @@
 					>
 						<div class="px-4 pt-4">
 							<h2 class="line-clamp-2 h-12">
-								{hit.document.metadata_entries &&
-								hit.document.metadata_entries.some((entry) => entry.key === 'active_window')
-									? hit.document.metadata_entries.find((entry) => entry.key === 'active_window')
-											.value
-									: filename(hit.document.filepath)}
+								{getEntityTitle(hit.document)}
 							</h2>
 							<p class="text-gray-700 text-xs">
 								{formatDistanceToNow(new Date(hit.document.file_created_at * 1000), {
@@ -348,11 +364,12 @@
 								src={`${apiEndpoint}/files/${hit.document.filepath}`}
 								alt=""
 							/>
-							{#if hit.document.metadata_entries && hit.document.metadata_entries.some((entry) => entry.key === 'active_app')}
+							{#if getAppName(hit.document)}
 								<div
-									class="absolute bottom-2 left-6 bg-white bg-opacity-75 px-2 py-1 rounded-full text-xs font-semibold border border-gray-200"
+									class="absolute bottom-2 left-6 bg-white bg-opacity-75 px-2 py-1 rounded-full text-xs font-semibold border border-gray-200 flex items-center space-x-2"
 								>
-									{hit.document.metadata_entries.find((entry) => entry.key === 'active_app').value}
+									<LucideIcon name={appIconMap[getAppName(hit.document)] || 'Hexagon'} size={16} />
+									<span>{getAppName(hit.document)}</span>
 								</div>
 							{/if}
 						</figure>
@@ -376,7 +393,8 @@
 		video={`${apiEndpoint}/files/video/${searchResult.hits[selectedImage].document.filepath}`}
 		created_at={searchResult.hits[selectedImage].document.file_created_at * 1000}
 		filepath={searchResult.hits[selectedImage].document.filepath}
-		title={filename(searchResult.hits[selectedImage].document.filepath)}
+		title={getEntityTitle(searchResult.hits[selectedImage].document)}
+		app_name={getAppName(searchResult.hits[selectedImage].document)}
 		tags={searchResult.hits[selectedImage].document.tags}
 		metadata_entries={searchResult.hits[selectedImage].document.metadata_entries}
 		onClose={closeModal}
