@@ -222,7 +222,7 @@ def record(
 @app.command("watch")
 def watch_default_library(
     window_size: int = typer.Option(
-        20, "--window-size", "-ws", help="Window size for rate calculation"
+        10, "--window-size", "-ws", help="Window size for rate calculation"
     ),
     sparsity_factor: float = typer.Option(
         3.0, "--sparsity-factor", "-sf", help="Sparsity factor for file processing"
@@ -479,6 +479,7 @@ def ps():
     for service in services:
         processes = [p for p in psutil.process_iter(['pid', 'name', 'cmdline', 'create_time']) 
                      if 'python' in p.info['name'].lower() and 
+                     p.info['cmdline'] is not None and
                      'memos.commands' in p.info['cmdline'] and 
                      service in p.info['cmdline']]
         
@@ -509,6 +510,7 @@ def stop():
     for service in services:
         processes = [p for p in psutil.process_iter(['pid', 'name', 'cmdline']) 
                      if 'python' in p.info['name'].lower() and 
+                     p.info['cmdline'] is not None and
                      'memos.commands' in p.info['cmdline'] and 
                      service in p.info['cmdline']]
         

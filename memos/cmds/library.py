@@ -934,8 +934,8 @@ class LibraryFileHandler(FileSystemEventHandler):
         library_id,
         include_files,
         max_workers=2,
-        sparsity_factor=2,
-        window_size=20,
+        sparsity_factor=3,
+        window_size=10,
     ):
         self.library_id = library_id
         self.include_files = include_files
@@ -945,7 +945,7 @@ class LibraryFileHandler(FileSystemEventHandler):
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.lock = threading.Lock()
 
-        self.sparsity_window = 3
+        self.sparsity_window = 6
         self.sparsity_factor = sparsity_factor
         self.window_size = window_size
 
@@ -1089,7 +1089,7 @@ def watch(
         3.0, "--sparsity-factor", "-sf", help="Sparsity factor for file processing"
     ),
     window_size: int = typer.Option(
-        20, "--window-size", "-ws", help="Window size for rate calculation"
+        10, "--window-size", "-ws", help="Window size for rate calculation"
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging")
 ):
