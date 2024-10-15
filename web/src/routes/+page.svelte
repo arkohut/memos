@@ -276,7 +276,7 @@
 			type="text"
 			class={inputClasses}
 			bind:value={searchString}
-			placeholder="Type to search..."
+			placeholder="Input keyword to search or press Enter to show latest records"
 			on:keydown={handleEnterPress}
 			autofocus
 		/>
