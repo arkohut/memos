@@ -364,7 +364,7 @@
 								src={`${apiEndpoint}/files/${hit.document.filepath}`}
 								alt=""
 							/>
-							{#if getAppName(hit.document)}
+							{#if getAppName(hit.document) !== "unknown"}
 								<div
 									class="absolute bottom-2 left-6 bg-white bg-opacity-75 px-2 py-1 rounded-full text-xs font-semibold border border-gray-200 flex items-center space-x-2"
 								>
