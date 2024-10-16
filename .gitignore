@@ -3,7 +3,9 @@ dist/
 memos.egg-info/
 build/
 *.pyc
+.eggs/
+.vscode/
 typesense-data/
 test-data/
-static/
+memos/static/
 db/

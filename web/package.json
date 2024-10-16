@@ -9,7 +9,8 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --plugin-search-dir . --check . && eslint .",
-		"format": "prettier --plugin-search-dir . --write ."
+		"format": "prettier --plugin-search-dir . --write .",
+		"generate-logos": "node scripts/generateStaticLogos.js"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-auto": "^2.1.1",
@@ -43,6 +44,7 @@
 		"lucide-svelte": "^0.417.0",
 		"marked": "^13.0.2",
 		"mode-watcher": "^0.4.1",
+		"sharp": "^0.33.5",
 		"svelte-sonner": "^0.3.27",
 		"tailwind-merge": "^2.4.0",
 		"tailwind-variants": "^0.2.1",
