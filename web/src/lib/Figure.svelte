@@ -5,7 +5,7 @@
 	import OCRTable from './OCRTable.svelte';
 	import { marked } from 'marked';
 	import { ChevronLeft, ChevronRight, X, Hash, Library, Folder, FileClock } from 'lucide-svelte';
-	import { appIconMap } from '$lib/utils';
+	import { translateAppName } from '$lib/utils';
 	import LucideIcon from '$lib/components/LucideIcon.svelte';
 
 	/**
@@ -127,7 +127,7 @@
 			<div class="flex-none w-full md:w-1/2 flex flex-col">
 				<div class="mb-4">
 					<div class="flex items-center space-x-2 text-lg leading-tight font-medium text-black hover:underline">
-						<LucideIcon name={appIconMap[app_name] || 'Image'} size={24} />
+						<LucideIcon name={translateAppName(app_name) || "Image"} size={24} />
 						<p>{title}</p>
 					</div>
 				</div>

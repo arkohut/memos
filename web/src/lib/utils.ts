@@ -61,30 +61,59 @@ export const flyAndScale = (
 	};
 };
 
-export const appIconMap: Record<string, string> = {
-	"Cursor": "Code",
-	"Google Chrome": "Chrome",
-	"IINA": "Youtube",
-	"微信": "MessageSquareCode",
-	"预览": "Eye",
-	"iTerm2": "SquareTerminal",
-	"企业微信": "MessageSquareCode",
-	"IntelliJ IDEA": "Code",
-	"Microsoft Edge": "Globe",
-	"腾讯会议": "MessagesSquare",
-	"访达": "Folder",
-	"邮件": "Mail",
-	"备忘录": "NotebookTabs",
-	"日历": "CalendarFold",
-	"UserNotificationCenter": "Bell",
-	"Electron": "Atom",
-	"Firefox": "Globe",
-	"Safari浏览器": "Compass",
-	"熊掌记": "NotebookTabs",
-	"Alacritty": "SquareTerminal",
-	"系统设置": "Settings",
-	"股市": "CircleDollarSign",
-	"活动监视器": "Activity",
-	"Brave Browser": "Globe",
-	"Code": "Code",
-};
+export function translateAppName(appName: string): string | undefined {
+	// Remove the '.exe' suffix for Windows app names
+	const cleanedAppName = appName.replace(/\.exe$/, '');
+
+	const appIconMap: Record<string, string> = {
+		"chrome": "Chrome",
+		"firefox": "Globe",
+		"edge": "Globe",
+		"msedge": "Globe",
+		"code": "Code",
+		"cursor": "Code",
+
+		"windows app beta": "LayoutGrid",
+		"windows app preview": "LayoutGrid",
+		
+		"google chrome": "Chrome",
+		"iina": "Youtube",
+		"微信": "MessageSquareCode",
+		"预览": "Eye",
+		"iterm2": "SquareTerminal",
+		"企业微信": "MessageSquareCode",
+		"intellij idea": "Code",
+		"microsoft edge": "Globe",
+		"腾讯会议": "Phone",
+		"访达": "Folder",
+		"邮件": "Mail",
+		"备忘录": "NotebookTabs",
+		"日历": "CalendarFold",
+		"usernotificationcenter": "Bell",
+		"electron": "Atom",
+		"safari浏览器": "Compass",
+		"熊掌记": "NotebookTabs",
+		"alacritty": "SquareTerminal",
+		"系统设置": "Settings",
+		"股市": "CircleDollarSign",
+		"活动监视器": "Activity",
+		"brave browser": "Globe",
+
+		"windowsterminal": "SquareTerminal",
+		"explorer": "Folder",
+		"clash for windows": "Globe",
+		"mpv": "Youtube",
+		"searchhost": "Search",
+		"lockapp": "Lock",
+		"thunder": "CloudDownload",
+		"xlliveud": "CloudDownload",
+		"ollama app": "Bot",
+		"githubdesktop": "Github",
+	};
+
+	// Try to match the cleaned app name (case-insensitive)
+	const iconName = appIconMap[cleanedAppName.toLowerCase()];
+	
+	// If no match is found, return undefined
+	return iconName;
+}

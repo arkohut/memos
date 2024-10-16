@@ -8,7 +8,7 @@
 	import { formatDistanceToNow } from 'date-fns';
 	import Logo from '$lib/components/Logo.svelte';
 	import { onMount } from 'svelte';
-	import { appIconMap } from '$lib/utils';
+	import { translateAppName } from '$lib/utils';
 	import LucideIcon from '$lib/components/LucideIcon.svelte';
 
 	let searchString = '';
@@ -267,11 +267,11 @@
 		return filename(document.filepath);
 	}
 
-	function getAppName(document: any): string | null {
-		if (document.metadata_entries && document.metadata_entries.some((entry) => entry.key === 'active_app')) {
-			return document.metadata_entries.find((entry) => entry.key === 'active_app').value;
+	function getAppName(document: any): string {
+		if (document.metadata_entries && document.metadata_entries.some((entry: any) => entry.key === 'active_app')) {
+			return document.metadata_entries.find((entry: any) => entry.key === 'active_app').value;
 		} else {
-			return null;
+			return "unknown";
 		}
 	}
 
@@ -368,7 +368,7 @@
 								<div
 									class="absolute bottom-2 left-6 bg-white bg-opacity-75 px-2 py-1 rounded-full text-xs font-semibold border border-gray-200 flex items-center space-x-2"
 								>
-									<LucideIcon name={appIconMap[getAppName(hit.document)] || 'Hexagon'} size={16} />
+									<LucideIcon name={translateAppName(getAppName(hit.document)) || "Hexagon"} size={16} />
 									<span>{getAppName(hit.document)}</span>
 								</div>
 							{/if}
