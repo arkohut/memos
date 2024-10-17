@@ -10,6 +10,8 @@
 	import { onMount } from 'svelte';
 	import { translateAppName } from '$lib/utils';
 	import LucideIcon from '$lib/components/LucideIcon.svelte';
+	import LanguageSwitcher from '$lib/LanguageSwitcher.svelte';
+	import { _ } from 'svelte-i18n';
 
 	let searchString = '';
 	/**
@@ -64,7 +66,6 @@
 
 	onMount(() => {
 		const handleScroll = () => {
-			console.log(window.scrollY)
 			if (window.scrollY > 100) {
 				isScrolled = true;
 			} else if (isScrolled && window.scrollY < 20) {
@@ -296,7 +297,7 @@
 			type="text"
 			class={inputClasses}
 			bind:value={searchString}
-			placeholder="Input keyword to search or press Enter to show latest records"
+			placeholder={$_('searchPlaceholder')}
 			on:keydown={handleEnterPress}
 			autofocus
 		/>
@@ -331,13 +332,15 @@
 	<!-- Right panel for search results -->
 	<div class="{searchResult && searchResult.facet_counts && searchResult.facet_counts.length > 0 ? 'xl:w-6/7 lg:w-5/6 md:w-4/5' : 'w-full'}">
 		{#if isLoading}
-			<p class="text-center">Loading...</p>
+			<p class="text-center">{$_('loading')}</p>
 		{:else if searchResult && searchResult.hits.length > 0}
 			{#if searchResult['search_time_ms'] > 0}
 				<p class="search-summary mb-4 text-center">
-					✨ {searchResult['found'].toLocaleString()} results found - Searched {searchResult[
-						'out_of'
-					].toLocaleString()} recipes in {searchResult['search_time_ms']}ms.
+					{$_('searchSummary', { values: {
+						found: searchResult['found'].toLocaleString(),
+						outOf: searchResult['out_of'].toLocaleString(),
+						time: searchResult['search_time_ms']
+					}})}
 				</p>
 			{/if}
 			<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -377,7 +380,7 @@
 				{/each}
 			</div>
 		{:else if searchString}
-			<p class="text-center">No results found.</p>
+			<p class="text-center">{$_('noResults')}</p>
 		{:else}
 			<p class="text-center"></p>
 		{/if}
@@ -407,11 +410,13 @@
 
 <footer class="mx-auto mt-32 w-full container text-center">
 	<div class="border-t border-slate-900/5 py-10">
-		<p class="mt-2 text-sm leading-6 text-slate-500">© 2024 Arkohut Qinini. All rights reserved.</p>
+		<p class="mt-2 text-sm leading-6 text-slate-500">{$_('copyright')}</p>
 		<div class="mt-2 flex justify-center items-center space-x-4 text-sm font-semibold leading-6 text-slate-700">
-			<a href="/privacy-policy">Privacy policy</a>
+			<a href="/privacy-policy">{$_('privacyPolicy')}</a>
 			<div class="h-4 w-px bg-slate-500/20" />
-			<a href="/changelog">Changelog</a>
+			<a href="/changelog">{$_('changelog')}</a>
+			<div class="h-4 w-px bg-slate-500/20" />
+			<LanguageSwitcher />
 		</div>
 	</div>
 </footer>

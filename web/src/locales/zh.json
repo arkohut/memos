@@ -1,0 +1,29 @@
+{
+    "libraryFilter": {
+        "all": "全部",
+        "repositoryFilter": "仓库筛选",
+        "selectAll": "全选"
+    },
+    "language": "语言",
+    "timeFilter": {
+        "label": "时间筛选",
+        "unlimited": "不限时间",
+        "threeHours": "最近3小时",
+        "today": "今天",
+        "week": "最近一周",
+        "month": "最近一个月",
+        "threeMonths": "最近三个月",
+        "custom": "自定义",
+        "customRange": "{start} - {end}"
+    },
+    "searchPlaceholder": "输入关键词搜索或直接按回车键显示最新记录",
+    "loading": "加载中...",
+    "searchSummary": "✨ 找到 {found} 个结果 - 在 {time} 毫秒内搜索了 {outOf} 个记录。",
+    "noResults": "未找到结果。",
+    "copyright": "© 2024 Arkohut 漆妮妮 保留所有权利",
+    "privacyPolicy": "隐私政策",
+    "changelog": "更新日志",
+    "searchLog": {
+        "handleSearchStringChange": "处理搜索字符串变化"
+    }
+}

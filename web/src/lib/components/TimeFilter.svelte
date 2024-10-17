@@ -2,49 +2,56 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { RangeCalendar } from '$lib/components/ui/range-calendar/index.js';
+	import { _ } from 'svelte-i18n';
 
 	import {
-		CalendarDate,
-		DateFormatter,
 		type DateValue,
 		getLocalTimeZone
 	} from '@internationalized/date';
 
 	let now = +new Date();
 
-	const rangeMap = {
+	let rangeMap: {
+		[key: string]: {
+			label: string;
+			start: number | null;
+			end: number | null;
+		};
+	};
+
+	$: rangeMap = {
 		unlimited: {
-			label: '不限时间',
+			label: $_('timeFilter.unlimited'),
 			start: null,
 			end: null
 		},
 		threeHours: {
-			label: '最近3小时',
+			label: $_('timeFilter.threeHours'),
 			start: now - 3 * 60 * 60 * 1000,
 			end: now
 		},
 		today: {
-			label: '今天',
+			label: $_('timeFilter.today'),
 			start: now - 24 * 60 * 60 * 1000,
 			end: now
 		},
 		week: {
-			label: '最近一周',
+			label: $_('timeFilter.week'),
 			start: now - 7 * 24 * 60 * 60 * 1000,
 			end: now
 		},
 		month: {
-			label: '最近一个月',
+			label: $_('timeFilter.month'),
 			start: now - 30 * 24 * 60 * 60 * 1000,
 			end: now
 		},
 		threeMonths: {
-			label: '最近三个月',
+			label: $_('timeFilter.threeMonths'),
 			start: now - 90 * 24 * 60 * 60 * 1000,
 			end: now
 		},
 		custom: {
-			label: '自定义',
+			label: $_('timeFilter.custom'),
 			start: null,
 			end: null
 		}
@@ -80,7 +87,7 @@
 
 	$: displayText =
 		(timeFilter === 'custom' && customDateRange.start && customDateRange.end)
-			? `${customDateRange.start?.toString()} - ${customDateRange.end?.toString()}`
+			? $_('timeFilter.customRange', { values: { start: customDateRange.start?.toString(), end: customDateRange.end?.toString() } })
 			: rangeMap[timeFilter].label;
 	$: start = rangeMap[timeFilter].start;
 	$: end = rangeMap[timeFilter].end;
@@ -99,17 +106,17 @@
 			</Button>
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content class="w-56" align="start" side="bottom">
-			<DropdownMenu.Label>时间筛选</DropdownMenu.Label>
+			<DropdownMenu.Label>{$_('timeFilter.label')}</DropdownMenu.Label>
 			<DropdownMenu.Separator />
 			<DropdownMenu.RadioGroup bind:value={timeFilter}>
-				<DropdownMenu.RadioItem value="unlimited">时间不限</DropdownMenu.RadioItem>
-				<DropdownMenu.RadioItem value="threeHours">最近三小时</DropdownMenu.RadioItem>
-				<DropdownMenu.RadioItem value="today">今天</DropdownMenu.RadioItem>
-				<DropdownMenu.RadioItem value="week">最近一周</DropdownMenu.RadioItem>
-				<DropdownMenu.RadioItem value="month">最近一个月</DropdownMenu.RadioItem>
-				<DropdownMenu.RadioItem value="threeMonths">最近三个月</DropdownMenu.RadioItem>
+				<DropdownMenu.RadioItem value="unlimited">{$_('timeFilter.unlimited')}</DropdownMenu.RadioItem>
+				<DropdownMenu.RadioItem value="threeHours">{$_('timeFilter.threeHours')}</DropdownMenu.RadioItem>
+				<DropdownMenu.RadioItem value="today">{$_('timeFilter.today')}</DropdownMenu.RadioItem>
+				<DropdownMenu.RadioItem value="week">{$_('timeFilter.week')}</DropdownMenu.RadioItem>
+				<DropdownMenu.RadioItem value="month">{$_('timeFilter.month')}</DropdownMenu.RadioItem>
+				<DropdownMenu.RadioItem value="threeMonths">{$_('timeFilter.threeMonths')}</DropdownMenu.RadioItem>
 				<DropdownMenu.Sub>
-					<DropdownMenu.SubTrigger>自定义</DropdownMenu.SubTrigger>
+					<DropdownMenu.SubTrigger>{$_('timeFilter.custom')}</DropdownMenu.SubTrigger>
 					<DropdownMenu.SubContent>
 						<RangeCalendar bind:value={customDateRange} />
 					</DropdownMenu.SubContent>

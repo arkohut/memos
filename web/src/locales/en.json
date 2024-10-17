@@ -1,0 +1,29 @@
+{
+    "libraryFilter": {
+        "all": "All",
+        "repositoryFilter": "Repository Filter",
+        "selectAll": "Select All"
+    },
+    "language": "Language",
+    "timeFilter": {
+        "label": "Time Filter",
+        "unlimited": "No time limit",
+        "threeHours": "Last 3 hours",
+        "today": "Today",
+        "week": "Last week",
+        "month": "Last month",
+        "threeMonths": "Last 3 months",
+        "custom": "Custom",
+        "customRange": "{start} - {end}"
+    },
+    "searchPlaceholder": "Input keyword to search or press Enter to show latest records",
+    "loading": "Loading...",
+    "searchSummary": "✨ {found} results found - Searched {outOf} recipes in {time}ms.",
+    "noResults": "No results found.",
+    "copyright": "© 2024 Arkohut Qinini. All rights reserved.",
+    "privacyPolicy": "Privacy policy",
+    "changelog": "Changelog",
+    "searchLog": {
+        "handleSearchStringChange": "handleSearchStringChange"
+    }
+}

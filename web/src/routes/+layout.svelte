@@ -1,6 +1,7 @@
 <script lang="ts">
+	import '../i18n';
 	import '../app.css';
-	import { Toaster } from "$lib/components/ui/sonner";
+	import { Toaster } from '$lib/components/ui/sonner';
 </script>
 
 <svelte:head>

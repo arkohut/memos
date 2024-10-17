@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { _ } from 'svelte-i18n'; // 导入翻译函数
 
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
@@ -33,7 +34,7 @@
 	let selectedLibraries: Record<number, boolean> = {};
 	let allSelected = true;
 
-	let displayName = '全部';
+	let displayName = $_('libraryFilter.all');
 
 	let prevSelectedLibraryIds: number[] = [];
 
@@ -61,12 +62,12 @@
 				.map((id) => libraries.find(lib => lib.id === id)?.name)
 				.join(', ');
 		} else if (selectedCount === 0) {
-			displayName = '全部';
+			displayName = $_('libraryFilter.all');
 			allSelected = true;
 			selectedLibraries = {};
 			newSelectedLibraryIds = [];
 		} else {
-			displayName = '全部';
+			displayName = $_('libraryFilter.all');
 			allSelected = true;
 			selectedLibraries = {};
 			newSelectedLibraryIds = [];
@@ -98,13 +99,13 @@
 		</Popover.Trigger>
 		<Popover.Content class="w-56 mt-1 p-1" align="start" side="bottom">
 			<div class="px-2 py-1.5 text-sm font-semibold">
-				<Label class="text-sm font-semibold">仓库筛选</Label>
+				<Label class="text-sm font-semibold">{$_('libraryFilter.repositoryFilter')}</Label>
 			</div>
 			<Separator class="my-1" />
 			<div class="px-2 py-1.5">
 				<div class="mb-2 items-top flex space-x-2">
-					<Checkbox id="all-selected" bind:checked={allSelected} disabled={allSelected} onCheckedChange={toggleSelectAll} />
-					<Label for="all-selected" class="flex items-center text-sm">全选</Label>
+						<Checkbox id="all-selected" bind:checked={allSelected} disabled={allSelected} onCheckedChange={toggleSelectAll} />
+						<Label for="all-selected" class="flex items-center text-sm">{$_('libraryFilter.selectAll')}</Label>
 				</div>
 				{#each libraries as library}
 					<div class="mb-2 items-top flex space-x-2">
