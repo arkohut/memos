@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { locale, _ } from 'svelte-i18n';
-	import * as Select from '$lib/components/ui/select';
 
 	let selectedLocale: string;
 
@@ -29,7 +28,7 @@
 	}
 </script>
 
-<select bind:value={selectedLocale} on:change={() => setLocale(selectedLocale)} class="bg-white text-black">
+<select bind:value={selectedLocale} on:change={() => setLocale(selectedLocale)} class="bg-white text-slate-500">
     {#each languages as language}
         <option value={language.value}>{language.label}</option>
     {/each}

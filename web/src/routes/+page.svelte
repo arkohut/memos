@@ -12,6 +12,7 @@
 	import LucideIcon from '$lib/components/LucideIcon.svelte';
 	import LanguageSwitcher from '$lib/LanguageSwitcher.svelte';
 	import { _ } from 'svelte-i18n';
+	import { Github } from 'lucide-svelte';
 
 	let searchString = '';
 	/**
@@ -410,11 +411,12 @@
 
 <footer class="mx-auto mt-32 w-full container text-center">
 	<div class="border-t border-slate-900/5 py-10">
+		<p class="mt-2 text-sm leading-6 text-slate-500">{$_('slogan')}</p>
 		<p class="mt-2 text-sm leading-6 text-slate-500">{$_('copyright')}</p>
 		<div class="mt-2 flex justify-center items-center space-x-4 text-sm font-semibold leading-6 text-slate-700">
-			<a href="/privacy-policy">{$_('privacyPolicy')}</a>
-			<div class="h-4 w-px bg-slate-500/20" />
-			<a href="/changelog">{$_('changelog')}</a>
+			<a href="https://github.com/arkohut/memos" target="_blank" rel="noopener noreferrer">
+				<Github size={16} />
+			</a>
 			<div class="h-4 w-px bg-slate-500/20" />
 			<LanguageSwitcher />
 		</div>

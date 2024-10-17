@@ -1,6 +1,6 @@
 {
     "libraryFilter": {
-        "all": "All",
+        "all": "All libs",
         "repositoryFilter": "Repository Filter",
         "selectAll": "Select All"
     },
@@ -21,9 +21,9 @@
     "searchSummary": "✨ {found} results found - Searched {outOf} recipes in {time}ms.",
     "noResults": "No results found.",
     "copyright": "© 2024 Arkohut Qinini. All rights reserved.",
-    "privacyPolicy": "Privacy policy",
-    "changelog": "Changelog",
+    "github": "GitHub",
     "searchLog": {
         "handleSearchStringChange": "handleSearchStringChange"
-    }
+    },
+    "slogan": "Record, Retrieve, Review"
 }

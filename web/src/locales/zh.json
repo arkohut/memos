@@ -1,6 +1,6 @@
 {
     "libraryFilter": {
-        "all": "全部",
+        "all": "全部仓库",
         "repositoryFilter": "仓库筛选",
         "selectAll": "全选"
     },
@@ -21,9 +21,9 @@
     "searchSummary": "✨ 找到 {found} 个结果 - 在 {time} 毫秒内搜索了 {outOf} 个记录。",
     "noResults": "未找到结果。",
     "copyright": "© 2024 Arkohut 漆妮妮 保留所有权利",
-    "privacyPolicy": "隐私政策",
-    "changelog": "更新日志",
+    "github": "GitHub",
     "searchLog": {
         "handleSearchStringChange": "处理搜索字符串变化"
-    }
+    },
+    "slogan": "记录、检索、回顾"
 }
