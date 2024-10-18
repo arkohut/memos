@@ -2,7 +2,6 @@ einops
 timm
 transformers
 sentence-transformers
-git+https://github.com/huggingface/transformers
+transformers
 qwen-vl-utils
-auto-gptq
 optimum
