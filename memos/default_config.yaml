@@ -1,0 +1,60 @@
+base_dir: ~/.memos
+database_path: database.db
+default_library: screenshots
+screenshots_dir: screenshots
+
+server_host: 127.0.0.1
+server_port: 8839
+
+# using ollama as the vlm server
+vlm:
+  concurrency: 1
+  enabled: true
+  endpoint: http://localhost:11434
+  force_jpeg: true
+  modelname: minicpm-v
+  prompt: 请帮描述这个图片中的内容，包括画面格局、出现的视觉元素等
+  token: ''
+
+# using local ocr
+ocr:
+  concurrency: 1
+  enabled: true
+  endpoint: http://localhost:5555/predict # this is not used
+  force_jpeg: false
+  token: ''
+  use_local: true
+
+# using local embedding
+embedding:
+  enabled: true
+  endpoint: http://localhost:11434/api/embed # this is not used
+  model: arkohut/jina-embeddings-v2-base-zh
+  num_dim: 768
+  use_local: true
+  use_modelscope: false
+
+# using ollama embedding
+# embedding:
+#   enabled: true
+#   endpoint: http://localhost:11434/api/embed # this is not used
+#   model: arkohut/gte-qwen2-1.5b-instruct:q8_0
+#   num_dim: 1536
+#   use_local: false
+#   use_modelscope: false
+
+typesense:
+  api_key: xyz
+  collection_name: entities
+  connection_timeout_seconds: 10
+  enabled: false
+  host: localhost
+  port: '8108'
+  protocol: http
+
+batchsize: 1
+auth_username: admin
+auth_password: changeme
+default_plugins:
+- builtin_ocr
+# - builtin_vlm

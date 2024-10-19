@@ -29,7 +29,7 @@ app = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
 app.add_typer(plugin_app, name="plugin")
 app.add_typer(lib_app, name="lib")
 
-BASE_URL = f"http://{settings.server_host}:{settings.server_port}"
+BASE_URL = settings.server_endpoint
 
 # Configure logging
 logging.basicConfig(
@@ -207,7 +207,7 @@ def record(
     """
     Record screenshots of the screen.
     """
-    base_dir = os.path.expanduser(base_dir) if base_dir else settings.screenshots_dir
+    base_dir = os.path.expanduser(base_dir) if base_dir else settings.resolved_screenshots_dir
     previous_hashes = load_previous_hashes(base_dir)
 
     if once:

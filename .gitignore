@@ -9,3 +9,4 @@ typesense-data/
 test-data/
 memos/static/
 db/
+memos/plugins/ocr/temp_ppocr.yaml

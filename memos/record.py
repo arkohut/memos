@@ -337,7 +337,7 @@ def main():
     args = parser.parse_args()
 
     base_dir = (
-        os.path.expanduser(args.base_dir) if args.base_dir else settings.screenshots_dir
+        os.path.expanduser(args.base_dir) if args.base_dir else settings.resolved_screenshots_dir
     )
     previous_hashes = load_previous_hashes(base_dir)
 
