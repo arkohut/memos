@@ -90,6 +90,10 @@ app.mount(
     "/_app", StaticFiles(directory=os.path.join(current_dir, "static/_app"), html=True)
 )
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 
 @app.get("/favicon.png", response_class=FileResponse)
 async def favicon_png():

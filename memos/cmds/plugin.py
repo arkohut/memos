@@ -3,7 +3,7 @@ import httpx
 from tabulate import tabulate
 from memos.config import settings
 
-BASE_URL = f"http://{settings.server_host}:{settings.server_port}"
+BASE_URL = settings.server_endpoint
 
 
 plugin_app = typer.Typer()

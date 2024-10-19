@@ -41,7 +41,7 @@ file_detector = Magika()
 
 IS_THUMBNAIL = "is_thumbnail"
 
-BASE_URL = f"http://{settings.server_host}:{settings.server_port}"
+BASE_URL = settings.server_endpoint
 
 include_files = [".jpg", ".jpeg", ".png", ".webp"]
 

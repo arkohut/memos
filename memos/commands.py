@@ -26,9 +26,6 @@ from tabulate import tabulate
 
 app = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
 
-app.add_typer(plugin_app, name="plugin")
-app.add_typer(lib_app, name="lib")
-
 BASE_URL = settings.server_endpoint
 
 # Configure logging
@@ -40,6 +37,44 @@ logging.basicConfig(
 # Optionally, you can set the logging level for specific libraries
 logging.getLogger("httpx").setLevel(logging.ERROR)
 logging.getLogger("typer").setLevel(logging.ERROR)
+
+
+def check_server_health():
+    """Check if the server is running and healthy."""
+    try:
+        response = httpx.get(f"{BASE_URL}/health", timeout=5)
+        return response.status_code == 200
+    except httpx.RequestError:
+        return False
+
+
+def callback(ctx: typer.Context):
+    """Callback to check server health before running any command."""
+    # List of commands that require the server to be running
+    server_dependent_commands = [
+        "scan",
+        "typesense-index",
+        "reindex",
+        "watch",
+        
+        "ls",
+        "create",
+        "add-folder",
+        "show",
+        "sync",
+
+        "bind",
+        "unbind",
+    ]
+
+    if ctx.invoked_subcommand in server_dependent_commands:
+        if not check_server_health():
+            typer.echo("Error: Server is not running. Please start the server first.")
+            raise typer.Exit(code=1)
+
+
+app.add_typer(plugin_app, name="plugin")
+app.add_typer(lib_app, name="lib", callback=callback)
 
 
 @app.command()
@@ -207,7 +242,9 @@ def record(
     """
     Record screenshots of the screen.
     """
-    base_dir = os.path.expanduser(base_dir) if base_dir else settings.resolved_screenshots_dir
+    base_dir = (
+        os.path.expanduser(base_dir) if base_dir else settings.resolved_screenshots_dir
+    )
     previous_hashes = load_previous_hashes(base_dir)
 
     if once:
