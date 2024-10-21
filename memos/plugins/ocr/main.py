@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 import yaml
 import io
+import platform
 
 MAX_THUMBNAIL_SIZE = (1920, 1920)
 
@@ -73,14 +74,38 @@ def convert_ocr_results(results):
     return converted
 
 
+def convert_ocr_data(ocr_data):
+    converted_data = []
+    for text, score, bbox in ocr_data:
+        x_min, y_min, x_max, y_max = bbox
+        dt_boxes = [
+            [x_min, y_min],
+            [x_max, y_min],
+            [x_max, y_max],
+            [x_min, y_max]
+        ]
+        entry = {
+            'dt_boxes': dt_boxes,
+            'rec_txt': text,
+            'score': float(score)
+        }
+        converted_data.append(entry)
+    return converted_data
+
+
 def predict_local(img_path):
     try:
-        with Image.open(img_path) as img:
-            img = img.convert("RGB")
-            img.thumbnail(MAX_THUMBNAIL_SIZE)
-            img_array = np.array(img)
-        results, _ = ocr(img_array)
-        return convert_ocr_results(results)
+        if platform.system() == 'Darwin':  # Check if the OS is macOS
+            from ocrmac import ocrmac
+            result = ocrmac.OCR(img_path, language_preference=['zh-Hans']).recognize(px=True)
+            return convert_ocr_data(result)
+        else:
+            with Image.open(img_path) as img:
+                img = img.convert("RGB")
+                img.thumbnail(MAX_THUMBNAIL_SIZE)
+                img_array = np.array(img)
+            results, _ = ocr(img_array)
+            return convert_ocr_results(results)
     except Exception as e:
         logger.error(f"Error processing image {img_path}: {str(e)}")
         return None

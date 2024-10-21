@@ -36,6 +36,7 @@ dependencies = [
     "pyobjc; sys_platform == 'darwin'",
     "pyobjc-core; sys_platform == 'darwin'",
     "pyobjc-framework-Quartz; sys_platform == 'darwin'",
+    "ocrmac; sys_platform == 'darwin'",
     "sentence-transformers",
     "torch",
     "numpy",
