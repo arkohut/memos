@@ -30,6 +30,8 @@ dependencies = [
     "piexif",
     "imagehash",
     "rapidocr_onnxruntime",
+    "rapidocr_openvino; sys_platform == 'win32'",
+    "py-cpuinfo",
     "screeninfo",
     "pywin32; sys_platform == 'win32'",
     "psutil; sys_platform == 'win32'",

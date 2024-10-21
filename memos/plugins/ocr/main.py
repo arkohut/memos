@@ -7,12 +7,12 @@ import json
 import base64
 from PIL import Image
 import numpy as np
-from rapidocr_onnxruntime import RapidOCR
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 import yaml
 import io
 import platform
+import cpuinfo
 
 MAX_THUMBNAIL_SIZE = (1920, 1920)
 
@@ -224,7 +224,12 @@ def init_plugin(config):
         with open(temp_config_path, 'w') as f:
             yaml.safe_dump(ocr_config, f)
         
-        ocr = RapidOCR(config_path=temp_config_path)
+        if platform.system() == 'Windows' and 'Intel' in cpuinfo.get_cpu_info()['brand_raw']:
+            from rapidocr_openvino import RapidOCR
+            ocr = RapidOCR(config_path=temp_config_path)
+        else:
+            from rapidocr_onnxruntime import RapidOCR
+            ocr = RapidOCR(config_path=temp_config_path)
         thread_pool = ThreadPoolExecutor(max_workers=concurrency)
 
     logger.info("OCR plugin initialized")
@@ -232,4 +237,5 @@ def init_plugin(config):
     logger.info(f"Token: {token}")
     logger.info(f"Concurrency: {concurrency}")
     logger.info(f"Use local: {use_local}")
-
+    if use_local:
+        logger.info(f"OCR library: {'rapidocr_openvino' if platform.system() == 'Windows' and 'Intel' in cpuinfo.get_cpu_info()['brand_raw'] else 'rapidocr_onnxruntime'}")
