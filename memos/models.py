@@ -438,7 +438,7 @@ async def update_fts_and_vec(mapper, connection, target):
     tags = ", ".join([tag.name for tag in target.tags])
 
     # Process metadata entries
-    def process_ocr_result(value):
+    def process_ocr_result(value, max_length=4096):
         try:
             ocr_data = json.loads(value)
             if isinstance(ocr_data, list) and all(
@@ -448,13 +448,13 @@ async def update_fts_and_vec(mapper, connection, target):
                 and "score" in item
                 for item in ocr_data
             ):
-                return " ".join(item["rec_txt"] for item in ocr_data)
+                return " ".join(item["rec_txt"] for item in ocr_data[:max_length])
             else:
                 return json.dumps(ocr_data, indent=2)
         except json.JSONDecodeError:
             return value
 
-    metadata = "\n".join(
+    fts_metadata = "\n".join(
         [
             f"{entry.key}: {process_ocr_result(entry.value) if entry.key == 'ocr_result' else entry.value}"
             for entry in target.metadata_entries
@@ -462,7 +462,7 @@ async def update_fts_and_vec(mapper, connection, target):
     )
 
     # Update FTS table
-    update_or_insert_entities_fts(session, target.id, target.filepath, tags, metadata)
+    update_or_insert_entities_fts(session, target.id, target.filepath, tags, fts_metadata)
 
     # Prepare vector data
     metadata_text = "\n".join(
@@ -472,6 +472,14 @@ async def update_fts_and_vec(mapper, connection, target):
             if entry.key != "ocr_result"
         ]
     )
+
+    # Add ocr_result at the end of metadata_text using process_ocr_result
+    ocr_result = next(
+        (entry.value for entry in target.metadata_entries if entry.key == "ocr_result"),
+        ""
+    )
+    processed_ocr_result = process_ocr_result(ocr_result, max_length=128)
+    metadata_text += f"\nocr_result: {processed_ocr_result}"
 
     # Use the new get_embeddings function
     embeddings = await get_embeddings([metadata_text])
