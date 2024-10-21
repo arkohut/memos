@@ -325,10 +325,16 @@ def init_default_libraries(session, default_plugins):
     for plugin in default_plugins:
         bind_response = session.query(PluginModel).filter_by(name=plugin.name).first()
         if bind_response:
-            library_plugin = LibraryPluginModel(
+            # Check if the LibraryPluginModel already exists
+            existing_library_plugin = session.query(LibraryPluginModel).filter_by(
                 library_id=1, plugin_id=bind_response.id
-            )  # Assuming library_id=1 for default libraries
-            session.add(library_plugin)
+            ).first()
+            
+            if not existing_library_plugin:
+                library_plugin = LibraryPluginModel(
+                    library_id=1, plugin_id=bind_response.id
+                )  # Assuming library_id=1 for default libraries
+                session.add(library_plugin)
 
     session.commit()
 
