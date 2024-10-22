@@ -311,7 +311,7 @@ def generate_windows_bat():
 call "{activate_path}"
 start /B "" "{pythonw_path}" -m memos.commands record > "{log_dir / 'record.log'}" 2>&1
 start /B "" "{pythonw_path}" -m memos.commands serve > "{log_dir / 'serve.log'}" 2>&1
-timeout /t 5 /nobreak >nul
+timeout /t 15 /nobreak >nul
 start /B "" "{pythonw_path}" -m memos.commands watch > "{log_dir / 'watch.log'}" 2>&1
 """
     else:
@@ -319,7 +319,7 @@ start /B "" "{pythonw_path}" -m memos.commands watch > "{log_dir / 'watch.log'}"
         content = f"""@echo off
 start /B "" "{pythonw_path}" -m memos.commands record > "{log_dir / 'record.log'}" 2>&1
 start /B "" "{pythonw_path}" -m memos.commands serve > "{log_dir / 'serve.log'}" 2>&1
-timeout /t 10 /nobreak >nul
+timeout /t 15 /nobreak >nul
 start /B "" "{pythonw_path}" -m memos.commands watch > "{log_dir / 'watch.log'}" 2>&1
 """
 
@@ -344,8 +344,8 @@ fi
 # run memos serve
 {python_path} -m memos.commands serve &
 
-# wait for 5 seconds before starting memos watch
-sleep 5
+# wait for 15 seconds before starting memos watch
+sleep 15
 
 # run memos watch
 {python_path} -m memos.commands watch &
