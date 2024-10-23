@@ -31,6 +31,7 @@ Data will be stored in the `~/.memos` directory.
 ### 3. Start the Service
 
 ```sh
+memos enable
 memos start
 ```
 

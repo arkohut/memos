@@ -31,6 +31,7 @@ memos init
 ### 3. 启动服务
 
 ```sh
+memos enable
 memos start
 ```
 
