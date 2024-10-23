@@ -1,69 +1,47 @@
+<div align="center">
+  <img src="web/static/logos/memos_logo_512.png" width="250"/>
+</div>
+
+English | [简体中文](README_ZH.md)
+
 # Memos
 
-A project to index everything to make it like another memory. The project contains two parts:
+Memos is a privacy-focused passive recording project. It can automatically record screen content, build intelligent indices, and provide a web interface to retrieve historical records.
 
-1. `screen recorder`: which takes screenshots every 5 seconds and saves them to `~/.memos/screenshots` by default.
-2. `memos server`: a web service that can index the screenshots and other files, providing a web interface to search the records.
+This project draws heavily from two other projects: one called [Rewind](https://www.rewind.ai/) and another called [Windows Recall](https://support.microsoft.com/en-us/windows/retrace-your-steps-with-recall-aa03f8a0-a78b-4b3e-b0a1-2eb8ac48701c). However, unlike both of them, Memos allows you to have complete control over your data, avoiding the transfer of data to untrusted data centers.
 
-There is a product called [Rewind](https://www.rewind.ai/) that is similar to memos, but memos aims to give you control over all your data.
+## Quick Start
 
-## Install
+### 1. Install Memos
 
-### Install Typesense
-
-```bash
-export TYPESENSE_API_KEY=xyz
-
-mkdir "$(pwd)"/typesense-data
-
-docker run -d -p 8108:8108 \
-    -v"$(pwd)"/typesense-data:/data typesense/typesense:27.0 \
-    --add-host=host.docker.internal:host-gateway \
-    --data-dir /data \
-    --api-key=$TYPESENSE_API_KEY \
-    --enable-cors
-```
-
-### Install Memos
-
-```bash
+```sh
 pip install memos
 ```
 
-## How to use
+### 2. Initialize
 
-To use memos, you need to initialize it first. Make sure you have started `typesense`.
+Initialize the memos configuration file and sqlite database:
 
-### 1. Initialize Memos
-
-```bash
+```sh
 memos init
 ```
 
-This will create a folder `~/.memos` and put the config file there.
+Data will be stored in the `~/.memos` directory.
 
-### 2. Start Screen Recorder
+### 3. Start the Service
 
-```bash
-memos-record
+```sh
+memos start
 ```
 
-This will start a screen recorder, which will take screenshots every 5 seconds and save it at `~/.memos/screenshots` by default.
+This command will:
 
-### 3. Start Memos Server
+- Begin recording all screens
+- Start the Web service
 
-```bash
-memos serve
-```
+### 4. Access the Web Interface
 
-This will start a web server, and you can access the web interface at `http://localhost:8080`.
-The default username and password is `admin` and `changeme`.
+Open your browser and visit `http://localhost:8839`
 
-### Index the screenshots
-
-```bash
-memos scan
-memos index
-```
-
-Refresh the page, and do some search.
+- Default username: `admin`
+- Default password: `changeme`
