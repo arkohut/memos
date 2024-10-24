@@ -38,8 +38,8 @@ embedding:
   enabled: true
   # this is not used if use_local is true
   endpoint: http://localhost:11434/api/embed
-  model: arkohut/jina-embeddings-v3
-  num_dim: 1024
+  model: arkohut/jina-embeddings-v2-base-zh
+  num_dim: 768
   use_local: true
   use_modelscope: false
 

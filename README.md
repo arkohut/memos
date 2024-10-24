@@ -201,7 +201,7 @@ The advantages of Memos are:
 1. The code is completely open-source and easy-to-understand Python code, allowing anyone to review the code to ensure there are no backdoors.
 2. Data is completely localized, all data is stored locally, and data processing is entirely controlled by the user. Data will be stored in the user's `~/.memos` directory.
 3. Easy to uninstall. If you no longer use Memos, you can close the program with `memos stop && memos disable`, then uninstall it with `pip uninstall memos`, and finally delete the `~/.memos` directory to clean up all databases and screenshot data.
-4. Data processing is entirely controlled by the user. Memos is an independent project, and the machine learning models used (including VLM and word vector models) are chosen by the user. Due to Memos' operating mode, using smaller models can also achieve good results.
+4. Data processing is entirely controlled by the user. Memos is an independent project, and the machine learning models used (including VLM and embedding models) are chosen by the user. Due to Memos' operating mode, using smaller models can also achieve good results.
 
 Of course, there is still room for improvement in terms of privacy, and contributions are welcome to make Memos better.
 
