@@ -60,6 +60,50 @@ memos start
 
 ## 使用指南
 
+### 使用合适的 embedding 模型
+
+#### 1. 模型选择
+
+Memos 通过 embedding 模型来提取语义信息，并构建向量索引。因此，选择一个合适的 embedding 模型非常重要。针对使用者的主语言，需要选择不同的 embedding 模型。
+
+- 对于中文场景，可以使用 [jinaai/jina-embeddings-v2-base-zh](https://huggingface.co/jinaai/jina-embeddings-v2-base-zh) 模型。
+- 对于英文场景，可以使用 [jinaai/jina-embeddings-v2-base-en](https://huggingface.co/jinaai/jina-embeddings-v2-base-en) 模型。
+
+#### 2. 调整 Memos 配置
+
+使用你喜欢的文本编辑器打开 `~/.memos/config.yaml` 文件，并修改 `embedding` 配置：
+
+```yaml
+embedding:
+  enabled: true
+  use_local: true
+  model: arkohut/jina-embeddings-v2-base-zh  # 使用的模型名称
+  num_dim: 768                               # 模型的维度             
+  use_modelscope: false                      # 是否使用魔搭（ModelScope）的模型
+```
+
+- 配置这里我使用的模型名称为 `arkohut/jina-embeddings-v2-base-zh`，这是我对原始的模型仓库做了裁剪，删除了一些用不到的模型文件，加速下载的速度。
+- 如果你无法访问 Hugging Face 的模型仓库，可以设置 `use_modelscope` 为 `true`，通过魔搭（ModelScope）模型仓库下载模型。
+
+#### 3. 重启 Memos 服务
+
+```sh
+memos stop
+memos start
+```
+
+第一次使用 embedding 模型时，Memos 会自动下载模型并加载模型。
+
+#### 4. 重新构建索引
+
+如果你是在使用过程中切换了 embedding 模型，也就是说你之前已经索引过截图，那么你需要重新构建索引：
+
+```sh
+memos reindex --force
+```
+
+`--force` 参数表示重新构建索引表，并删除之前索引的截图数据。
+
 ### 使用 Ollama 支持视觉检索
 
 默认情况下，Memos 仅启用 OCR 插件来提取截图中的文字并建立索引。然而，对于不包含文字的图像，这种方式会大大限制检索效果。
@@ -103,10 +147,10 @@ ollama run minicpm-v "描述一下这是什么服务"
 
 ```yaml
 vlm:
-  enabled: true          # 启用 VLM 功能
+  enabled: true                     # 启用 VLM 功能
   endpoint: http://localhost:11434  # Ollama 服务地址
-  modelname: minicpm-v   # 使用的模型名称
-  force_jpeg: true       # 将图片转换为 JPEG 格式以确保兼容性
+  modelname: minicpm-v              # 使用的模型名称
+  force_jpeg: true                  # 将图片转换为 JPEG 格式以确保兼容性
   prompt: 请帮描述这个图片中的内容，包括画面格局、出现的视觉元素等  # 发送给模型的提示词
 ```
 
@@ -141,7 +185,7 @@ memos start
 
 ### 全量索引
 
-Memos 是一个计算密集型的应用，Memos 的索引过程会需要 OCR、VLM 以及嵌入模型协同工作。为了尽量减少对用户电脑的影响，Memos 会计算每个截图的平均处理时间，并依据这个时间来调整索引的频率。因此，默认情况下并不是所有的截图都会被立即索引。
+Memos 是一个计算密集型的应用，Memos 的索引过程会需要 OCR、VLM 以及 embedding 模型协同工作。为了尽量减少对用户电脑的影响，Memos 会计算每个截图的平均处理时间，并依据这个时间来调整索引的频率。因此，默认情况下并不是所有的截图都会被立即索引。
 
 如果希望对所有截图进行索引，可以使用以下命令进行全量索引：
 
@@ -160,7 +204,7 @@ Memos 的优势在于：
 1. 代码完全开源，并且是易于理解的 Python 代码，任何人都可以审查代码，确保没有后门。
 2. 数据完全本地化，所有数据都存储在本地，数据处理完全由用户控制，数据将被存储在用户的 `~/.memos` 目录中。
 3. 易于卸载，如果不再使用 Memos，通过 `memos stop && memos disable` 即可关闭程序，然后通过 `pip uninstall memos` 即可卸载，最后删除 `~/.memos` 目录即可清理所有的数据库和截图数据。
-4. 数据处理完全由用户控制，Memos 是一个独立项目，所使用的机器学习模型（包括 VLM 以及嵌入模型）都由用户自己选择，并且由于 Memos 的运作模式，使用较小的模型也可以达到不错的效果。
+4. 数据处理完全由用户控制，Memos 是一个独立项目，所使用的机器学习模型（包括 VLM 以及 embedding 模型）都由用户自己选择，并且由于 Memos 的运作模式，使用较小的模型也可以达到不错的效果。
 
 当然 Memos 肯定在隐私方面依然有可以改进的地方，欢迎大家贡献代码，一起让 Memos 变得更好。
 
@@ -189,12 +233,12 @@ Memos 每 5 秒会记录一次屏幕，并将原始截图保存到 `~/.memos/scr
 Memos 默认需要两个计算密集型的任务：
 
 - 一个是 OCR 任务，用于提取截图中的文字
-- 一个是嵌入任务，用于提取语义信息构建向量索引
+- 一个是 embedding 任务，用于提取语义信息构建向量索引
 
 #### 资源使用情况
 
 - **OCR 任务**：使用 CPU 执行，并根据不同操作系统优化选择 OCR 引擎，以最小化 CPU 占用
-- **嵌入任务**：智能选择计算设备
+- **Embedding 任务**：智能选择计算设备
 
   - NVIDIA GPU 设备优先使用 GPU
   - Mac 设备优先使用 Metal GPU

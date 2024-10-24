@@ -60,6 +60,47 @@ Open your browser and visit `http://localhost:8839`
 
 ## User Guide
 
+### Using the Appropriate Embedding Model
+
+#### 1. Model Selection
+
+Memos uses embedding models to extract semantic information and build vector indices. Therefore, choosing an appropriate embedding model is crucial. Depending on the user's primary language, different embedding models should be selected.
+
+- For Chinese scenarios, you can use the [jinaai/jina-embeddings-v2-base-zh](https://huggingface.co/jinaai/jina-embeddings-v2-base-zh) model.
+- For English scenarios, you can use the [jinaai/jina-embeddings-v2-base-en](https://huggingface.co/jinaai/jina-embeddings-v2-base-en) model.
+
+#### 2. Adjust Memos Configuration
+
+Open the `~/.memos/config.yaml` file with your preferred text editor and modify the `embedding` configuration:
+
+```yaml
+embedding:
+  enabled: true
+  use_local: true
+  model: jinaai/jina-embeddings-v2-base-en   # Model name used
+  num_dim: 768                               # Model dimensions
+  use_modelscope: false                      # Whether to use ModelScope's model
+```
+
+#### 3. Restart Memos Service
+
+```sh
+memos stop
+memos start
+```
+
+The first time you use the embedding model, Memos will automatically download and load the model.
+
+#### 4. Rebuild Index
+
+If you switch the embedding model during use, meaning you have already indexed screenshots before, you need to rebuild the index:
+
+```sh
+memos reindex --force
+```
+
+The `--force` parameter indicates rebuilding the index table and deleting previously indexed screenshot data.
+
 ### Using Ollama for Visual Search
 
 By default, Memos only enables the OCR plugin to extract text from screenshots and build indices. However, this method significantly limits search effectiveness for images without text.
@@ -103,10 +144,10 @@ Open the `~/.memos/config.yaml` file with your preferred text editor and modify 
 
 ```yaml
 vlm:
-  enabled: true          # Enable VLM feature
+  enabled: true                     # Enable VLM feature
   endpoint: http://localhost:11434  # Ollama service address
-  modelname: minicpm-v   # Model name to use
-  force_jpeg: true       # Convert images to JPEG format to ensure compatibility
+  modelname: minicpm-v              # Model name to use
+  force_jpeg: true                  # Convert images to JPEG format to ensure compatibility
   prompt: Please describe the content of this image, including the layout and visual elements  # Prompt sent to the model
 ```
 
@@ -160,7 +201,7 @@ The advantages of Memos are:
 1. The code is completely open-source and easy-to-understand Python code, allowing anyone to review the code to ensure there are no backdoors.
 2. Data is completely localized, all data is stored locally, and data processing is entirely controlled by the user. Data will be stored in the user's `~/.memos` directory.
 3. Easy to uninstall. If you no longer use Memos, you can close the program with `memos stop && memos disable`, then uninstall it with `pip uninstall memos`, and finally delete the `~/.memos` directory to clean up all databases and screenshot data.
-4. Data processing is entirely controlled by the user. Memos is an independent project, and the machine learning models used (including VLM and embedding models) are chosen by the user. Due to Memos' operating mode, using smaller models can also achieve good results.
+4. Data processing is entirely controlled by the user. Memos is an independent project, and the machine learning models used (including VLM and word vector models) are chosen by the user. Due to Memos' operating mode, using smaller models can also achieve good results.
 
 Of course, there is still room for improvement in terms of privacy, and contributions are welcome to make Memos better.
 
