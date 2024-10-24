@@ -54,6 +54,20 @@ def bind(
     except ValueError:
         plugin_param = {"plugin_name": plugin}
 
+    # Check if the plugin is already bound to the library
+    response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
+    if response.status_code == 200:
+        library_data = response.json()
+        bound_plugins = library_data.get("plugins", [])
+        if "plugin_id" in plugin_param:
+            if any(p["id"] == plugin_param["plugin_id"] for p in bound_plugins):
+                print("Plugin is already bound to the library")
+                return
+        elif "plugin_name" in plugin_param:
+            if any(p["name"] == plugin_param["plugin_name"] for p in bound_plugins):
+                print("Plugin is already bound to the library")
+                return
+
     response = httpx.post(
         f"{BASE_URL}/libraries/{library_id}/plugins",
         json=plugin_param,
