@@ -3,8 +3,15 @@ database_path: database.db
 default_library: screenshots
 screenshots_dir: screenshots
 
-server_host: 127.0.0.1
+server_host: 0.0.0.0
 server_port: 8839
+
+batchsize: 1
+auth_username: admin
+auth_password: changeme
+default_plugins:
+- builtin_ocr
+# - builtin_vlm
 
 # using ollama as the vlm server
 vlm:
@@ -20,7 +27,8 @@ vlm:
 ocr:
   concurrency: 1
   enabled: true
-  endpoint: http://localhost:5555/predict # this is not used
+  # this is not used if use_local is true
+  endpoint: http://localhost:5555/predict
   force_jpeg: false
   token: ''
   use_local: true
@@ -28,9 +36,10 @@ ocr:
 # using local embedding
 embedding:
   enabled: true
-  endpoint: http://localhost:11434/api/embed # this is not used
-  model: arkohut/jina-embeddings-v2-base-zh
-  num_dim: 768
+  # this is not used if use_local is true
+  endpoint: http://localhost:11434/api/embed
+  model: arkohut/jina-embeddings-v3
+  num_dim: 1024
   use_local: true
   use_modelscope: false
 
@@ -44,17 +53,11 @@ embedding:
 #   use_modelscope: false
 
 typesense:
+  enabled: false
   api_key: xyz
   collection_name: entities
   connection_timeout_seconds: 10
-  enabled: false
   host: localhost
   port: '8108'
   protocol: http
 
-batchsize: 1
-auth_username: admin
-auth_password: changeme
-default_plugins:
-- builtin_ocr
-# - builtin_vlm
