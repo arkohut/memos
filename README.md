@@ -12,13 +12,13 @@ This project draws heavily from two other projects: one called [Rewind](https://
 
 ## Features
 
-- Simple installation: just install dependencies via pip to get started
-- Complete data control: all data is stored locally, allowing for full local operation and self-managed data processing
-- Full-text and vector search support
-- Integrates with Ollama, using it as the machine learning engine for Memos
-- Compatible with any OpenAI API models (e.g., OpenAI, Azure OpenAI, vLLM, etc.)
-- Supports Mac and Windows (Linux support is in development)
-- Extensible functionality through plugins
+- 🚀 Simple installation: just install dependencies via pip to get started
+- 🔒 Complete data control: all data is stored locally, allowing for full local operation and self-managed data processing
+- 🔍 Full-text and vector search support
+- 🤖 Integrates with Ollama, using it as the machine learning engine for Memos
+- 🌐 Compatible with any OpenAI API models (e.g., OpenAI, Azure OpenAI, vLLM, etc.)
+- 💻 Supports Mac and Windows (Linux support is in development)
+- 🔌 Extensible functionality through plugins
 
 ## Quick Start
 
