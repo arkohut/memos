@@ -292,12 +292,8 @@ def get_python_path():
     return sys.executable
 
 
-def get_memos_dir():
-    return Path.home() / ".memos"
-
-
 def generate_windows_bat():
-    memos_dir = get_memos_dir()
+    memos_dir = settings.resolved_base_dir
     python_path = get_python_path()
     pythonw_path = python_path.replace("python.exe", "pythonw.exe")
     conda_prefix = os.environ.get("CONDA_PREFIX")
@@ -330,7 +326,7 @@ start /B "" "{pythonw_path}" -m memos.commands watch > "{log_dir / 'watch.log'}"
 
 
 def generate_launch_sh():
-    memos_dir = get_memos_dir()
+    memos_dir = settings.resolved_base_dir
     python_path = get_python_path()
     content = f"""#!/bin/bash
 # activate current python environment
@@ -376,8 +372,11 @@ def setup_windows_autostart(bat_path):
 
 
 def generate_plist():
-    memos_dir = get_memos_dir()
+    memos_dir = settings.resolved_base_dir
     python_dir = os.path.dirname(get_python_path())
+    log_dir = memos_dir / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    
     plist_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
     "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -393,9 +392,9 @@ def generate_plist():
     <key>RunAtLoad</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/tmp/memos.log</string>
+    <string>{log_dir}/memos.log</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/memos.err</string>
+    <string>{log_dir}/memos.err</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
@@ -485,7 +484,7 @@ def enable():
         typer.echo("Error: Unable to detect Python environment.")
         raise typer.Exit(code=1)
 
-    memos_dir = get_memos_dir()
+    memos_dir = settings.resolved_base_dir
     memos_dir.mkdir(parents=True, exist_ok=True)
 
     if is_windows():
@@ -500,7 +499,7 @@ def enable():
         typer.echo(f"Generated plist file at {plist_path}")
         load_plist(plist_path)
         typer.echo(
-            "Loaded plist file. Memos will run at next startup or when 'start' command is used."
+            "Loaded plist file. Memos is started and will run at next startup or when 'start' command is used."
         )
     else:
         typer.echo("Unsupported operating system.")
@@ -593,7 +592,7 @@ def stop():
 @app.command()
 def start():
     """Start all Memos processes"""
-    memos_dir = get_memos_dir()
+    memos_dir = settings.resolved_base_dir
 
     if is_windows():
         bat_path = memos_dir / "launch.bat"
