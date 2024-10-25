@@ -33,7 +33,6 @@ ocr:
 
 # using local embedding
 embedding:
-  enabled: true
   # this is not used if use_local is true
   endpoint: http://localhost:11434/api/embed
   model: arkohut/jina-embeddings-v2-base-zh

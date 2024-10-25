@@ -36,7 +36,6 @@ class OCRSettings(BaseModel):
 
 
 class EmbeddingSettings(BaseModel):
-    enabled: bool = True
     num_dim: int = 768
     # will be ignored if use_local is True
     endpoint: str = "http://localhost:11434/api/embed"
