@@ -122,13 +122,11 @@ Before deciding to enable the VLM feature, please note the following:
    - Enabling VLM will significantly increase system power consumption
    - Consider using other devices to provide OpenAI API compatible model services
 
-#### Enabling Steps
-
-1. **Install Ollama**
+#### 1. Install Ollama
 
 Visit the [Ollama official documentation](https://ollama.com) for detailed installation and configuration instructions.
 
-2. **Prepare the Multimodal Model**
+#### 2. Prepare the Multimodal Model
 
 Download and run the multimodal model `minicpm-v` using the following command:
 
@@ -138,7 +136,7 @@ ollama run minicpm-v "Describe what this service is"
 
 This command will download and run the minicpm-v model. If the running speed is too slow, it is not recommended to use this feature.
 
-3. **Configure Memos to Use Ollama**
+#### 3. Configure Memos to Use Ollama
 
 Open the `~/.memos/config.yaml` file with your preferred text editor and modify the `vlm` configuration:
 
@@ -163,7 +161,7 @@ default_plugins:
 
 This adds the `builtin_vlm` plugin to the default plugin list.
 
-4. **Restart Memos Service**
+#### 4. Restart Memos Service
 
 ```sh
 memos stop

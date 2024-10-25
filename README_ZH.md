@@ -125,13 +125,11 @@ memos reindex --force
    - 启用 VLM 后会显著增加系统功耗
    - 可以考虑使用其他设备提供 OpenAI API 兼容的模型服务
 
-#### 启用步骤
-
-1. **安装 Ollama**
+#### 1. 安装 Ollama
 
 请访问 [Ollama 官方文档](https://ollama.com) 获取详细的安装和配置指南。
 
-2. **准备多模态模型**
+#### 2. 准备多模态模型
 
 使用以下命令下载并运行多模态模型 `minicpm-v`：
 
@@ -141,7 +139,7 @@ ollama run minicpm-v "描述一下这是什么服务"
 
 这条命令会下载并运行 minicpm-v 模型，如果发现运行速度太慢的话，不推荐使用这部分功能。
 
-3. **配置 Memos 使用 Ollama**
+#### 3. 配置 Memos 使用 Ollama
 
 使用你喜欢的文本编辑器打开 `~/.memos/config.yaml` 文件，并修改 `vlm` 配置：
 
@@ -166,7 +164,7 @@ default_plugins:
 
 这里就是将 `builtin_vlm` 插件添加到默认的插件列表中。
 
-4. **重启 Memos 服务**
+#### 4. 重启 Memos 服务
 
 ```sh
 memos stop
