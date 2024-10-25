@@ -18,6 +18,7 @@ import cv2
 from PIL import Image
 from secrets import compare_digest
 import functools
+import logging
 
 import typesense
 
@@ -50,7 +51,9 @@ from .read_metadata import read_metadata
 from .logging_config import LOGGING_CONFIG
 from .models import load_extension
 
-# Initialize FastAPI app and other global variables
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+
 app = FastAPI()
 security = HTTPBasic()
 
@@ -77,7 +80,7 @@ if settings.typesense.enabled:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this as needed
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -89,6 +92,7 @@ current_dir = os.path.dirname(__file__)
 app.mount(
     "/_app", StaticFiles(directory=os.path.join(current_dir, "static/_app"), html=True)
 )
+
 
 @app.get("/health")
 async def health():
@@ -132,7 +136,7 @@ def optional_auth(credentials: HTTPBasicCredentials = Depends(security)):
 
 
 @app.get("/")
-async def serve_spa(username: str = Depends(optional_auth)):
+async def serve_spa():
     return FileResponse(os.path.join(current_dir, "static/app.html"))
 
 
@@ -219,7 +223,7 @@ async def trigger_webhooks(
                     webhook_url = plugin.webhook_url
                     if webhook_url.startswith("/"):
                         webhook_url = str(request.base_url)[:-1] + webhook_url
-                        print(f"webhook_url: {webhook_url}")
+                        logging.debug("webhook_url: %s", webhook_url)
                     task = client.post(
                         webhook_url,
                         json=entity.model_dump(mode="json"),
@@ -233,12 +237,17 @@ async def trigger_webhooks(
         for plugin, response in zip(library.plugins, responses):
             if plugins is None or plugin.id in plugins:
                 if isinstance(response, Exception):
-                    print(
-                        f"Error triggering webhook for plugin {plugin.id}: {response}"
+                    logging.error(
+                        "Error triggering webhook for plugin %d: %s",
+                        plugin.id,
+                        response,
                     )
                 elif response.status_code >= 400:
-                    print(
-                        f"Error triggering webhook for plugin {plugin.id}: {response.status_code} - {response.text}"
+                    logging.error(
+                        "Error triggering webhook for plugin %d: %d - %s",
+                        plugin.id,
+                        response.status_code,
+                        response.text,
                     )
 
 
@@ -376,11 +385,12 @@ async def update_entity(
     return entity
 
 
-@app.post("/entities/{entity_id}/last-scan-at", status_code=status.HTTP_204_NO_CONTENT, tags=["entity"])
-def update_entity_last_scan_at(
-    entity_id: int,
-    db: Session = Depends(get_db)
-):
+@app.post(
+    "/entities/{entity_id}/last-scan-at",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["entity"],
+)
+def update_entity_last_scan_at(entity_id: int, db: Session = Depends(get_db)):
     """
     Update the last_scan_at timestamp for an entity and trigger update for fts and vec.
     """
@@ -401,6 +411,7 @@ def typesense_required(func):
                 detail="Typesense is not enabled",
             )
         return await func(*args, **kwargs)
+
     return wrapper
 
 
@@ -740,13 +751,15 @@ async def get_video_frame(file_path: str):
     metadata = read_metadata(str(full_path))
     screen, sequence, is_thumbnail = get_thumbnail_info(metadata)
 
-    print(screen, sequence, is_thumbnail)
+    logging.debug(
+        "Screen: %s, Sequence: %s, Is Thumbnail: %s", screen, sequence, is_thumbnail
+    )
 
     if not all([screen, sequence, is_thumbnail]):
         return FileResponse(full_path)
 
     video_path = full_path.parent / f"{screen}.mp4"
-    print(video_path)
+    logging.debug("Video path: %s", video_path)
     if not video_path.is_file():
         return FileResponse(full_path)
 
@@ -794,7 +807,12 @@ async def search_entities_v2(
         else:
             # Use hybrid_search when q is not empty
             entities = await crud.hybrid_search(
-                query=q, db=db, limit=limit, library_ids=library_ids, start=start, end=end
+                query=q,
+                db=db,
+                limit=limit,
+                library_ids=library_ids,
+                start=start,
+                end=end,
             )
 
         # Convert Entity list to SearchHit list
@@ -859,7 +877,7 @@ async def search_entities_v2(
         return search_result
 
     except Exception as e:
-        print(f"Error searching entities: {e}")
+        logging.error("Error searching entities: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
@@ -867,15 +885,19 @@ async def search_entities_v2(
 
 
 def run_server():
-    print("Database path:", get_database_path())
+    logging.info("Database path: %s", get_database_path())
     if settings.typesense.enabled:
-        print(
-            f"Typesense connection info: Host: {settings.typesense.host}, Port: {settings.typesense.port}, Protocol: {settings.typesense.protocol}, Collection Name: {settings.typesense.collection_name}"
+        logging.info(
+            "Typesense connection info: Host: %s, Port: %s, Protocol: %s, Collection Name: %s",
+            settings.typesense.host,
+            settings.typesense.port,
+            settings.typesense.protocol,
+            settings.typesense.collection_name,
         )
     else:
-        print("Typesense is disabled")
-    print(f"VLM plugin enabled: {settings.vlm}")
-    print(f"OCR plugin enabled: {settings.ocr}")
+        logging.info("Typesense is disabled")
+    logging.info("VLM plugin enabled: %s", settings.vlm)
+    logging.info("OCR plugin enabled: %s", settings.ocr)
 
     # Add VLM plugin router
     # Removed check for settings.vlm.enabled
