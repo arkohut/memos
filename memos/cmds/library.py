@@ -395,8 +395,12 @@ def scan(
         path = Path(path).expanduser().resolve()
         # Check if the path is a folder or a subdirectory of a library folder
         folder = next(
-            (folder for folder in library_folders if path.is_relative_to(Path(folder["path"]).resolve())),
-            None
+            (
+                folder
+                for folder in library_folders
+                if path.is_relative_to(Path(folder["path"]).resolve())
+            ),
+            None,
         )
         if not folder:
             print(f"Error: The path {path} is not part of any folder in the library.")
@@ -450,7 +454,10 @@ def scan(
                     pbar2.refresh()
 
                 for existing_file in existing_files:
-                    if existing_file["filepath"] not in scanned_files:
+                    if (
+                        Path(existing_file["filepath"]).is_relative_to(folder_path)
+                        and existing_file["filepath"] not in scanned_files
+                    ):
                         # File has been deleted
                         delete_response = httpx.delete(
                             f"{BASE_URL}/libraries/{library_id}/entities/{existing_file['id']}"
