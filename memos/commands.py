@@ -230,7 +230,7 @@ def reindex_default_library(
 
     # Reindex the library
     print(f"Reindexing library: {default_library['name']}")
-    reindex(default_library["id"], force=force)
+    reindex(default_library["id"], force=force, folders=None)
 
 
 @app.command("record")
