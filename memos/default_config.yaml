@@ -16,7 +16,6 @@ default_plugins:
 # using ollama as the vlm server
 vlm:
   concurrency: 1
-  enabled: true
   endpoint: http://localhost:11434
   force_jpeg: true
   modelname: minicpm-v
@@ -26,7 +25,6 @@ vlm:
 # using local ocr
 ocr:
   concurrency: 1
-  enabled: true
   # this is not used if use_local is true
   endpoint: http://localhost:5555/predict
   force_jpeg: false

@@ -16,7 +16,6 @@ import typer
 
 
 class VLMSettings(BaseModel):
-    enabled: bool = True
     modelname: str = "minicpm-v"
     endpoint: str = "http://localhost:11434"
     token: str = ""
@@ -28,7 +27,6 @@ class VLMSettings(BaseModel):
 
 
 class OCRSettings(BaseModel):
-    enabled: bool = True
     # will by ignored if use_local is True
     endpoint: str = "http://localhost:5555/predict"
     token: str = ""

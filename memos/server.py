@@ -878,16 +878,14 @@ def run_server():
     print(f"OCR plugin enabled: {settings.ocr}")
 
     # Add VLM plugin router
-    if settings.vlm.enabled:
-        print("VLM plugin is enabled")
-        vlm_main.init_plugin(settings.vlm)
-        app.include_router(vlm_main.router, prefix="/plugins/vlm")
+    # Removed check for settings.vlm.enabled
+    vlm_main.init_plugin(settings.vlm)
+    app.include_router(vlm_main.router, prefix="/plugins/vlm")
 
     # Add OCR plugin router
-    if settings.ocr.enabled:
-        print("OCR plugin is enabled")
-        ocr_main.init_plugin(settings.ocr)
-        app.include_router(ocr_main.router, prefix="/plugins/ocr")
+    # Removed check for settings.ocr.enabled
+    ocr_main.init_plugin(settings.ocr)
+    app.include_router(ocr_main.router, prefix="/plugins/ocr")
 
     uvicorn.run(
         "memos.server:app",
