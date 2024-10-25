@@ -362,10 +362,15 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
 @lib_app.command("scan")
 def scan(
     library_id: int,
+    path: str = typer.Argument(None, help="Path to scan within the library"),
     force: bool = False,
     plugins: List[int] = typer.Option(None, "--plugin", "-p"),
     folders: List[int] = typer.Option(None, "--folder", "-f"),
 ):
+    # Check if both path and folders are provided
+    if path and folders:
+        print("Error: You cannot specify both a path and folders at the same time.")
+        return
 
     response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
     if response.status_code != 200:
@@ -384,6 +389,20 @@ def scan(
         ]
     else:
         library_folders = library["folders"]
+
+    # Check if a specific path is provided
+    if path:
+        path = Path(path).expanduser().resolve()
+        # Check if the path is a folder or a subdirectory of a library folder
+        folder = next(
+            (folder for folder in library_folders if path.is_relative_to(Path(folder["path"]).resolve())),
+            None
+        )
+        if not folder:
+            print(f"Error: The path {path} is not part of any folder in the library.")
+            return
+        # Only scan the specified path
+        library_folders = [{"id": folder["id"], "path": str(path)}]
 
     for folder in library_folders:
         folder_path = Path(folder["path"])
