@@ -2,6 +2,7 @@ import os
 import logging
 from pathlib import Path
 from datetime import datetime, timedelta
+from typing import List
 
 import httpx
 import typer
@@ -161,7 +162,12 @@ def get_or_create_default_library():
 
 
 @app.command("scan")
-def scan_default_library(force: bool = False):
+def scan_default_library(
+    force: bool = typer.Option(False, "--force", help="Force update all indexes"),
+    path: str = typer.Argument(None, help="Path to scan within the library"),
+    plugins: List[int] = typer.Option(None, "--plugin", "-p"),
+    folders: List[int] = typer.Option(None, "--folder", "-f"),
+):
     """
     Scan the screenshots directory and add it to the library if empty.
     """
@@ -171,7 +177,7 @@ def scan_default_library(force: bool = False):
 
     # Scan the library
     print(f"Scanning library: {default_library['name']}")
-    scan(default_library["id"], plugins=None, folders=None, force=force)
+    scan(default_library["id"], path=path, plugins=plugins, folders=folders, force=force)
 
 
 @app.command("typesense-index")
