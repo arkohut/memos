@@ -12,7 +12,7 @@
 		Library,
 		Folder,
 		FileClock,
-		Info
+		IndentIncrease
 	} from 'lucide-svelte';
 	import { translateAppName } from '$lib/utils';
 	import LucideIcon from '$lib/components/LucideIcon.svelte';
@@ -162,20 +162,26 @@
 					<div class="mb-4 relative z-[52]">
 						<div class="flex justify-between items-center">
 							<div class="flex-1" />
-							<div class="flex items-center space-x-2 text-lg leading-tight font-medium text-black">
-								<LucideIcon name={translateAppName(app_name) || 'Image'} size={24} />
-								<p>{title}</p>
-							</div>
-							<div class="flex-1 flex justify-end">
-								{#if showDetails}
+							<div class="flex items-center text-lg leading-tight font-medium text-black {showDetails ? 'w-full' : 'w-4/5'}">
+								<div class="flex items-center justify-between w-full">
+									<div class="flex-1 flex items-center justify-center min-w-0">
+										<div class="flex items-center space-x-2 min-w-0">
+											<LucideIcon name={translateAppName(app_name) || 'Image'} size={24} />
+											<p class="truncate">{title}</p>
+										</div>
+									</div>
 									<button
-										class="p-2 hover:bg-gray-100 rounded-full transition-colors"
+										class="p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
 										on:click={toggleDetails}
 									>
-										<Info size={24} class={showDetails ? 'text-indigo-600' : 'text-gray-400'} />
+										<IndentIncrease 
+											size={24} 
+											class={showDetails ? 'text-indigo-600' : 'text-gray-400'} 
+										/>
 									</button>
-								{/if}
+								</div>
 							</div>
+							<div class="flex-1" />
 						</div>
 					</div>
 
@@ -223,22 +229,14 @@
 						</div>
 					{/if}
 
-					<div class="relative flex-grow overflow-hidden">
-						<a href={video} target="_blank" rel="noopener noreferrer" class="block">
+					<div class="relative flex-1 overflow-hidden flex items-center justify-center">
+						<a href={video} target="_blank" rel="noopener noreferrer" class="block w-full h-full flex items-center justify-center">
 							<img
 								class="w-full h-full object-contain rounded-lg drop-shadow-md"
 								src={image}
 								alt={title}
 							/>
 						</a>
-						{#if !showDetails}
-							<button
-								class="opacity-0 group-hover:opacity-100 absolute top-4 right-4 p-0.5 rounded-full transition-all duration-200 hover:bg-gray-100 bg-white/80"
-								on:click={toggleDetails}
-							>
-								<Info size={24} class="text-indigo-600" />
-							</button>
-						{/if}
 					</div>
 
 					{#if !showDetails}
