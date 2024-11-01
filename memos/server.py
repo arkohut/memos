@@ -258,6 +258,7 @@ async def new_entity(
     request: Request,
     db: Session = Depends(get_db),
     plugins: Annotated[List[int] | None, Query()] = None,
+    trigger_webhooks_flag: bool = True,
 ):
     library = crud.get_library_by_id(library_id, db)
     if library is None:
@@ -266,7 +267,8 @@ async def new_entity(
         )
 
     entity = crud.create_entity(library_id, new_entity, db)
-    await trigger_webhooks(library, entity, request, plugins)
+    if trigger_webhooks_flag:
+        await trigger_webhooks(library, entity, request, plugins)
     return entity
 
 

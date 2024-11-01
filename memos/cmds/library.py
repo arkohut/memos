@@ -833,6 +833,9 @@ def sync(
     force: bool = typer.Option(
         False, "--force", "-f", help="Force update the file even if it hasn't changed"
     ),
+    without_webhooks: bool = typer.Option(
+        False, "--no-plugins", help="Disable plugin triggers", is_flag=True
+    ),
 ):
     """
     Sync a specific file with the library.
@@ -925,7 +928,7 @@ def sync(
             update_response = httpx.put(
                 f"{BASE_URL}/entities/{existing_entity['id']}",
                 json=new_entity,
-                params={"trigger_webhooks_flag": "true"},
+                params={"trigger_webhooks_flag": str(not without_webhooks).lower()},
                 timeout=60,
             )
             if update_response.status_code == 200:
@@ -955,6 +958,7 @@ def sync(
             create_response = httpx.post(
                 f"{BASE_URL}/libraries/{library_id}/entities",
                 json=new_entity,
+                params={"trigger_webhooks_flag": str(not without_webhooks).lower()},
                 timeout=60,
             )
 
@@ -1034,7 +1038,8 @@ class LibraryFileHandler(FileSystemEventHandler):
 
     def process_pending_files(self):
         current_time = time.time()
-        files_to_process = []
+        files_to_process_with_plugins = []
+        files_to_process_without_plugins = []
         processed_in_current_loop = 0
         with self.lock:
             for path, file_info in list(self.pending_files.items()):
@@ -1043,20 +1048,26 @@ class LibraryFileHandler(FileSystemEventHandler):
                     if os.path.exists(path) and os.path.getsize(path) > 0:
                         self.file_count += 1
                         if self.file_count % self.sparsity_window == 0:
-                            files_to_process.append(path)
+                            files_to_process_with_plugins.append(path)
                             print(
                                 f"file_count % sparsity_window: {self.file_count} % {self.sparsity_window} == 0"
                             )
-                            print(f"Picked file for processing: {path}")
+                            print(f"Picked file for processing with plugins: {path}")
                         else:
+                            files_to_process_without_plugins.append(path)
                             self.file_skipped += 1
                         del self.pending_files[path]
                     elif not os.path.exists(path):
                         del self.pending_files[path]
 
-        for path in files_to_process:
-            self.executor.submit(self.process_file, path)
+        # Process files with plugins - these count as submitted
+        for path in files_to_process_with_plugins:
+            self.executor.submit(self.process_file, path, False)
             self.file_submitted += 1
+
+        # Process files without plugins - these don't count as submitted
+        for path in files_to_process_without_plugins:
+            self.executor.submit(self.process_file, path, True)
 
         if processed_in_current_loop > 0:
             self.logger.info(
@@ -1065,14 +1076,15 @@ class LibraryFileHandler(FileSystemEventHandler):
 
         self.update_sparsity_window()
 
-    def process_file(self, path):
-        self.logger.debug(f"Processing file: {path}")
+    def process_file(self, path, no_plugins):
+        self.logger.debug(f"Processing file: {path} (with plugins: {not no_plugins})")
         start_time = time.time()
-        sync(self.library_id, path)
+        sync(self.library_id, path, without_webhooks=no_plugins)
         end_time = time.time()
-        with self.lock:
-            self.sync_times.append(end_time - start_time)
-            self.file_synced += 1
+        if not no_plugins:
+            with self.lock:
+                self.sync_times.append(end_time - start_time)
+                self.file_synced += 1
 
     def update_sparsity_window(self):
         min_samples = max(3, self.window_size // 3)
