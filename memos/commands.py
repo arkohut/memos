@@ -163,7 +163,7 @@ def get_or_create_default_library():
 
 @app.command("scan")
 def scan_default_library(
-    force: bool = typer.Option(False, "--force", help="Force update all indexes"),
+    force: bool = typer.Option(True, "--force", help="Force update all indexes"),
     path: str = typer.Argument(None, help="Path to scan within the library"),
     plugins: List[int] = typer.Option(None, "--plugin", "-p"),
     folders: List[int] = typer.Option(None, "--folder", "-f"),
