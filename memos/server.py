@@ -46,6 +46,7 @@ from .schemas import (
     SearchResult,
     SearchHit,
     RequestParams,
+    EntityContext,
 )
 from .read_metadata import read_metadata
 from .logging_config import LOGGING_CONFIG
@@ -884,6 +885,54 @@ async def search_entities_v2(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
         )
+
+
+@app.get(
+    "/libraries/{library_id}/entities/{entity_id}/context",
+    response_model=EntityContext,
+    tags=["entity"],
+)
+def get_entity_context(
+    library_id: int,
+    entity_id: int,
+    prev: Annotated[int | None, Query(ge=0, le=100)] = None,
+    next: Annotated[int | None, Query(ge=0, le=100)] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Get the context (previous and next entities) for a given entity.
+    
+    Args:
+        library_id: The ID of the library
+        entity_id: The ID of the target entity
+        prev: Number of previous entities to fetch (optional)
+        next: Number of next entities to fetch (optional)
+    
+    Returns:
+        EntityContext object containing prev and next lists of entities
+    """
+    # If both prev and next are None, return empty lists
+    if prev is None and next is None:
+        return EntityContext(prev=[], next=[])
+        
+    # Convert None to 0 for the crud function
+    prev_count = prev if prev is not None else 0
+    next_count = next if next is not None else 0
+    
+    # Get the context entities
+    prev_entities, next_entities = crud.get_entity_context(
+        db=db,
+        library_id=library_id,
+        entity_id=entity_id,
+        prev=prev_count,
+        next=next_count
+    )
+    
+    # Return the context object
+    return EntityContext(
+        prev=prev_entities,
+        next=next_entities
+    )
 
 
 def run_server():

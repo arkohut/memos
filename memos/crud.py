@@ -596,3 +596,58 @@ async def list_entities(
     entities = query.order_by(EntityModel.file_created_at.desc()).limit(limit).all()
 
     return [Entity(**entity.__dict__) for entity in entities]
+
+
+def get_entity_context(
+    db: Session, library_id: int, entity_id: int, prev: int = 0, next: int = 0
+) -> Tuple[List[Entity], List[Entity]]:
+    """
+    Get the context (previous and next entities) for a given entity.
+    Returns a tuple of (previous_entities, next_entities).
+    """
+    # First get the target entity to get its timestamp
+    target_entity = (
+        db.query(EntityModel)
+        .filter(
+            EntityModel.id == entity_id,
+            EntityModel.library_id == library_id,
+        )
+        .first()
+    )
+    
+    if not target_entity:
+        return [], []
+        
+    # Get previous entities
+    prev_entities = []
+    if prev > 0:
+        prev_entities = (
+            db.query(EntityModel)
+            .filter(
+                EntityModel.library_id == library_id,
+                EntityModel.file_created_at < target_entity.file_created_at
+            )
+            .order_by(EntityModel.file_created_at.desc())
+            .limit(prev)
+            .all()
+        )
+        # Reverse the list to get chronological order and convert to Entity models
+        prev_entities = [Entity(**entity.__dict__) for entity in prev_entities][::-1]
+    
+    # Get next entities
+    next_entities = []
+    if next > 0:
+        next_entities = (
+            db.query(EntityModel)
+            .filter(
+                EntityModel.library_id == library_id,
+                EntityModel.file_created_at > target_entity.file_created_at
+            )
+            .order_by(EntityModel.file_created_at.asc())
+            .limit(next)
+            .all()
+        )
+        # Convert to Entity models
+        next_entities = [Entity(**entity.__dict__) for entity in next_entities]
+    
+    return prev_entities, next_entities

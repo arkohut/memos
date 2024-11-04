@@ -292,3 +292,8 @@ class SearchResult(BaseModel):
     request_params: RequestParams
     search_cutoff: bool
     search_time_ms: int
+
+
+class EntityContext(BaseModel):
+    prev: List[Entity]
+    next: List[Entity]
