@@ -339,27 +339,6 @@ def init_default_libraries(session, default_plugins):
     session.commit()
 
 
-@event.listens_for(EntityTagModel, "after_insert")
-@event.listens_for(EntityTagModel, "after_delete")
-def update_entity_last_scan_at_for_tags(mapper, connection, target):
-    session = Session(bind=connection)
-    entity = session.query(EntityModel).get(target.entity_id)
-    if entity:
-        EntityModel.update_last_scan_at(session, entity)
-    session.commit()
-
-
-@event.listens_for(EntityMetadataModel, "after_insert")
-@event.listens_for(EntityMetadataModel, "after_update")
-@event.listens_for(EntityMetadataModel, "after_delete")
-def update_entity_last_scan_at_for_metadata(mapper, connection, target):
-    session = Session(bind=connection)
-    entity = session.query(EntityModel).get(target.entity_id)
-    if entity:
-        EntityModel.update_last_scan_at(session, entity)
-    session.commit()
-
-
 async def update_or_insert_entities_vec(session, target_id, embedding):
     try:
         # First, try to update the existing row

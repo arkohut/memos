@@ -308,8 +308,7 @@ def update_entity_tags(entity_id: int, tags: List[str], db: Session) -> Entity:
 
     # Clear existing tags
     db.query(EntityTagModel).filter(EntityTagModel.entity_id == entity_id).delete()
-    db.commit()
-
+    
     for tag_name in tags:
         tag = db.query(TagModel).filter(TagModel.name == tag_name).first()
         if not tag:
@@ -323,6 +322,10 @@ def update_entity_tags(entity_id: int, tags: List[str], db: Session) -> Entity:
             source=MetadataSource.PLUGIN_GENERATED,
         )
         db.add(entity_tag)
+    
+    # Update last_scan_at in the same transaction
+    db_entity.last_scan_at = func.now()
+    
     db.commit()
     db.refresh(db_entity)
     return Entity(**db_entity.__dict__)
@@ -349,6 +352,10 @@ def add_new_tags(entity_id: int, tags: List[str], db: Session) -> Entity:
             source=MetadataSource.PLUGIN_GENERATED,
         )
         db.add(entity_tag)
+    
+    # Update last_scan_at in the same transaction
+    db_entity.last_scan_at = func.now()
+    
     db.commit()
     db.refresh(db_entity)
     return Entity(**db_entity.__dict__)
@@ -397,6 +404,9 @@ def update_entity_metadata_entries(
             )
             db.add(entity_metadata)
             db_entity.metadata_entries.append(entity_metadata)
+
+    # Update last_scan_at in the same transaction
+    db_entity.last_scan_at = func.now()
 
     db.commit()
     db.refresh(db_entity)
