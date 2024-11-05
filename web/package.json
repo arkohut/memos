@@ -48,7 +48,6 @@
 		"svelte-i18n": "^4.0.0",
 		"svelte-sonner": "^0.3.27",
 		"tailwind-merge": "^2.4.0",
-		"tailwind-variants": "^0.2.1",
-		"typesense": "^1.7.2"
+		"tailwind-variants": "^0.2.1"
 	}
 }

@@ -45,17 +45,6 @@ class EmbeddingSettings(BaseModel):
     use_local: bool = True
 
 
-class TypesenseSettings(BaseModel):
-    # is disabled by default, and right now is quite unnecessary
-    enabled: bool = False
-    host: str = "localhost"
-    port: str = "8108"
-    protocol: str = "http"
-    api_key: str = "xyz"
-    connection_timeout_seconds: int = 10
-    collection_name: str = "entities"
-
-
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         yaml_file=str(Path.home() / ".memos" / "config.yaml"),
@@ -80,9 +69,6 @@ class Settings(BaseSettings):
 
     # Embedding settings
     embedding: EmbeddingSettings = EmbeddingSettings()
-
-    # Typesense settings
-    typesense: TypesenseSettings = TypesenseSettings()
 
     batchsize: int = 1
 
@@ -116,7 +102,7 @@ class Settings(BaseSettings):
     @property
     def resolved_screenshots_dir(self) -> Path:
         return self.resolved_base_dir / self.screenshots_dir
-    
+
     @property
     def server_endpoint(self) -> str:
         host = "127.0.0.1" if self.server_host == "0.0.0.0" else self.server_host
@@ -162,9 +148,6 @@ settings = Settings()
 # Define the default database path
 os.makedirs(settings.resolved_base_dir, exist_ok=True)
 
-# Global variable for Typesense collection name
-TYPESENSE_COLLECTION_NAME = settings.typesense.collection_name
-
 
 # Function to get the database path from environment variable or default
 def get_database_path():
@@ -172,9 +155,7 @@ def get_database_path():
 
 
 def format_value(value):
-    if isinstance(
-        value, (VLMSettings, OCRSettings, EmbeddingSettings, TypesenseSettings)
-    ):
+    if isinstance(value, (VLMSettings, OCRSettings, EmbeddingSettings)):
         return (
             "{\n"
             + "\n".join(f"    {k}: {v}" for k, v in value.model_dump().items())

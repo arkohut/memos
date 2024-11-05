@@ -20,12 +20,10 @@ from secrets import compare_digest
 import functools
 import logging
 
-import typesense
-
 from .config import get_database_path, settings
 from memos.plugins.vlm import main as vlm_main
 from memos.plugins.ocr import main as ocr_main
-from . import crud, indexing
+from . import crud
 from .schemas import (
     Library,
     Folder,
@@ -40,7 +38,6 @@ from .schemas import (
     UpdateEntityTagsParam,
     UpdateEntityMetadataParam,
     MetadataType,
-    EntityIndexItem,
     MetadataIndexItem,
     EntitySearchResult,
     SearchResult,
@@ -61,23 +58,6 @@ security = HTTPBasic()
 engine = create_engine(f"sqlite:///{get_database_path()}")
 event.listen(engine, "connect", load_extension)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Initialize Typesense client only if enabled
-client = None
-if settings.typesense.enabled:
-    client = typesense.Client(
-        {
-            "nodes": [
-                {
-                    "host": settings.typesense.host,
-                    "port": settings.typesense.port,
-                    "protocol": settings.typesense.protocol,
-                }
-            ],
-            "api_key": settings.typesense.api_key,
-            "connection_timeout_seconds": settings.typesense.connection_timeout_seconds,
-        }
-    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -402,175 +382,6 @@ def update_entity_last_scan_at(entity_id: int, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Entity not found",
-        )
-
-
-def typesense_required(func):
-    @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
-        if not settings.typesense.enabled:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Typesense is not enabled",
-            )
-        return await func(*args, **kwargs)
-
-    return wrapper
-
-
-@app.post(
-    "/entities/{entity_id}/index",
-    status_code=status.HTTP_204_NO_CONTENT,
-    tags=["entity"],
-)
-@typesense_required
-async def sync_entity_to_typesense(entity_id: int, db: Session = Depends(get_db)):
-    entity = crud.get_entity_by_id(entity_id, db)
-    if entity is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Entity not found",
-        )
-
-    try:
-        indexing.upsert(client, entity)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-        )
-    return None
-
-
-@app.post(
-    "/entities/batch-index",
-    status_code=status.HTTP_204_NO_CONTENT,
-    tags=["entity"],
-)
-@typesense_required
-async def batch_sync_entities_to_typesense(
-    entity_ids: List[int], db: Session = Depends(get_db)
-):
-    entities = crud.find_entities_by_ids(entity_ids, db)
-    if not entities:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No entities found",
-        )
-
-    try:
-        await indexing.bulk_upsert(client, entities)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-        )
-    return None
-
-
-@app.get(
-    "/entities/{entity_id}/index",
-    response_model=EntitySearchResult,
-    tags=["entity"],
-)
-@typesense_required
-async def get_entity_index(entity_id: int) -> EntityIndexItem:
-    try:
-        entity_index_item = indexing.fetch_entity_by_id(client, entity_id)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        )
-
-    return entity_index_item
-
-
-@app.delete(
-    "/entities/{entity_id}/index",
-    status_code=status.HTTP_204_NO_CONTENT,
-    tags=["entity"],
-)
-@typesense_required
-async def remove_entity_from_typesense(entity_id: int, db: Session = Depends(get_db)):
-    try:
-        indexing.remove_entity_by_id(client, entity_id)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-        )
-    return None
-
-
-@app.get(
-    "/libraries/{library_id}/folders/{folder_id}/index",
-    response_model=List[EntityIndexItem],
-    tags=["entity"],
-)
-@typesense_required
-def list_entitiy_indices_in_folder(
-    library_id: int,
-    folder_id: int,
-    limit: Annotated[int, Query(ge=1, le=200)] = 10,
-    offset: int = 0,
-    db: Session = Depends(get_db),
-):
-    library = crud.get_library_by_id(library_id, db)
-    if library is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Library not found"
-        )
-
-    if folder_id not in [folder.id for folder in library.folders]:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Folder not found in the specified library",
-        )
-
-    return indexing.list_all_entities(client, library_id, folder_id, limit, offset)
-
-
-@app.get("/search/v2", response_model=SearchResult, tags=["search"])
-@typesense_required
-async def search_entities(
-    q: str,
-    library_ids: str = Query(None, description="Comma-separated list of library IDs"),
-    folder_ids: str = Query(None, description="Comma-separated list of folder IDs"),
-    tags: str = Query(None, description="Comma-separated list of tags"),
-    created_dates: str = Query(
-        None, description="Comma-separated list of created dates in YYYY-MM-DD format"
-    ),
-    limit: Annotated[int, Query(ge=1, le=200)] = 48,
-    offset: int = 0,
-    start: int = None,
-    end: int = None,
-    db: Session = Depends(get_db),
-):
-    library_ids = [int(id) for id in library_ids.split(",")] if library_ids else None
-    folder_ids = [int(id) for id in folder_ids.split(",")] if folder_ids else None
-    tags = [tag.strip() for tag in tags.split(",")] if tags else None
-    created_dates = (
-        [date.strip() for date in created_dates.split(",")] if created_dates else None
-    )
-    try:
-        return await indexing.search_entities(
-            client,
-            q,
-            library_ids,
-            folder_ids,
-            tags,
-            created_dates,
-            limit,
-            offset,
-            start,
-            end,
-        )
-    except Exception as e:
-        print(f"Error searching entities: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
         )
 
 
@@ -901,52 +712,39 @@ def get_entity_context(
 ):
     """
     Get the context (previous and next entities) for a given entity.
-    
+
     Args:
         library_id: The ID of the library
         entity_id: The ID of the target entity
         prev: Number of previous entities to fetch (optional)
         next: Number of next entities to fetch (optional)
-    
+
     Returns:
         EntityContext object containing prev and next lists of entities
     """
     # If both prev and next are None, return empty lists
     if prev is None and next is None:
         return EntityContext(prev=[], next=[])
-        
+
     # Convert None to 0 for the crud function
     prev_count = prev if prev is not None else 0
     next_count = next if next is not None else 0
-    
+
     # Get the context entities
     prev_entities, next_entities = crud.get_entity_context(
         db=db,
         library_id=library_id,
         entity_id=entity_id,
         prev=prev_count,
-        next=next_count
+        next=next_count,
     )
-    
+
     # Return the context object
-    return EntityContext(
-        prev=prev_entities,
-        next=next_entities
-    )
+    return EntityContext(prev=prev_entities, next=next_entities)
 
 
 def run_server():
     logging.info("Database path: %s", get_database_path())
-    if settings.typesense.enabled:
-        logging.info(
-            "Typesense connection info: Host: %s, Port: %s, Protocol: %s, Collection Name: %s",
-            settings.typesense.host,
-            settings.typesense.port,
-            settings.typesense.protocol,
-            settings.typesense.collection_name,
-        )
-    else:
-        logging.info("Typesense is disabled")
     logging.info("VLM plugin enabled: %s", settings.vlm)
     logging.info("OCR plugin enabled: %s", settings.ocr)
 

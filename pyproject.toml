@@ -24,7 +24,6 @@ dependencies = [
     "typer",
     "magika",
     "pydantic-settings",
-    "typesense",
     "opencv-python",
     "pillow",
     "piexif",

@@ -8,7 +8,6 @@ import httpx
 import typer
 from .config import settings, display_config
 from .models import init_database
-from .initialize_typesense import init_typesense
 from .record import (
     run_screen_recorder_once,
     run_screen_recorder,
@@ -19,7 +18,7 @@ import sys
 import subprocess
 import platform
 from .cmds.plugin import plugin_app, bind
-from .cmds.library import lib_app, scan, typesense_index, reindex, watch
+from .cmds.library import lib_app, scan, reindex, watch
 import psutil
 import signal
 from tabulate import tabulate
@@ -54,7 +53,6 @@ def callback(ctx: typer.Context):
     # List of commands that require the server to be running
     server_dependent_commands = [
         "scan",
-        "typesense-index",
         "reindex",
         "watch",
         
@@ -82,12 +80,8 @@ app.add_typer(lib_app, name="lib", callback=callback)
 def serve():
     """Run the server after initializing if necessary."""
     db_success = init_database()
-    ts_success = True
-    if settings.typesense.enabled:
-        ts_success = init_typesense()
-    if db_success and (ts_success or not settings.typesense.enabled):
+    if db_success:
         from .server import run_server
-
         run_server()
     else:
         print("Server initialization failed. Unable to start the server.")
@@ -95,12 +89,9 @@ def serve():
 
 @app.command()
 def init():
-    """Initialize the database and Typesense collection if enabled."""
+    """Initialize the database."""
     db_success = init_database()
-    ts_success = True
-    if settings.typesense.enabled:
-        ts_success = init_typesense()
-    if db_success and (ts_success or not settings.typesense.enabled):
+    if db_success:
         print("Initialization completed successfully.")
     else:
         print("Initialization failed. Please check the error messages above.")
@@ -178,36 +169,6 @@ def scan_default_library(
     # Scan the library
     print(f"Scanning library: {default_library['name']}")
     scan(default_library["id"], path=path, plugins=plugins, folders=folders, force=force)
-
-
-@app.command("typesense-index")
-def typsense_index_default_library(
-    batchsize: int = typer.Option(
-        4, "--batchsize", "-bs", help="Number of entities to index in a batch"
-    ),
-    force: bool = typer.Option(False, "--force", help="Force update all indexes"),
-):
-    """
-    Index the default library for memos.
-    """
-    # Get the default library
-    response = httpx.get(f"{BASE_URL}/libraries")
-    if response.status_code != 200:
-        print(f"Failed to retrieve libraries: {response.status_code} - {response.text}")
-        return
-
-    libraries = response.json()
-    default_library = next(
-        (lib for lib in libraries if lib["name"] == settings.default_library), None
-    )
-
-    if not default_library:
-        print("Default library does not exist.")
-        return
-
-    typesense_index(
-        default_library["id"], force=force, folders=None, batchsize=batchsize
-    )
 
 
 @app.command("reindex")

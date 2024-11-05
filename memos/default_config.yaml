@@ -48,13 +48,3 @@ embedding:
 #   num_dim: 1536
 #   use_local: false
 #   use_modelscope: false
-
-typesense:
-  enabled: false
-  api_key: xyz
-  collection_name: entities
-  connection_timeout_seconds: 10
-  host: localhost
-  port: '8108'
-  protocol: http
-

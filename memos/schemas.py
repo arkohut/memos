@@ -195,27 +195,6 @@ class MetadataIndexItem(BaseModel):
     source: str
 
 
-class EntityIndexItem(BaseModel):
-    id: str
-    filepath: str
-    filename: str
-    size: int
-    file_created_at: int = Field(..., description="Unix timestamp")
-    created_date: Optional[str] = None
-    created_month: Optional[str] = None
-    created_year: Optional[str] = None
-    file_last_modified_at: int = Field(..., description="Unix timestamp")
-    file_type: str
-    file_type_group: str
-    last_scan_at: Optional[int] = Field(None, description="Unix timestamp")
-    library_id: int
-    folder_id: int
-    tags: List[str]
-    metadata_entries: List[MetadataIndexItem]
-    metadata_text: str
-    embedding: Optional[List[float]] = Field(None, description="Embedding vector")
-
-
 class EntitySearchResult(BaseModel):
     id: str
     filepath: str
