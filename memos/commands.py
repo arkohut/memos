@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import List
 
 # Third-party imports
-import requests  # 替换 httpx
+import httpx
 import typer
 
 # Local imports
@@ -35,16 +35,16 @@ logging.basicConfig(
 )
 
 # Optionally, you can set the logging level for specific libraries
-logging.getLogger("requests").setLevel(logging.ERROR)
+logging.getLogger("httpx").setLevel(logging.ERROR)
 logging.getLogger("typer").setLevel(logging.ERROR)
 
 
 def check_server_health():
     """Check if the server is running and healthy."""
     try:
-        response = requests.get(f"{BASE_URL}/health", timeout=5)
+        response = httpx.get(f"{BASE_URL}/health", timeout=5)
         return response.status_code == 200
-    except requests.RequestException:
+    except httpx.RequestException:
         return False
 
 
@@ -106,7 +106,7 @@ def get_or_create_default_library():
     Ensure the library has at least one folder.
     """
     from .cmds.plugin import bind
-    response = requests.get(f"{BASE_URL}/libraries")
+    response = httpx.get(f"{BASE_URL}/libraries")
     if response.status_code != 200:
         print(f"Failed to retrieve libraries: {response.status_code} - {response.text}")
         return None
@@ -118,7 +118,7 @@ def get_or_create_default_library():
 
     if not default_library:
         # Create the default library if it doesn't exist
-        response = requests.post(
+        response = httpx.post(
             f"{BASE_URL}/libraries",
             json={"name": settings.default_library, "folders": []},
         )
@@ -142,7 +142,7 @@ def get_or_create_default_library():
                 screenshots_dir.stat().st_mtime
             ).isoformat(),
         }
-        response = requests.post(
+        response = httpx.post(
             f"{BASE_URL}/libraries/{default_library['id']}/folders",
             json={"folders": [folder]},
         )
@@ -190,7 +190,7 @@ def reindex_default_library(
     from .cmds.library import reindex
     
     # Get the default library
-    response = requests.get(f"{BASE_URL}/libraries")
+    response = httpx.get(f"{BASE_URL}/libraries")
     if response.status_code != 200:
         print(f"Failed to retrieve libraries: {response.status_code} - {response.text}")
         return

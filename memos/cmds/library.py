@@ -16,7 +16,7 @@ from collections import defaultdict, deque
 
 # Third-party imports
 import typer
-import requests
+import httpx
 from tqdm import tqdm
 from tabulate import tabulate
 import psutil
@@ -97,7 +97,7 @@ def display_libraries(libraries):
 
 @lib_app.command("ls")
 def ls():
-    response = requests.get(f"{BASE_URL}/libraries")
+    response = httpx.get(f"{BASE_URL}/libraries")
     libraries = response.json()
     display_libraries(libraries)
 
@@ -116,10 +116,10 @@ def add(name: str, folders: List[str]):
             }
         )
 
-    response = requests.post(
+    response = httpx.post(
         f"{BASE_URL}/libraries", json={"name": name, "folders": absolute_folders}
     )
-    if response.ok:
+    if 200 <= response.status_code < 300:
         print("Library created successfully")
     else:
         print(f"Failed to create library: {response.status_code} - {response.text}")
@@ -139,7 +139,7 @@ def add_folder(library_id: int, folders: List[str]):
             }
         )
 
-    response = requests.post(
+    response = httpx.post(
         f"{BASE_URL}/libraries/{library_id}/folders",
         json={"folders": absolute_folders},
     )
@@ -153,7 +153,7 @@ def add_folder(library_id: int, folders: List[str]):
 
 @lib_app.command("show")
 def show(library_id: int):
-    response = requests.get(f"{BASE_URL}/libraries/{library_id}")
+    response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
     if response.status_code == 200:
         library = response.json()
         display_libraries([library])
@@ -175,7 +175,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
     scanned_files = set()
     semaphore = asyncio.Semaphore(settings.batchsize)
 
-    with requests.Session() as session:
+    async with httpx.AsyncClient(timeout=60) as client:
         tasks = []
         for root, _, files in os.walk(folder_path):
             with tqdm(total=len(files), desc=f"Scanning {root}", leave=True) as pbar:
@@ -197,12 +197,12 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                     batch = candidate_files[i : i + batching]
 
                     # Get batch of entities
-                    get_response = session.post(
+                    get_response = await client.post(
                         f"{BASE_URL}/libraries/{library_id}/entities/by-filepaths",
                         json=batch,
                     )
 
-                    if get_response.ok:
+                    if get_response.status_code == 200:
                         existing_entities = get_response.json()
                     else:
                         print(
@@ -316,7 +316,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                             ):
                                 tasks.append(
                                     update_entity(
-                                        session,
+                                        client,
                                         semaphore,
                                         plugins,
                                         new_entity,
@@ -326,7 +326,7 @@ async def loop_files(library_id, folder, folder_path, force, plugins):
                         elif not is_thumbnail:  # Ignore thumbnails
                             tasks.append(
                                 add_entity(
-                                    session, semaphore, library_id, plugins, new_entity
+                                    client, semaphore, library_id, plugins, new_entity
                                 )
                             )
                     pbar.update(len(batch))
@@ -383,7 +383,7 @@ def scan(
         print("Error: You cannot specify both a path and folders at the same time.")
         return
 
-    response = requests.get(f"{BASE_URL}/libraries/{library_id}")
+    response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
     if response.status_code != 200:
         print(f"Failed to retrieve library: {response.status_code} - {response.text}")
         return
@@ -439,7 +439,7 @@ def scan(
             total=total_entities, desc="Checking for deleted files", leave=True
         ) as pbar2:
             while True:
-                existing_files_response = requests.get(
+                existing_files_response = httpx.get(
                     f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
                     params={"limit": limit, "offset": offset},
                     timeout=60,
@@ -470,7 +470,7 @@ def scan(
                         and existing_file["filepath"] not in scanned_files
                     ):
                         # File has been deleted
-                        delete_response = requests.delete(
+                        delete_response = httpx.delete(
                             f"{BASE_URL}/libraries/{library_id}/entities/{existing_file['id']}"
                         )
                         if 200 <= delete_response.status_code < 300:
@@ -492,18 +492,18 @@ def scan(
 
 
 async def add_entity(
-    client: requests.Session,
+    client: httpx.AsyncClient,
     semaphore: asyncio.Semaphore,
     library_id,
     plugins,
     new_entity,
-) -> Tuple[FileStatus, bool, requests.Response]:
+) -> Tuple[FileStatus, bool, httpx.Response]:
     async with semaphore:
         MAX_RETRIES = 3
         RETRY_DELAY = 2.0
         for attempt in range(MAX_RETRIES):
             try:
-                post_response = client.post(
+                post_response = await client.post(
                     f"{BASE_URL}/libraries/{library_id}/entities",
                     json=new_entity,
                     params={"plugins": plugins} if plugins else {},
@@ -529,18 +529,18 @@ async def add_entity(
 
 
 async def update_entity(
-    client: requests.Session,
+    client: httpx.AsyncClient,
     semaphore: asyncio.Semaphore,
     plugins,
     new_entity,
     existing_entity,
-) -> Tuple[FileStatus, bool, requests.Response]:
+) -> Tuple[FileStatus, bool, httpx.Response]:
     MAX_RETRIES = 3
     RETRY_DELAY = 2.0
     async with semaphore:
         for attempt in range(MAX_RETRIES):
             try:
-                update_response = client.put(
+                update_response = await client.put(
                     f"{BASE_URL}/entities/{existing_entity['id']}",
                     json=new_entity,
                     params={
@@ -586,7 +586,7 @@ def reindex(
     from memos.models import recreate_fts_and_vec_tables
 
     # Get the library
-    response = requests.get(f"{BASE_URL}/libraries/{library_id}")
+    response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
     if response.status_code != 200:
         print(f"Failed to get library: {response.status_code} - {response.text}")
         return
@@ -607,7 +607,7 @@ def reindex(
         recreate_fts_and_vec_tables()
         print("FTS and vector tables have been recreated.")
 
-    with requests.Session() as client:
+    with httpx.Session() as client:
         total_entities = 0
 
         # Get total entity count for all folders
@@ -681,7 +681,7 @@ async def check_and_index_entity(client, entity_id, entity_last_scan_at):
             if index_last_scan_at >= entity_last_scan_at:
                 return False  # Index is up to date, no need to update
         return True  # Index doesn't exist or needs update
-    except requests.HTTPStatusError as e:
+    except httpx.HTTPStatusError as e:
         if e.response.status_code == 404:
             return True  # Index doesn't exist, need to create
         raise  # Re-raise other HTTP errors
@@ -711,7 +711,7 @@ def sync(
     Sync a specific file with the library.
     """
     # 1. Get library by id and check if it exists
-    response = requests.get(f"{BASE_URL}/libraries/{library_id}")
+    response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
     if response.status_code != 200:
         typer.echo(f"Error: Library with id {library_id} not found.")
         raise typer.Exit(code=1)
@@ -726,7 +726,7 @@ def sync(
         raise typer.Exit(code=1)
 
     # 2. Check if the file exists in the library
-    response = requests.get(
+    response = httpx.get(
         f"{BASE_URL}/libraries/{library_id}/entities/by-filepath",
         params={"filepath": str(file_path)},
     )
@@ -795,7 +795,7 @@ def sync(
             != new_entity["file_last_modified_at"]
             or existing_entity["size"] != new_entity["size"]
         ):
-            update_response = requests.put(
+            update_response = httpx.put(
                 f"{BASE_URL}/entities/{existing_entity['id']}",
                 json=new_entity,
                 params={"trigger_webhooks_flag": str(not without_webhooks).lower()},
@@ -825,7 +825,7 @@ def sync(
             # Create new entity
             new_entity["folder_id"] = folder["id"]
 
-            create_response = requests.post(
+            create_response = httpx.post(
                 f"{BASE_URL}/libraries/{library_id}/entities",
                 json=new_entity,
                 params={"trigger_webhooks_flag": str(not without_webhooks).lower()},
@@ -1065,7 +1065,7 @@ def watch(
     logger.info(f"Watching library {library_id} for changes...")
 
     # Get the library
-    response = requests.get(f"{BASE_URL}/libraries/{library_id}")
+    response = httpx.get(f"{BASE_URL}/libraries/{library_id}")
     if response.status_code != 200:
         print(f"Error: Library with id {library_id} not found.")
         raise typer.Exit(code=1)
