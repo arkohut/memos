@@ -11,7 +11,6 @@ from pydantic_settings import (
 from pydantic import BaseModel, SecretStr
 import yaml
 from collections import OrderedDict
-import io
 import typer
 
 
@@ -19,7 +18,7 @@ class VLMSettings(BaseModel):
     modelname: str = "minicpm-v"
     endpoint: str = "http://localhost:11434"
     token: str = ""
-    concurrency: int = 1
+    concurrency: int = 8
     # some vlm models do not support webp
     force_jpeg: bool = True
     # prompt for vlm to extract caption
@@ -30,7 +29,7 @@ class OCRSettings(BaseModel):
     # will by ignored if use_local is True
     endpoint: str = "http://localhost:5555/predict"
     token: str = ""
-    concurrency: int = 1
+    concurrency: int = 8
     use_local: bool = True
     force_jpeg: bool = False
 

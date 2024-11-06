@@ -17,7 +17,6 @@ import json
 import cv2
 from PIL import Image
 from secrets import compare_digest
-import functools
 import logging
 
 from .config import get_database_path, settings
