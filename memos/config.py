@@ -71,8 +71,6 @@ class Settings(BaseSettings):
     # Embedding settings
     embedding: EmbeddingSettings = EmbeddingSettings()
 
-    batchsize: int = 1
-
     auth_username: str = "admin"
     auth_password: SecretStr = SecretStr("changeme")
 

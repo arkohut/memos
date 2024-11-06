@@ -169,11 +169,11 @@ def is_temp_file(filename):
     )
 
 
-async def loop_files(library_id, folder, folder_path, force, plugins):
+async def loop_files(library_id, folder, folder_path, force, plugins, batch_size):
     updated_file_count = 0
     added_file_count = 0
     scanned_files = set()
-    semaphore = asyncio.Semaphore(settings.batchsize)
+    semaphore = asyncio.Semaphore(batch_size)
 
     async with httpx.AsyncClient(timeout=60) as client:
         tasks = []
@@ -377,6 +377,7 @@ def scan(
     force: bool = False,
     plugins: List[int] = typer.Option(None, "--plugin", "-p"),
     folders: List[int] = typer.Option(None, "--folder", "-f"),
+    batch_size: int = typer.Option(1, "--batch-size", "-bs", help="Batch size for processing files"),
 ):
     # Check if both path and folders are provided
     if path and folders:
@@ -426,7 +427,7 @@ def scan(
             continue
 
         added_file_count, updated_file_count, scanned_files = asyncio.run(
-            loop_files(library_id, folder, folder_path, force, plugins)
+            loop_files(library_id, folder, folder_path, force, plugins, batch_size)
         )
         total_files_added += added_file_count
         total_files_updated += updated_file_count

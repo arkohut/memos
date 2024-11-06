@@ -92,7 +92,7 @@ def serve():
 def init():
     """Initialize the database."""
     from .models import init_database
-    
+
     db_success = init_database()
     if db_success:
         print("Initialization completed successfully.")
@@ -106,6 +106,7 @@ def get_or_create_default_library():
     Ensure the library has at least one folder.
     """
     from .cmds.plugin import bind
+
     response = httpx.get(f"{BASE_URL}/libraries")
     if response.status_code != 200:
         print(f"Failed to retrieve libraries: {response.status_code} - {response.text}")
@@ -162,19 +163,27 @@ def scan_default_library(
     path: str = typer.Argument(None, help="Path to scan within the library"),
     plugins: List[int] = typer.Option(None, "--plugin", "-p"),
     folders: List[int] = typer.Option(None, "--folder", "-f"),
+    batch_size: int = typer.Option(
+        1, "--batch-size", "-bs", help="Batch size for processing files"
+    ),
 ):
     """
     Scan the screenshots directory and add it to the library if empty.
     """
     from .cmds.library import scan
-    
+
     default_library = get_or_create_default_library()
     if not default_library:
         return
 
     print(f"Scanning library: {default_library['name']}")
     scan(
-        default_library["id"], path=path, plugins=plugins, folders=folders, force=force
+        default_library["id"],
+        path=path,
+        plugins=plugins,
+        folders=folders,
+        force=force,
+        batch_size=batch_size,
     )
 
 
@@ -188,7 +197,7 @@ def reindex_default_library(
     Reindex the default library for memos.
     """
     from .cmds.library import reindex
-    
+
     # Get the default library
     response = httpx.get(f"{BASE_URL}/libraries")
     if response.status_code != 200:
@@ -258,7 +267,7 @@ def watch_default_library(
     Watch the default library for file changes and sync automatically.
     """
     from .cmds.library import watch
-    
+
     default_library = get_or_create_default_library()
     if not default_library:
         return

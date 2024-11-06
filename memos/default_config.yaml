@@ -6,7 +6,6 @@ screenshots_dir: screenshots
 server_host: 0.0.0.0
 server_port: 8839
 
-batchsize: 1
 auth_username: admin
 auth_password: changeme
 default_plugins:
