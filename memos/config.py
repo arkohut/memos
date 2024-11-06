@@ -50,6 +50,7 @@ class Settings(BaseSettings):
         yaml_file=str(Path.home() / ".memos" / "config.yaml"),
         yaml_file_encoding="utf-8",
         env_prefix="MEMOS_",
+        extra="ignore",
     )
 
     base_dir: str = "~/.memos"
