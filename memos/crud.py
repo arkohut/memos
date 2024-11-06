@@ -184,6 +184,17 @@ def get_entities_by_filepaths(filepaths: List[str], db: Session) -> List[Entity]
 def remove_entity(entity_id: int, db: Session):
     entity = db.query(EntityModel).filter(EntityModel.id == entity_id).first()
     if entity:
+        # Delete the entity from FTS and vec tables first
+        db.execute(
+            text("DELETE FROM entities_fts WHERE id = :id"),
+            {"id": entity_id}
+        )
+        db.execute(
+            text("DELETE FROM entities_vec WHERE rowid = :id"),
+            {"id": entity_id}
+        )
+        
+        # Then delete the entity itself
         db.delete(entity)
         db.commit()
     else:

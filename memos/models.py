@@ -478,4 +478,3 @@ def update_fts_and_vec_sync(mapper, connection, entity: EntityModel):
 # Add event listeners for EntityModel
 event.listen(EntityModel, "after_insert", update_fts_and_vec_sync)
 event.listen(EntityModel, "after_update", update_fts_and_vec_sync)
-event.listen(EntityModel, "after_delete", delete_fts_and_vec)

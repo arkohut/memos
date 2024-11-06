@@ -12,8 +12,8 @@ from enum import Enum
 
 
 class FolderType(Enum):
-    DEFAULT = "default"
-    DUMMY = "dummy"
+    DEFAULT = "DEFAULT"
+    DUMMY = "DUMMY"
 
 
 class MetadataSource(Enum):
