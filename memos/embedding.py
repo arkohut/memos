@@ -1,12 +1,8 @@
 from typing import List
-from sentence_transformers import SentenceTransformer
-import torch
 import numpy as np
-from modelscope import snapshot_download
 from .config import settings
 import logging
 import httpx
-import asyncio
 
 # Configure logger
 logging.basicConfig(level=logging.INFO)
@@ -18,6 +14,9 @@ device = None
 
 
 def init_embedding_model():
+    import torch
+    from sentence_transformers import SentenceTransformer
+    
     global model, device
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -27,6 +26,7 @@ def init_embedding_model():
         device = torch.device("cpu")
 
     if settings.embedding.use_modelscope:
+        from modelscope import snapshot_download
         model_dir = snapshot_download(settings.embedding.model)
         logger.info(f"Model downloaded from ModelScope to: {model_dir}")
     else:

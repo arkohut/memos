@@ -1,24 +1,24 @@
+# Standard library imports
 import os
 import logging
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List
 
-import httpx
+# Third-party imports
+import requests  # 替换 httpx
 import typer
+
+# Local imports
 from .config import settings, display_config
-from .models import init_database
-from .record import (
-    run_screen_recorder_once,
-    run_screen_recorder,
-    load_previous_hashes,
-)
-import time
+
 import sys
 import subprocess
 import platform
-from .cmds.plugin import plugin_app, bind
-from .cmds.library import lib_app, scan, reindex, watch
+
+from .cmds.plugin import plugin_app
+from .cmds.library import lib_app
+
 import psutil
 import signal
 from tabulate import tabulate
@@ -35,16 +35,16 @@ logging.basicConfig(
 )
 
 # Optionally, you can set the logging level for specific libraries
-logging.getLogger("httpx").setLevel(logging.ERROR)
+logging.getLogger("requests").setLevel(logging.ERROR)
 logging.getLogger("typer").setLevel(logging.ERROR)
 
 
 def check_server_health():
     """Check if the server is running and healthy."""
     try:
-        response = httpx.get(f"{BASE_URL}/health", timeout=5)
+        response = requests.get(f"{BASE_URL}/health", timeout=5)
         return response.status_code == 200
-    except httpx.RequestError:
+    except requests.RequestException:
         return False
 
 
@@ -55,13 +55,11 @@ def callback(ctx: typer.Context):
         "scan",
         "reindex",
         "watch",
-        
         "ls",
         "create",
         "add-folder",
         "show",
         "sync",
-
         "bind",
         "unbind",
     ]
@@ -79,9 +77,12 @@ app.add_typer(lib_app, name="lib", callback=callback)
 @app.command()
 def serve():
     """Run the server after initializing if necessary."""
+    from .models import init_database
+
     db_success = init_database()
     if db_success:
         from .server import run_server
+
         run_server()
     else:
         print("Server initialization failed. Unable to start the server.")
@@ -90,6 +91,8 @@ def serve():
 @app.command()
 def init():
     """Initialize the database."""
+    from .models import init_database
+    
     db_success = init_database()
     if db_success:
         print("Initialization completed successfully.")
@@ -102,7 +105,8 @@ def get_or_create_default_library():
     Get the default library or create it if it doesn't exist.
     Ensure the library has at least one folder.
     """
-    response = httpx.get(f"{BASE_URL}/libraries")
+    from .cmds.plugin import bind
+    response = requests.get(f"{BASE_URL}/libraries")
     if response.status_code != 200:
         print(f"Failed to retrieve libraries: {response.status_code} - {response.text}")
         return None
@@ -114,7 +118,7 @@ def get_or_create_default_library():
 
     if not default_library:
         # Create the default library if it doesn't exist
-        response = httpx.post(
+        response = requests.post(
             f"{BASE_URL}/libraries",
             json={"name": settings.default_library, "folders": []},
         )
@@ -138,7 +142,7 @@ def get_or_create_default_library():
                 screenshots_dir.stat().st_mtime
             ).isoformat(),
         }
-        response = httpx.post(
+        response = requests.post(
             f"{BASE_URL}/libraries/{default_library['id']}/folders",
             json={"folders": [folder]},
         )
@@ -162,13 +166,16 @@ def scan_default_library(
     """
     Scan the screenshots directory and add it to the library if empty.
     """
+    from .cmds.library import scan
+    
     default_library = get_or_create_default_library()
     if not default_library:
         return
 
-    # Scan the library
     print(f"Scanning library: {default_library['name']}")
-    scan(default_library["id"], path=path, plugins=plugins, folders=folders, force=force)
+    scan(
+        default_library["id"], path=path, plugins=plugins, folders=folders, force=force
+    )
 
 
 @app.command("reindex")
@@ -180,8 +187,10 @@ def reindex_default_library(
     """
     Reindex the default library for memos.
     """
+    from .cmds.library import reindex
+    
     # Get the default library
-    response = httpx.get(f"{BASE_URL}/libraries")
+    response = requests.get(f"{BASE_URL}/libraries")
     if response.status_code != 200:
         print(f"Failed to retrieve libraries: {response.status_code} - {response.text}")
         return
@@ -209,6 +218,12 @@ def record(
     """
     Record screenshots of the screen.
     """
+    from .record import (
+        run_screen_recorder_once,
+        run_screen_recorder,
+        load_previous_hashes,
+    )
+
     base_dir = (
         os.path.expanduser(base_dir) if base_dir else settings.resolved_screenshots_dir
     )
@@ -242,6 +257,8 @@ def watch_default_library(
     """
     Watch the default library for file changes and sync automatically.
     """
+    from .cmds.library import watch
+    
     default_library = get_or_create_default_library()
     if not default_library:
         return
@@ -343,7 +360,7 @@ def generate_plist():
     python_dir = os.path.dirname(get_python_path())
     log_dir = memos_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
-    
+
     plist_content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
     "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

@@ -47,6 +47,7 @@ dependencies = [
     "mss",
     "sqlite_vec",
     "watchdog",
+    "requests",
 ]
 
 [project.urls]
