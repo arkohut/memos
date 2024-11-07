@@ -58,11 +58,11 @@ def generate_embeddings(texts: List[str]) -> List[List[float]]:
     return embeddings.tolist()
 
 
-async def get_embeddings(texts: List[str]) -> List[List[float]]:
+def get_embeddings(texts: List[str]) -> List[List[float]]:
     if settings.embedding.use_local:
         embeddings = generate_embeddings(texts)
     else:
-        embeddings = await get_remote_embeddings(texts)
+        embeddings = get_remote_embeddings(texts)
 
     # Round the embedding values to 5 decimal places
     return [
@@ -71,12 +71,12 @@ async def get_embeddings(texts: List[str]) -> List[List[float]]:
     ]
 
 
-async def get_remote_embeddings(texts: List[str]) -> List[List[float]]:
+def get_remote_embeddings(texts: List[str]) -> List[List[float]]:
     payload = {"model": settings.embedding.model, "input": texts}
 
-    async with httpx.AsyncClient() as client:
+    with httpx.Client() as client:
         try:
-            response = await client.post(settings.embedding.endpoint, json=payload)
+            response = client.post(settings.embedding.endpoint, json=payload)
             response.raise_for_status()
             result = response.json()
             return result["embeddings"]

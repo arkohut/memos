@@ -25,13 +25,12 @@ from .models import (
     EntityMetadataModel,
     EntityTagModel,
 )
-import numpy as np
 from collections import defaultdict
 from .embedding import get_embeddings
 import logging
 from sqlite_vec import serialize_float32
 import time
-import asyncio
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +99,11 @@ def add_folders(library_id: int, folders: NewFoldersParam, db: Session) -> Libra
     return Library(**db_library.__dict__)
 
 
-def create_entity(library_id: int, entity: NewEntityParam, db: Session) -> Entity:
+def create_entity(
+    library_id: int,
+    entity: NewEntityParam,
+    db: Session,
+) -> Entity:
     tags = entity.tags
     metadata_entries = entity.metadata_entries
 
@@ -146,6 +149,7 @@ def create_entity(library_id: int, entity: NewEntityParam, db: Session) -> Entit
             db.add(entity_metadata)
     db.commit()
     db.refresh(db_entity)
+
     return Entity(**db_entity.__dict__)
 
 
@@ -185,15 +189,11 @@ def remove_entity(entity_id: int, db: Session):
     entity = db.query(EntityModel).filter(EntityModel.id == entity_id).first()
     if entity:
         # Delete the entity from FTS and vec tables first
+        db.execute(text("DELETE FROM entities_fts WHERE id = :id"), {"id": entity_id})
         db.execute(
-            text("DELETE FROM entities_fts WHERE id = :id"),
-            {"id": entity_id}
+            text("DELETE FROM entities_vec WHERE rowid = :id"), {"id": entity_id}
         )
-        db.execute(
-            text("DELETE FROM entities_vec WHERE rowid = :id"),
-            {"id": entity_id}
-        )
-        
+
         # Then delete the entity itself
         db.delete(entity)
         db.commit()
@@ -241,7 +241,9 @@ def find_entities_by_ids(entity_ids: List[int], db: Session) -> List[Entity]:
 
 
 def update_entity(
-    entity_id: int, updated_entity: UpdateEntityParam, db: Session
+    entity_id: int,
+    updated_entity: UpdateEntityParam,
+    db: Session,
 ) -> Entity:
     db_entity = db.query(EntityModel).filter(EntityModel.id == entity_id).first()
 
@@ -298,6 +300,7 @@ def update_entity(
 
     db.commit()
     db.refresh(db_entity)
+
     return Entity(**db_entity.__dict__)
 
 
@@ -312,14 +315,18 @@ def touch_entity(entity_id: int, db: Session) -> bool:
         return False
 
 
-def update_entity_tags(entity_id: int, tags: List[str], db: Session) -> Entity:
+def update_entity_tags(
+    entity_id: int,
+    tags: List[str],
+    db: Session,
+) -> Entity:
     db_entity = get_entity_by_id(entity_id, db)
     if not db_entity:
         raise ValueError(f"Entity with id {entity_id} not found")
 
     # Clear existing tags
     db.query(EntityTagModel).filter(EntityTagModel.entity_id == entity_id).delete()
-    
+
     for tag_name in tags:
         tag = db.query(TagModel).filter(TagModel.name == tag_name).first()
         if not tag:
@@ -333,12 +340,13 @@ def update_entity_tags(entity_id: int, tags: List[str], db: Session) -> Entity:
             source=MetadataSource.PLUGIN_GENERATED,
         )
         db.add(entity_tag)
-    
+
     # Update last_scan_at in the same transaction
     db_entity.last_scan_at = func.now()
-    
+
     db.commit()
     db.refresh(db_entity)
+
     return Entity(**db_entity.__dict__)
 
 
@@ -363,17 +371,20 @@ def add_new_tags(entity_id: int, tags: List[str], db: Session) -> Entity:
             source=MetadataSource.PLUGIN_GENERATED,
         )
         db.add(entity_tag)
-    
+
     # Update last_scan_at in the same transaction
     db_entity.last_scan_at = func.now()
-    
+
     db.commit()
     db.refresh(db_entity)
+
     return Entity(**db_entity.__dict__)
 
 
 def update_entity_metadata_entries(
-    entity_id: int, updated_metadata: List[EntityMetadataParam], db: Session
+    entity_id: int,
+    updated_metadata: List[EntityMetadataParam],
+    db: Session,
 ) -> Entity:
     db_entity = get_entity_by_id(entity_id, db)
 
@@ -421,6 +432,7 @@ def update_entity_metadata_entries(
 
     db.commit()
     db.refresh(db_entity)
+
     return Entity(**db_entity.__dict__)
 
 
@@ -478,7 +490,9 @@ def full_text_search(
         params["start"] = str(start)
         params["end"] = str(end)
 
-    sql_query += " ORDER BY bm25(entities_fts), entities.file_created_at DESC LIMIT :limit"
+    sql_query += (
+        " ORDER BY bm25(entities_fts), entities.file_created_at DESC LIMIT :limit"
+    )
 
     result = db.execute(text(sql_query), params).fetchall()
 
@@ -489,7 +503,7 @@ def full_text_search(
     return ids
 
 
-async def vec_search(
+def vec_search(
     query: str,
     db: Session,
     limit: int = 200,
@@ -497,7 +511,7 @@ async def vec_search(
     start: Optional[int] = None,
     end: Optional[int] = None,
 ) -> List[int]:
-    query_embedding = await get_embeddings([query])
+    query_embedding = get_embeddings([query])
     if not query_embedding:
         return []
 
@@ -517,9 +531,7 @@ async def vec_search(
         sql_query += f" AND entities.library_id IN ({library_ids_str})"
 
     if start is not None and end is not None:
-        sql_query += (
-            " AND strftime('%s', entities.file_created_at, 'utc') BETWEEN :start AND :end"
-        )
+        sql_query += " AND strftime('%s', entities.file_created_at, 'utc') BETWEEN :start AND :end"
         params["start"] = str(start)
         params["end"] = str(end)
 
@@ -547,7 +559,7 @@ def reciprocal_rank_fusion(
     return sorted_results
 
 
-async def hybrid_search(
+def hybrid_search(
     query: str,
     db: Session,
     limit: int = 200,
@@ -563,7 +575,7 @@ async def hybrid_search(
     logger.info(f"Full-text search took {fts_end - fts_start:.4f} seconds")
 
     vec_start = time.time()
-    vec_results = await vec_search(query, db, limit, library_ids, start, end)
+    vec_results = vec_search(query, db, limit, library_ids, start, end)
     vec_end = time.time()
     logger.info(f"Vector search took {vec_end - vec_start:.4f} seconds")
 
@@ -595,7 +607,7 @@ async def hybrid_search(
     return result
 
 
-async def list_entities(
+def list_entities(
     db: Session,
     limit: int = 200,
     library_ids: Optional[List[int]] = None,
@@ -609,7 +621,7 @@ async def list_entities(
 
     if start is not None and end is not None:
         query = query.filter(
-            func.strftime("%s", EntityModel.file_created_at, 'utc').between(
+            func.strftime("%s", EntityModel.file_created_at, "utc").between(
                 str(start), str(end)
             )
         )
@@ -635,10 +647,10 @@ def get_entity_context(
         )
         .first()
     )
-    
+
     if not target_entity:
         return [], []
-        
+
     # Get previous entities
     prev_entities = []
     if prev > 0:
@@ -646,7 +658,7 @@ def get_entity_context(
             db.query(EntityModel)
             .filter(
                 EntityModel.library_id == library_id,
-                EntityModel.file_created_at < target_entity.file_created_at
+                EntityModel.file_created_at < target_entity.file_created_at,
             )
             .order_by(EntityModel.file_created_at.desc())
             .limit(prev)
@@ -654,7 +666,7 @@ def get_entity_context(
         )
         # Reverse the list to get chronological order and convert to Entity models
         prev_entities = [Entity(**entity.__dict__) for entity in prev_entities][::-1]
-    
+
     # Get next entities
     next_entities = []
     if next > 0:
@@ -662,7 +674,7 @@ def get_entity_context(
             db.query(EntityModel)
             .filter(
                 EntityModel.library_id == library_id,
-                EntityModel.file_created_at > target_entity.file_created_at
+                EntityModel.file_created_at > target_entity.file_created_at,
             )
             .order_by(EntityModel.file_created_at.asc())
             .limit(next)
@@ -670,5 +682,171 @@ def get_entity_context(
         )
         # Convert to Entity models
         next_entities = [Entity(**entity.__dict__) for entity in next_entities]
-    
+
     return prev_entities, next_entities
+
+
+def process_ocr_result(value, max_length=4096):
+    try:
+        ocr_data = json.loads(value)
+        if isinstance(ocr_data, list) and all(
+            isinstance(item, dict)
+            and "dt_boxes" in item
+            and "rec_txt" in item
+            and "score" in item
+            for item in ocr_data
+        ):
+            return " ".join(item["rec_txt"] for item in ocr_data[:max_length])
+        else:
+            return json.dumps(ocr_data, indent=2)
+    except json.JSONDecodeError:
+        return value
+
+
+def prepare_fts_data(entity: EntityModel) -> tuple[str, str]:
+    tags = ", ".join([tag.name for tag in entity.tags])
+    fts_metadata = "\n".join(
+        [
+            f"{entry.key}: {process_ocr_result(entry.value) if entry.key == 'ocr_result' else entry.value}"
+            for entry in entity.metadata_entries
+        ]
+    )
+    return tags, fts_metadata
+
+
+def prepare_vec_data(entity: EntityModel) -> str:
+    vec_metadata = "\n".join(
+        [
+            f"{entry.key}: {entry.value}"
+            for entry in entity.metadata_entries
+            if entry.key != "ocr_result"
+        ]
+    )
+    ocr_result = next(
+        (entry.value for entry in entity.metadata_entries if entry.key == "ocr_result"),
+        "",
+    )
+    vec_metadata += f"\nocr_result: {process_ocr_result(ocr_result, max_length=128)}"
+    return vec_metadata
+
+
+def update_entity_index(entity: EntityModel, db: Session):
+    """Update both FTS and vector indexes for an entity"""
+    try:
+        # Update FTS index
+        tags, fts_metadata = prepare_fts_data(entity)
+        db.execute(
+            text(
+                """
+                INSERT OR REPLACE INTO entities_fts(id, filepath, tags, metadata)
+                VALUES(:id, :filepath, :tags, :metadata)
+                """
+            ),
+            {
+                "id": entity.id,
+                "filepath": entity.filepath,
+                "tags": tags,
+                "metadata": fts_metadata,
+            },
+        )
+
+        # Update vector index
+        vec_metadata = prepare_vec_data(entity)
+        embeddings = get_embeddings([vec_metadata])
+
+        if embeddings and embeddings[0]:
+            db.execute(
+                text("DELETE FROM entities_vec WHERE rowid = :id"), {"id": entity.id}
+            )
+            db.execute(
+                text(
+                    """
+                    INSERT INTO entities_vec (rowid, embedding)
+                    VALUES (:id, :embedding)
+                    """
+                ),
+                {
+                    "id": entity.id,
+                    "embedding": serialize_float32(embeddings[0]),
+                },
+            )
+
+        db.commit()
+    except Exception as e:
+        logger.error(f"Error updating indexes for entity {entity.id}: {e}")
+        db.rollback()
+        raise
+
+
+def batch_update_entity_indices(entity_ids: List[int], db: Session):
+    """Batch update both FTS and vector indexes for multiple entities"""
+    try:
+        # 获取实体
+        entities = db.query(EntityModel).filter(EntityModel.id.in_(entity_ids)).all()
+        found_ids = {entity.id for entity in entities}
+        
+        # 检查是否所有请求的实体都找到了
+        missing_ids = set(entity_ids) - found_ids
+        if missing_ids:
+            raise ValueError(f"Entities not found: {missing_ids}")
+
+        # Prepare FTS data for all entities
+        fts_data = []
+        vec_metadata_list = []
+
+        for entity in entities:
+            # Prepare FTS data
+            tags, fts_metadata = prepare_fts_data(entity)
+            fts_data.append((entity.id, entity.filepath, tags, fts_metadata))
+
+            # Prepare vector data
+            vec_metadata = prepare_vec_data(entity)
+            vec_metadata_list.append(vec_metadata)
+
+        # Batch update FTS table
+        for entity_id, filepath, tags, metadata in fts_data:
+            db.execute(
+                text(
+                    """
+                    INSERT OR REPLACE INTO entities_fts(id, filepath, tags, metadata)
+                    VALUES(:id, :filepath, :tags, :metadata)
+                    """
+                ),
+                {
+                    "id": entity_id,
+                    "filepath": filepath,
+                    "tags": tags,
+                    "metadata": metadata,
+                },
+            )
+
+        # Batch get embeddings
+        embeddings = get_embeddings(vec_metadata_list)
+
+        # Batch update vector table
+        if embeddings:
+            for entity, embedding in zip(entities, embeddings):
+                if embedding:  # Check if embedding is not empty
+                    db.execute(
+                        text("DELETE FROM entities_vec WHERE rowid = :id"),
+                        {"id": entity.id},
+                    )
+                    db.execute(
+                        text(
+                            """
+                            INSERT INTO entities_vec (rowid, embedding)
+                            VALUES (:id, :embedding)
+                            """
+                        ),
+                        {
+                            "id": entity.id,
+                            "embedding": serialize_float32(embedding),
+                        },
+                    )
+
+        db.commit()
+    except Exception as e:
+        logger.error(f"Error batch updating indexes: {e}")
+        db.rollback()
+        raise
+

@@ -191,7 +191,10 @@ def scan_default_library(
 def reindex_default_library(
     force: bool = typer.Option(
         False, "--force", help="Force recreate FTS and vector tables before reindexing"
-    )
+    ),
+    batch_size: int = typer.Option(
+        1, "--batch-size", "-bs", help="Batch size for processing files"
+    ),
 ):
     """
     Reindex the default library for memos.
@@ -215,7 +218,7 @@ def reindex_default_library(
 
     # Reindex the library
     print(f"Reindexing library: {default_library['name']}")
-    reindex(default_library["id"], force=force, folders=None)
+    reindex(default_library["id"], force=force, folders=None, batch_size=batch_size)
 
 
 @app.command("record")

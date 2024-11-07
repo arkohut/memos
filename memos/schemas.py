@@ -276,3 +276,7 @@ class SearchResult(BaseModel):
 class EntityContext(BaseModel):
     prev: List[Entity]
     next: List[Entity]
+
+
+class BatchIndexRequest(BaseModel):
+    entity_ids: List[int]

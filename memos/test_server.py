@@ -85,6 +85,10 @@ def setup_library_with_entity(client):
     assert entity_response.status_code == 200
     entity_id = entity_response.json()["id"]
 
+    # Update the entity's index
+    index_response = client.post(f"/entities/{entity_id}/index")
+    assert index_response.status_code == 204
+
     return library_id, folder_id, entity_id
 
 

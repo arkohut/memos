@@ -507,7 +507,10 @@ async def add_entity(
                 post_response = await client.post(
                     f"{BASE_URL}/libraries/{library_id}/entities",
                     json=new_entity,
-                    params={"plugins": plugins} if plugins else {},
+                    params={
+                        "plugins": plugins,
+                        "update_index": "true"
+                    } if plugins else {"update_index": "true"},
                     timeout=60,
                 )
                 if 200 <= post_response.status_code < 300:
@@ -546,6 +549,7 @@ async def update_entity(
                     json=new_entity,
                     params={
                         "trigger_webhooks_flag": "true",
+                        "update_index": "true",
                         **({"plugins": plugins} if plugins else {}),
                     },
                     timeout=60,
@@ -581,6 +585,7 @@ def reindex(
     force: bool = typer.Option(
         False, "--force", help="Force recreate FTS and vector tables before reindexing"
     ),
+    batch_size: int = typer.Option(1, "--batch-size", "-bs", help="Batch size for processing entities"),
 ):
     print(f"Reindexing library {library_id}")
 
@@ -608,7 +613,7 @@ def reindex(
         recreate_fts_and_vec_tables()
         print("FTS and vector tables have been recreated.")
 
-    with httpx.Session() as client:
+    with httpx.Client() as client:
         total_entities = 0
 
         # Get total entity count for all folders
@@ -647,54 +652,32 @@ def reindex(
                     if not entities:
                         break
 
-                    # Update last_scan_at for each entity
-                    for entity in entities:
-                        if entity["id"] in scanned_entities:
-                            continue
-
-                        update_response = client.post(
-                            f"{BASE_URL}/entities/{entity['id']}/last-scan-at"
-                        )
-                        if update_response.status_code != 204:
-                            print(
-                                f"Failed to update last_scan_at for entity {entity['id']}: {update_response.status_code} - {update_response.text}"
+                    # 收集需要处理的实体 ID
+                    entity_ids = [
+                        entity["id"] 
+                        for entity in entities 
+                        if entity["id"] not in scanned_entities
+                    ]
+                    
+                    # 按 batch_size 分批处理
+                    for i in range(0, len(entity_ids), batch_size):
+                        batch_ids = entity_ids[i:i + batch_size]
+                        if batch_ids:
+                            batch_response = client.post(
+                                f"{BASE_URL}/entities/batch-index",
+                                json={"entity_ids": batch_ids},
+                                timeout=60,
                             )
-                        else:
-                            scanned_entities.add(entity["id"])
-
-                        pbar.update(1)
+                            if batch_response.status_code != 204:
+                                print(
+                                    f"Failed to update batch: {batch_response.status_code} - {batch_response.text}"
+                                )
+                            pbar.update(len(batch_ids))
+                            scanned_entities.update(batch_ids)
 
                     offset += limit
 
     print(f"Reindexing completed for library {library_id}")
-
-
-async def check_and_index_entity(client, entity_id, entity_last_scan_at):
-    try:
-        index_response = client.get(f"{BASE_URL}/entities/{entity_id}/index")
-        if index_response.status_code == 200:
-            index_data = index_response.json()
-            if index_data["last_scan_at"] is None:
-                return entity_last_scan_at is not None
-            index_last_scan_at = datetime.fromtimestamp(index_data["last_scan_at"])
-            entity_last_scan_at = datetime.fromisoformat(entity_last_scan_at)
-
-            if index_last_scan_at >= entity_last_scan_at:
-                return False  # Index is up to date, no need to update
-        return True  # Index doesn't exist or needs update
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 404:
-            return True  # Index doesn't exist, need to create
-        raise  # Re-raise other HTTP errors
-
-
-async def index_batch(client, entity_ids):
-    index_response = client.post(
-        f"{BASE_URL}/entities/batch-index",
-        json=entity_ids,
-        timeout=60,
-    )
-    return index_response
 
 
 @lib_app.command("sync")
@@ -799,7 +782,10 @@ def sync(
             update_response = httpx.put(
                 f"{BASE_URL}/entities/{existing_entity['id']}",
                 json=new_entity,
-                params={"trigger_webhooks_flag": str(not without_webhooks).lower()},
+                params={
+                    "trigger_webhooks_flag": str(not without_webhooks).lower(),
+                    "update_index": "true",
+                },
                 timeout=60,
             )
             if update_response.status_code == 200:
@@ -829,7 +815,10 @@ def sync(
             create_response = httpx.post(
                 f"{BASE_URL}/libraries/{library_id}/entities",
                 json=new_entity,
-                params={"trigger_webhooks_flag": str(not without_webhooks).lower()},
+                params={
+                    "trigger_webhooks_flag": str(not without_webhooks).lower(),
+                    "update_index": "true",
+                },
                 timeout=60,
             )
 

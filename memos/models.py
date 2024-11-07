@@ -21,11 +21,6 @@ from sqlalchemy import text
 import sqlite_vec
 import sys
 from pathlib import Path
-import json
-from .embedding import get_embeddings
-from sqlite_vec import serialize_float32
-import asyncio
-import threading
 
 
 class Base(DeclarativeBase):
@@ -246,7 +241,13 @@ def recreate_fts_and_vec_tables():
 def init_database():
     """Initialize the database."""
     db_path = get_database_path()
-    engine = create_engine(f"sqlite:///{db_path}")
+    engine = create_engine(
+        f"sqlite:///{db_path}",
+        pool_size=3,
+        max_overflow=0,
+        pool_timeout=30,
+        connect_args={"timeout": 30}
+    )
 
     # Use a single event listener for both extension loading and WAL mode setting
     event.listen(engine, "connect", load_extension)
@@ -339,142 +340,3 @@ def init_default_libraries(session, default_plugins):
                 session.add(library_plugin)
 
     session.commit()
-
-
-async def update_or_insert_entities_vec(session, target_id, embedding):
-    try:
-        session.execute(
-            text("DELETE FROM entities_vec WHERE rowid = :id"),
-            {"id": target_id}
-        )
-        
-        session.execute(
-            text(
-                """
-                INSERT INTO entities_vec (rowid, embedding)
-                VALUES (:id, :embedding)
-                """
-            ),
-            {
-                "id": target_id,
-                "embedding": serialize_float32(embedding),
-            },
-        )
-        session.commit()
-    except Exception as e:
-        print(f"Error updating entities_vec: {e}")
-        session.rollback()
-
-
-def update_or_insert_entities_fts(session, target_id, filepath, tags, metadata):
-    try:
-        session.execute(
-            text(
-                """
-                INSERT OR REPLACE INTO entities_fts(id, filepath, tags, metadata)
-                VALUES(:id, :filepath, :tags, :metadata)
-                """
-            ),
-            {
-                "id": target_id,
-                "filepath": filepath,
-                "tags": tags,
-                "metadata": metadata,
-            },
-        )
-        session.commit()
-    except Exception as e:
-        print(f"Error updating entities_fts: {e}")
-        session.rollback()
-
-
-async def update_fts_and_vec(mapper, connection, entity: EntityModel):
-    session = Session(bind=connection)
-
-    # Prepare FTS data
-    tags = ", ".join([tag.name for tag in entity.tags])
-
-    # Process metadata entries
-    def process_ocr_result(value, max_length=4096):
-        try:
-            ocr_data = json.loads(value)
-            if isinstance(ocr_data, list) and all(
-                isinstance(item, dict)
-                and "dt_boxes" in item
-                and "rec_txt" in item
-                and "score" in item
-                for item in ocr_data
-            ):
-                return " ".join(item["rec_txt"] for item in ocr_data[:max_length])
-            else:
-                return json.dumps(ocr_data, indent=2)
-        except json.JSONDecodeError:
-            return value
-
-    fts_metadata = "\n".join(
-        [
-            f"{entry.key}: {process_ocr_result(entry.value) if entry.key == 'ocr_result' else entry.value}"
-            for entry in entity.metadata_entries
-        ]
-    )
-
-    # Update FTS table
-    update_or_insert_entities_fts(
-        session, entity.id, entity.filepath, tags, fts_metadata
-    )
-
-    # Prepare vector data
-    metadata_text = "\n".join(
-        [
-            f"{entry.key}: {entry.value}"
-            for entry in entity.metadata_entries
-            if entry.key != "ocr_result"
-        ]
-    )
-
-    # Add ocr_result at the end of metadata_text using process_ocr_result
-    ocr_result = next(
-        (entry.value for entry in entity.metadata_entries if entry.key == "ocr_result"),
-        "",
-    )
-    processed_ocr_result = process_ocr_result(ocr_result, max_length=128)
-    metadata_text += f"\nocr_result: {processed_ocr_result}"
-
-    # Use the new get_embeddings function
-    embeddings = await get_embeddings([metadata_text])
-    if not embeddings:
-        embedding = []
-    else:
-        embedding = embeddings[0]
-
-    # Update vector table
-    if embedding:
-        await update_or_insert_entities_vec(session, entity.id, embedding)
-
-
-def delete_fts_and_vec(mapper, connection, entity: EntityModel):
-    connection.execute(
-        text("DELETE FROM entities_fts WHERE id = :id"), {"id": entity.id}
-    )
-    connection.execute(
-        text("DELETE FROM entities_vec WHERE rowid = :id"), {"id": entity.id}
-    )
-
-
-def run_async(coro):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    return loop.run_until_complete(coro)
-
-
-def update_fts_and_vec_sync(mapper, connection, entity: EntityModel):
-    def run_in_thread():
-        run_async(update_fts_and_vec(mapper, connection, entity))
-
-    thread = threading.Thread(target=run_in_thread)
-    thread.start()
-    thread.join()
-
-# Add event listeners for EntityModel
-event.listen(EntityModel, "after_insert", update_fts_and_vec_sync)
-event.listen(EntityModel, "after_update", update_fts_and_vec_sync)

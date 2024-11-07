@@ -43,6 +43,7 @@ from .schemas import (
     SearchHit,
     RequestParams,
     EntityContext,
+    BatchIndexRequest,
 )
 from .read_metadata import read_metadata
 from .logging_config import LOGGING_CONFIG
@@ -239,6 +240,7 @@ async def new_entity(
     db: Session = Depends(get_db),
     plugins: Annotated[List[int] | None, Query()] = None,
     trigger_webhooks_flag: bool = True,
+    update_index: bool = False,
 ):
     library = crud.get_library_by_id(library_id, db)
     if library is None:
@@ -249,6 +251,10 @@ async def new_entity(
     entity = crud.create_entity(library_id, new_entity, db)
     if trigger_webhooks_flag:
         await trigger_webhooks(library, entity, request, plugins)
+
+    if update_index:
+        crud.update_entity_index(entity, db) 
+        
     return entity
 
 
@@ -346,6 +352,7 @@ async def update_entity(
     db: Session = Depends(get_db),
     trigger_webhooks_flag: bool = False,
     plugins: Annotated[List[int] | None, Query()] = None,
+    update_index: bool = False,
 ):
     entity = crud.find_entity_by_id(entity_id, db)
     if entity is None:
@@ -364,6 +371,10 @@ async def update_entity(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Library not found"
             )
         await trigger_webhooks(library, entity, request, plugins)
+
+    if update_index:
+        crud.update_entity_index(entity, db)
+
     return entity
 
 
@@ -381,6 +392,46 @@ def update_entity_last_scan_at(entity_id: int, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Entity not found",
+        )
+    
+
+@app.post(
+    "/entities/{entity_id}/index",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["entity"],
+)
+def update_index(entity_id: int, db: Session = Depends(get_db)):
+    """
+    Update the FTS and vector indexes for an entity.
+    """
+    entity = crud.get_entity_by_id(entity_id, db)
+    if entity is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Entity not found",
+        )
+    
+    crud.update_entity_index(entity, db)
+
+
+@app.post(
+    "/entities/batch-index",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["entity"],
+)
+async def batch_update_index(
+    request: BatchIndexRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Batch update the FTS and vector indexes for multiple entities.
+    """
+    try:
+        crud.batch_update_entity_indices(request.entity_ids, db)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
         )
 
 
@@ -614,12 +665,12 @@ async def search_entities_v2(
     try:
         if q.strip() == "":
             # Use list_entities when q is empty
-            entities = await crud.list_entities(
+            entities = crud.list_entities(
                 db=db, limit=limit, library_ids=library_ids, start=start, end=end
             )
         else:
             # Use hybrid_search when q is not empty
-            entities = await crud.hybrid_search(
+            entities = crud.hybrid_search(
                 query=q,
                 db=db,
                 limit=limit,
