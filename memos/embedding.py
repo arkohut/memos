@@ -74,7 +74,7 @@ def get_embeddings(texts: List[str]) -> List[List[float]]:
 def get_remote_embeddings(texts: List[str]) -> List[List[float]]:
     payload = {"model": settings.embedding.model, "input": texts}
 
-    with httpx.Client() as client:
+    with httpx.Client(timeout=60) as client:
         try:
             response = client.post(settings.embedding.endpoint, json=payload)
             response.raise_for_status()
