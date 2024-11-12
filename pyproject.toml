@@ -31,7 +31,6 @@ dependencies = [
     "rapidocr_onnxruntime",
     "rapidocr_openvino; sys_platform == 'win32'",
     "py-cpuinfo",
-    "screeninfo",
     "psutil",
     "pywin32; sys_platform == 'win32'",
     "pyobjc; sys_platform == 'darwin'",
