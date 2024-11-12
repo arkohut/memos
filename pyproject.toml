@@ -33,7 +33,6 @@ dependencies = [
     "py-cpuinfo",
     "psutil",
     "pywin32; sys_platform == 'win32'",
-    "pyobjc; sys_platform == 'darwin'",
     "pyobjc-core; sys_platform == 'darwin'",
     "pyobjc-framework-Quartz; sys_platform == 'darwin'",
     "ocrmac; sys_platform == 'darwin'",
