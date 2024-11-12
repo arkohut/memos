@@ -400,7 +400,9 @@ def generate_plist():
 </dict>
 </plist>
 """
-    plist_path = Path.home() / "Library/LaunchAgents/com.user.memos.plist"
+    plist_dir = Path.home() / "Library/LaunchAgents"
+    plist_dir.mkdir(parents=True, exist_ok=True)
+    plist_path = plist_dir / "com.user.memos.plist"
     with open(plist_path, "w") as f:
         f.write(plist_content)
     return plist_path
