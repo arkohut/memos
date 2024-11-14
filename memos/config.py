@@ -153,12 +153,14 @@ def get_database_path():
 
 
 def format_value(value):
-    if isinstance(value, (VLMSettings, OCRSettings, EmbeddingSettings)):
-        return (
-            "{\n"
-            + "\n".join(f"    {k}: {v}" for k, v in value.model_dump().items())
-            + "\n  }"
-        )
+    if isinstance(value, dict):
+        # Format nested dictionary with proper indentation
+        formatted_items = []
+        for k, v in value.items():
+            # Add proper indentation and alignment for nested items
+            formatted_value = str(v)
+            formatted_items.append(f"    {k:<12} : {formatted_value}")
+        return "\n" + "\n".join(formatted_items)
     elif isinstance(value, (list, tuple)):
         return f"[{', '.join(map(str, value))}]"
     elif isinstance(value, SecretStr):
@@ -178,9 +180,10 @@ def display_config():
         if key in ["base_dir", "database_path", "screenshots_dir"]:
             resolved_value = getattr(settings, f"resolved_{key}")
             formatted_value += f" (resolved: {resolved_value})"
+        
+        # 如果值包含换行符，使用多行格式打印
         if "\n" in formatted_value:
-            typer.echo(f"{key}:")
-            for line in formatted_value.split("\n"):
-                typer.echo(f"  {line}")
+            typer.echo(f"{key.ljust(max_key_length)} :{formatted_value}")
         else:
+            # 对于单行值，在同一行打印
             typer.echo(f"{key.ljust(max_key_length)} : {formatted_value}")
