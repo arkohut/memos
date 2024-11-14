@@ -55,8 +55,13 @@ memos start
 
 打开浏览器，访问 `http://localhost:8839`
 
-- 默认用户名：`admin`
-- 默认密码：`changeme`
+![init page](docs/images/init-page-cn.png)
+
+### Mac 下的权限问题
+
+在 Mac 下，Memos 需要获取截图权限，程序启动的时候，Mac 就会提示需要录屏的权限，请允许即可。
+
+![mac permission](docs/images/mac-security-permission.jpg)
 
 ## 使用指南
 

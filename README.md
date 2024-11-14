@@ -55,8 +55,13 @@ This command will:
 
 Open your browser and visit `http://localhost:8839`
 
-- Default username: `admin`
-- Default password: `changeme`
+![init page](docs/images/init-page-en.png)
+
+### Mac Permission Issues
+
+On Mac, Memos needs screen recording permission. When the program starts, Mac will prompt for screen recording permission - please allow it to proceed.
+
+![mac permission](docs/images/mac-security-permission.jpg)
 
 ## User Guide
 
