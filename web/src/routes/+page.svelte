@@ -285,107 +285,134 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<header
-	class="sticky top-0 z-10 transition-all duration-300"
-	bind:this={headerElement}
->
-	<div class="mx-auto max-w-screen-lg flex items-center justify-between p-4 transition-all duration-300"
-		 class:flex-col={!isScrolled}
-		 class:flex-row={isScrolled}
+<!-- 添加一个最外层的容器来管理整体布局 -->
+<div class="min-h-screen flex flex-col">
+	<!-- Header 部分 -->
+	<header
+		class="sticky top-0 z-10 transition-all duration-300"
+		bind:this={headerElement}
 	>
-		<Logo size={isScrolled ? 32 : 128} withBorder={!isScrolled} hasGap={!isScrolled} class_="transition-transform duration-300 ease-in-out mr-4" />
-		<Input
-			type="text"
-			class={inputClasses}
-			bind:value={searchString}
-			placeholder={$_('searchPlaceholder')}
-			on:keydown={handleEnterPress}
-			autofocus
-		/>
-		<div class="mx-auto max-w-screen-lg">
-			<div class="flex space-x-2" class:mt-4={!isScrolled} class:ml-4={isScrolled}>
-				<LibraryFilter bind:selectedLibraryIds={selectedLibraries} />
-				<TimeFilter bind:start={startTimestamp} bind:end={endTimestamp} />
+		<div class="mx-auto max-w-screen-lg flex items-center justify-between p-4 transition-all duration-300"
+			 class:flex-col={!isScrolled}
+			 class:flex-row={isScrolled}
+		>
+			<Logo size={isScrolled ? 32 : 128} withBorder={!isScrolled} hasGap={!isScrolled} class_="transition-transform duration-300 ease-in-out mr-4" />
+			<Input
+				type="text"
+				class={inputClasses}
+				bind:value={searchString}
+				placeholder={$_('searchPlaceholder')}
+				on:keydown={handleEnterPress}
+				autofocus
+			/>
+			<div class="mx-auto max-w-screen-lg">
+				<div class="flex space-x-2" class:mt-4={!isScrolled} class:ml-4={isScrolled}>
+					<LibraryFilter bind:selectedLibraryIds={selectedLibraries} />
+					<TimeFilter bind:start={startTimestamp} bind:end={endTimestamp} />
+				</div>
 			</div>
 		</div>
-	</div>
-</header>
+	</header>
 
-<!-- 添加一个动态调整高度的空白区域 -->
-<div style="height: {isScrolled ? '100px' : '0px'}"></div>
+	<!-- 添加一个动态调整高度的空白区域 -->
+	<div style="height: {isScrolled ? '100px' : '0px'}"></div>
 
-<div class="mx-auto flex flex-col sm:flex-row">
-	<!-- Left panel for tags and created_date -->
-	{#if searchResult && searchResult.facet_counts && searchResult.facet_counts.length > 0}
-	<div class="xl:w-1/7 lg:w-1/6 md:w-1/5 sm:w-full pr-4">
-		{#each searchResult.facet_counts as facet}
-			{#if facet.field_name === 'tags' || facet.field_name === 'created_date'}
-				<FacetFilter
-					{facet}
-					selectedItems={facet.field_name === 'tags' ? selectedTags : selectedDates}
-					onItemChange={facet.field_name === 'tags' ? handleTagChange : handleDateChange}
-				/>
-			{/if}
-		{/each}
-	</div>
-	{/if}
-
-	<!-- Right panel for search results -->
-	<div class="{searchResult && searchResult.facet_counts && searchResult.facet_counts.length > 0 ? 'xl:w-6/7 lg:w-5/6 md:w-4/5' : 'w-full'}">
-		{#if isLoading}
-			<p class="text-center">{$_('loading')}</p>
-		{:else if searchResult && searchResult.hits.length > 0}
-			{#if searchResult['search_time_ms'] > 0}
-				<p class="search-summary mb-4 text-center">
-					{$_('searchSummary', { values: {
-						found: searchResult['found'].toLocaleString(),
-						outOf: searchResult['out_of'].toLocaleString(),
-						time: searchResult['search_time_ms']
-					}})}
-				</p>
-			{/if}
-			<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-				{#each searchResult.hits as hit, index}
-					<!-- svelte-ignore a11y-click-events-have-key-events -->
-					<!-- svelte-ignore a11y-no-static-element-interactions -->
-					<div
-						class="bg-white rounded-lg overflow-hidden border border-gray-300 relative"
-						on:click={() => openModal(index)}
-					>
-						<div class="px-4 pt-4">
-							<h2 class="line-clamp-2 h-12">
-								{getEntityTitle(hit.document)}
-							</h2>
-							<p class="text-gray-700 text-xs">
-								{formatDistanceToNow(new Date(hit.document.file_created_at * 1000), {
-									addSuffix: true
-								})}
-							</p>
-						</div>
-						<figure class="px-4 pt-4 mb-4 relative">
-							<img
-								class="w-full h-48 object-cover"
-								src={`${apiEndpoint}/files/${hit.document.filepath}`}
-								alt=""
+	<!-- 主要内容区域 -->
+	<main class="flex-grow">
+		<div class="mx-auto flex flex-col sm:flex-row">
+			<!-- 左侧面板 -->
+			{#if searchResult && searchResult.facet_counts && searchResult.facet_counts.length > 0}
+				<div class="xl:w-1/7 lg:w-1/6 md:w-1/5 sm:w-full pr-4">
+					{#each searchResult.facet_counts as facet}
+						{#if facet.field_name === 'tags' || facet.field_name === 'created_date'}
+							<FacetFilter
+								{facet}
+								selectedItems={facet.field_name === 'tags' ? selectedTags : selectedDates}
+								onItemChange={facet.field_name === 'tags' ? handleTagChange : handleDateChange}
 							/>
-							{#if getAppName(hit.document) !== "unknown"}
-								<div
-									class="absolute bottom-2 left-6 bg-white bg-opacity-75 px-2 py-1 rounded-full text-xs font-semibold border border-gray-200 flex items-center space-x-2"
-								>
-									<LucideIcon name={translateAppName(getAppName(hit.document)) || "Hexagon"} size={16} />
-									<span>{getAppName(hit.document)}</span>
+						{/if}
+					{/each}
+				</div>
+			{/if}
+
+			<!-- 右侧面板 -->
+			<div class="{searchResult && searchResult.facet_counts && searchResult.facet_counts.length > 0 ? 'xl:w-6/7 lg:w-5/6 md:w-4/5' : 'w-full'}">
+				{#if isLoading}
+					<p class="text-center">{$_('loading')}</p>
+				{:else if searchResult && searchResult.hits.length > 0}
+					{#if searchResult['search_time_ms'] > 0}
+						<p class="search-summary mb-4 text-center">
+							{$_('searchSummary', { values: {
+								found: searchResult['found'].toLocaleString(),
+								outOf: searchResult['out_of'].toLocaleString(),
+								time: searchResult['search_time_ms']
+							}})}
+						</p>
+					{/if}
+					<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+						{#each searchResult.hits as hit, index}
+							<!-- svelte-ignore a11y-click-events-have-key-events -->
+							<!-- svelte-ignore a11y-no-static-element-interactions -->
+							<div
+								class="bg-white rounded-lg overflow-hidden border border-gray-300 relative"
+								on:click={() => openModal(index)}
+							>
+								<div class="px-4 pt-4">
+									<h2 class="line-clamp-2 h-12">
+										{getEntityTitle(hit.document)}
+									</h2>
+									<p class="text-gray-700 text-xs">
+										{formatDistanceToNow(new Date(hit.document.file_created_at * 1000), {
+											addSuffix: true
+										})}
+									</p>
 								</div>
-							{/if}
-						</figure>
+								<figure class="px-4 pt-4 mb-4 relative">
+									<img
+										class="w-full h-48 object-cover"
+										src={`${apiEndpoint}/files/${hit.document.filepath}`}
+										alt=""
+									/>
+									{#if getAppName(hit.document) !== "unknown"}
+										<div
+											class="absolute bottom-2 left-6 bg-white bg-opacity-75 px-2 py-1 rounded-full text-xs font-semibold border border-gray-200 flex items-center space-x-2"
+										>
+											<LucideIcon name={translateAppName(getAppName(hit.document)) || "Hexagon"} size={16} />
+											<span>{getAppName(hit.document)}</span>
+										</div>
+									{/if}
+								</figure>
+							</div>
+						{/each}
 					</div>
-				{/each}
+				{:else if searchString}
+					<p class="text-center">{$_('noResults')}</p>
+				{:else}
+					<p class="text-center"></p>
+				{/if}
 			</div>
-		{:else if searchString}
-			<p class="text-center">{$_('noResults')}</p>
-		{:else}
-			<p class="text-center"></p>
-		{/if}
-	</div>
+		</div>
+	</main>
+
+	<!-- Footer -->
+	<footer class="w-full mx-auto mt-8">
+		<div class="container mx-auto">
+			<div class="border-t border-slate-900/5 py-10 text-center">
+				<p class="mt-2 text-sm leading-6 text-slate-500">{$_('slogan')}</p>
+				<p class="mt-2 text-sm leading-6 text-slate-500">{$_('copyright')}</p>
+				<div class="mt-2 flex justify-center items-center space-x-4 text-sm font-semibold leading-6 text-slate-700">
+					<a href="https://github.com/arkohut/memos" 
+					   target="_blank" 
+					   rel="noopener noreferrer"
+					   class="hover:text-slate-900 transition-colors">
+						<Github size={16} />
+					</a>
+					<div class="h-4 w-px bg-slate-500/20" />
+					<LanguageSwitcher />
+				</div>
+			</div>
+		</div>
+	</footer>
 </div>
 
 {#if searchResult && searchResult.hits.length && showModal}
@@ -408,17 +435,3 @@
 			openModal((selectedImage - 1 + searchResult.hits.length) % searchResult.hits.length)}
 	/>
 {/if}
-
-<footer class="mx-auto mt-32 w-full container text-center">
-	<div class="border-t border-slate-900/5 py-10">
-		<p class="mt-2 text-sm leading-6 text-slate-500">{$_('slogan')}</p>
-		<p class="mt-2 text-sm leading-6 text-slate-500">{$_('copyright')}</p>
-		<div class="mt-2 flex justify-center items-center space-x-4 text-sm font-semibold leading-6 text-slate-700">
-			<a href="https://github.com/arkohut/memos" target="_blank" rel="noopener noreferrer">
-				<Github size={16} />
-			</a>
-			<div class="h-4 w-px bg-slate-500/20" />
-			<LanguageSwitcher />
-		</div>
-	</div>
-</footer>
