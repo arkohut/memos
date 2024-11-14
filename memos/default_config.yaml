@@ -6,8 +6,10 @@ screenshots_dir: screenshots
 server_host: 0.0.0.0
 server_port: 8839
 
-auth_username: admin
-auth_password: changeme
+# Enable authentication by uncommenting the following lines
+# auth_username: admin
+# auth_password: changeme
+
 default_plugins:
 - builtin_ocr
 # - builtin_vlm

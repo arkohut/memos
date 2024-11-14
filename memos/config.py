@@ -70,8 +70,8 @@ class Settings(BaseSettings):
     # Embedding settings
     embedding: EmbeddingSettings = EmbeddingSettings()
 
-    auth_username: str = "admin"
-    auth_password: SecretStr = SecretStr("changeme")
+    auth_username: str = ""
+    auth_password: SecretStr = SecretStr("")
 
     default_plugins: List[str] = ["builtin_ocr"]
 

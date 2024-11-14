@@ -96,6 +96,7 @@ def is_auth_enabled():
 
 def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
     if not is_auth_enabled():
+        logging.info("Authentication is disabled - no username/password configured")
         return None
     correct_username = compare_digest(credentials.username, settings.auth_username)
     correct_password = compare_digest(
@@ -117,7 +118,7 @@ def optional_auth(credentials: HTTPBasicCredentials = Depends(security)):
 
 
 @app.get("/")
-async def serve_spa():
+async def serve_spa(username: str = Depends(optional_auth)):
     return FileResponse(os.path.join(current_dir, "static/app.html"))
 
 
