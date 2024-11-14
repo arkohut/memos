@@ -6,7 +6,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.encoders import jsonable_encoder
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
@@ -16,7 +15,6 @@ import asyncio
 import json
 import cv2
 from PIL import Image
-from secrets import compare_digest
 import logging
 
 from .config import get_database_path, settings
@@ -53,7 +51,6 @@ from .models import load_extension
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
-security = HTTPBasic()
 
 engine = create_engine(f"sqlite:///{get_database_path()}")
 event.listen(engine, "connect", load_extension)
@@ -90,35 +87,8 @@ async def favicon_ico():
     return FileResponse(os.path.join(current_dir, "static/favicon.png"))
 
 
-def is_auth_enabled():
-    return bool(settings.auth_username and settings.auth_password.get_secret_value())
-
-
-def authenticate(credentials: HTTPBasicCredentials = Depends(security)):
-    if not is_auth_enabled():
-        logging.info("Authentication is disabled - no username/password configured")
-        return None
-    correct_username = compare_digest(credentials.username, settings.auth_username)
-    correct_password = compare_digest(
-        credentials.password, settings.auth_password.get_secret_value()
-    )
-    if not (correct_username and correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return credentials.username
-
-
-def optional_auth(credentials: HTTPBasicCredentials = Depends(security)):
-    if is_auth_enabled():
-        return authenticate(credentials)
-    return None
-
-
 @app.get("/")
-async def serve_spa(username: str = Depends(optional_auth)):
+async def serve_spa():
     return FileResponse(os.path.join(current_dir, "static/app.html"))
 
 
