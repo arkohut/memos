@@ -6,18 +6,20 @@ English | [简体中文](README_ZH.md)
 
 ![memos-search](docs/images/memos-search-en.gif)
 
-# Memos
+> I changed the name to Pensieve because Memos was already taken.
 
-Memos is a privacy-focused passive recording project. It can automatically record screen content, build intelligent indices, and provide a convenient web interface to retrieve historical records.
+# Pensieve (previously named Memos)
 
-This project draws heavily from two other projects: one called [Rewind](https://www.rewind.ai/) and another called [Windows Recall](https://support.microsoft.com/en-us/windows/retrace-your-steps-with-recall-aa03f8a0-a78b-4b3e-b0a1-2eb8ac48701c). However, unlike both of them, Memos allows you to have complete control over your data, avoiding the transfer of data to untrusted data centers.
+Pensieve is a privacy-focused passive recording project. It can automatically record screen content, build intelligent indices, and provide a convenient web interface to retrieve historical records.
+
+This project draws heavily from two other projects: one called [Rewind](https://www.rewind.ai/) and another called [Windows Recall](https://support.microsoft.com/en-us/windows/retrace-your-steps-with-recall-aa03f8a0-a78b-4b3e-b0a1-2eb8ac48701c). However, unlike both of them, Pensieve allows you to have complete control over your data, avoiding the transfer of data to untrusted data centers.
 
 ## Features
 
 - 🚀 Simple installation: just install dependencies via pip to get started
 - 🔒 Complete data control: all data is stored locally, allowing for full local operation and self-managed data processing
 - 🔍 Full-text and vector search support
-- 🤖 Integrates with Ollama, using it as the machine learning engine for Memos
+- 🤖 Integrates with Ollama, using it as the machine learning engine for Pensieve
 - 🌐 Compatible with any OpenAI API models (e.g., OpenAI, Azure OpenAI, vLLM, etc.)
 - 💻 Supports Mac and Windows (Linux support is in development)
 - 🔌 Extensible functionality through plugins
@@ -26,7 +28,7 @@ This project draws heavily from two other projects: one called [Rewind](https://
 
 ![memos-installation](docs/images/memos-installation.gif)
 
-### 1. Install Memos
+### 1. Install Pensieve
 
 ```sh
 pip install memos
@@ -34,7 +36,7 @@ pip install memos
 
 ### 2. Initialize
 
-Initialize the memos configuration file and sqlite database:
+Initialize the pensieve configuration file and sqlite database:
 
 ```sh
 memos init
@@ -63,7 +65,7 @@ Open your browser and visit `http://localhost:8839`
 
 ### Mac Permission Issues
 
-On Mac, Memos needs screen recording permission. When the program starts, Mac will prompt for screen recording permission - please allow it to proceed.
+On Mac, Pensieve needs screen recording permission. When the program starts, Mac will prompt for screen recording permission - please allow it to proceed.
 
 ![mac permission](docs/images/mac-security-permission.jpg)
 
@@ -73,7 +75,7 @@ On Mac, Memos needs screen recording permission. When the program starts, Mac wi
 
 #### 1. Model Selection
 
-Memos uses embedding models to extract semantic information and build vector indices. Therefore, choosing an appropriate embedding model is crucial. Depending on the user's primary language, different embedding models should be selected.
+Pensieve uses embedding models to extract semantic information and build vector indices. Therefore, choosing an appropriate embedding model is crucial. Depending on the user's primary language, different embedding models should be selected.
 
 - For Chinese scenarios, you can use the [jinaai/jina-embeddings-v2-base-zh](https://huggingface.co/jinaai/jina-embeddings-v2-base-zh) model.
 - For English scenarios, you can use the [jinaai/jina-embeddings-v2-base-en](https://huggingface.co/jinaai/jina-embeddings-v2-base-en) model.
@@ -98,7 +100,7 @@ memos stop
 memos start
 ```
 
-The first time you use the embedding model, Memos will automatically download and load the model.
+The first time you use the embedding model, Pensieve will automatically download and load the model.
 
 #### 4. Rebuild Index
 
@@ -112,7 +114,7 @@ The `--force` parameter indicates rebuilding the index table and deleting previo
 
 ### Using Ollama for Visual Search
 
-By default, Memos only enables the OCR plugin to extract text from screenshots and build indices. However, this method significantly limits search effectiveness for images without text.
+By default, Pensieve only enables the OCR plugin to extract text from screenshots and build indices. However, this method significantly limits search effectiveness for images without text.
 
 To achieve more comprehensive visual search capabilities, we need a multimodal image understanding service compatible with the OpenAI API. Ollama perfectly fits this role.
 
@@ -145,7 +147,7 @@ ollama run minicpm-v "Describe what this service is"
 
 This command will download and run the minicpm-v model. If the running speed is too slow, it is not recommended to use this feature.
 
-#### 3. Configure Memos to Use Ollama
+#### 3. Configure Pensieve to Use Ollama
 
 Open the `~/.memos/config.yaml` file with your preferred text editor and modify the `vlm` configuration:
 
@@ -170,26 +172,26 @@ default_plugins:
 
 This adds the `builtin_vlm` plugin to the default plugin list.
 
-#### 4. Restart Memos Service
+#### 4. Restart Pensieve Service
 
 ```sh
 memos stop
 memos start
 ```
 
-After restarting the Memos service, wait a moment to see the data extracted by VLM in the latest screenshots on the Memos web interface:
+After restarting the Pensieve service, wait a moment to see the data extracted by VLM in the latest screenshots on the Pensieve web interface:
 
 ![image](./docs/images/single-screenshot-view-with-minicpm-result.png)
 
 If you do not see the VLM results, you can:
 
-- Use the command `memos ps` to check if the Memos process is running normally
+- Use the command `memos ps` to check if the Pensieve process is running normally
 - Check for error messages in `~/.memos/logs/memos.log`
 - Confirm whether the Ollama model is loaded correctly (`ollama ps`)
 
 ### Full Indexing
 
-Memos is a compute-intensive application. The indexing process requires the collaboration of OCR, VLM, and embedding models. To minimize the impact on the user's computer, Memos calculates the average processing time for each screenshot and adjusts the indexing frequency accordingly. Therefore, not all screenshots are indexed immediately by default.
+Pensieve is a compute-intensive application. The indexing process requires the collaboration of OCR, VLM, and embedding models. To minimize the impact on the user's computer, Pensieve calculates the average processing time for each screenshot and adjusts the indexing frequency accordingly. Therefore, not all screenshots are indexed immediately by default.
 
 If you want to index all screenshots, you can use the following command for full indexing:
 
@@ -201,22 +203,22 @@ This command will scan and index all recorded screenshots. Note that depending o
 
 ## Privacy and Security
 
-During the development of Memos, I closely followed the progress of similar products, especially [Rewind](https://www.rewind.ai/) and [Windows Recall](https://support.microsoft.com/en-us/windows/retrace-your-steps-with-recall-aa03f8a0-a78b-4b3e-b0a1-2eb8ac48701c). I greatly appreciate their product philosophy, but they do not do enough in terms of privacy protection, which is a concern for many users (or potential users). Recording the screen of a personal computer may expose extremely sensitive private data, such as bank accounts, passwords, chat records, etc. Therefore, ensuring that data storage and processing are completely controlled by the user to prevent data leakage is particularly important.
+During the development of Pensieve, I closely followed the progress of similar products, especially [Rewind](https://www.rewind.ai/) and [Windows Recall](https://support.microsoft.com/en-us/windows/retrace-your-steps-with-recall-aa03f8a0-a78b-4b3e-b0a1-2eb8ac48701c). I greatly appreciate their product philosophy, but they do not do enough in terms of privacy protection, which is a concern for many users (or potential users). Recording the screen of a personal computer may expose extremely sensitive private data, such as bank accounts, passwords, chat records, etc. Therefore, ensuring that data storage and processing are completely controlled by the user to prevent data leakage is particularly important.
 
-The advantages of Memos are:
+The advantages of Pensieve are:
 
 1. The code is completely open-source and easy-to-understand Python code, allowing anyone to review the code to ensure there are no backdoors.
 2. Data is completely localized, all data is stored locally, and data processing is entirely controlled by the user. Data will be stored in the user's `~/.memos` directory.
-3. Easy to uninstall. If you no longer use Memos, you can close the program with `memos stop && memos disable`, then uninstall it with `pip uninstall memos`, and finally delete the `~/.memos` directory to clean up all databases and screenshot data.
-4. Data processing is entirely controlled by the user. Memos is an independent project, and the machine learning models used (including VLM and embedding models) are chosen by the user. Due to Memos' operating mode, using smaller models can also achieve good results.
+3. Easy to uninstall. If you no longer use Pensieve, you can close the program with `memos stop && memos disable`, then uninstall it with `pip uninstall memos`, and finally delete the `~/.memos` directory to clean up all databases and screenshot data.
+4. Data processing is entirely controlled by the user. Pensieve is an independent project, and the machine learning models used (including VLM and embedding models) are chosen by the user. Due to Pensieve' operating mode, using smaller models can also achieve good results.
 
-Of course, there is still room for improvement in terms of privacy, and contributions are welcome to make Memos better.
+Of course, there is still room for improvement in terms of privacy, and contributions are welcome to make Pensieve better.
 
 ## Other Noteworthy Content
 
 ### About Storage Space
 
-Memos records the screen every 5 seconds and saves the original screenshots in the `~/.memos/screenshots` directory. Storage space usage mainly depends on the following factors:
+Pensieve records the screen every 5 seconds and saves the original screenshots in the `~/.memos/screenshots` directory. Storage space usage mainly depends on the following factors:
 
 1. **Screenshot Data**:
 
@@ -234,7 +236,7 @@ Memos records the screen every 5 seconds and saves the original screenshots in t
 
 ### About Power Consumption
 
-Memos requires two compute-intensive tasks by default:
+Pensieve requires two compute-intensive tasks by default:
 
 - One is the OCR task, used to extract text from screenshots
 - The other is the embedding task, used to extract semantic information and build vector indices
@@ -250,7 +252,7 @@ Memos requires two compute-intensive tasks by default:
 
 #### Performance Optimization Strategy
 
-To avoid affecting users' daily use, Memos has adopted the following optimization measures:
+To avoid affecting users' daily use, Pensieve has adopted the following optimization measures:
 
 - Dynamically adjust the indexing frequency, adapting to system processing speed
 - Automatically reduce processing frequency when on battery power to save power
