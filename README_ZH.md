@@ -4,6 +4,8 @@
 
 [English](README.md) | 简体中文
 
+![memos-search](docs/images/memos-search-cn.gif)
+
 # Memos
 
 Memos 是一个专注于隐私的被动记录项目。它可以自动记录屏幕内容，构建智能索引，并提供便捷的 web 界面来检索历史记录。
@@ -21,6 +23,8 @@ Memos 是一个专注于隐私的被动记录项目。它可以自动记录屏�
 - 🔌 支持通过插件扩展出更多数据处理能力
 
 ## 快速开始
+
+![memos-installation](docs/images/memos-installation.gif)
 
 ### 1. 安装 Memos
 

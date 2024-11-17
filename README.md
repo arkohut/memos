@@ -4,12 +4,7 @@
 
 English | [简体中文](README_ZH.md)
 
-<div align="center">
-  <video width="800" controls>
-    <source src="docs/videos/memos-github.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
-</div>
+![memos-search](docs/images/memos-search-en.gif)
 
 # Memos
 
@@ -29,12 +24,7 @@ This project draws heavily from two other projects: one called [Rewind](https://
 
 ## Quick Start
 
-<div align="center">
-  <video width="800" controls>
-    <source src="docs/videos/memos-installation.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
-</div>
+![memos-installation](docs/images/memos-installation.gif)
 
 ### 1. Install Memos
 
