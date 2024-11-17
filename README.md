@@ -4,6 +4,13 @@
 
 English | [简体中文](README_ZH.md)
 
+<div align="center">
+  <video width="800" controls>
+    <source src="docs/videos/memos-github.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+</div>
+
 # Memos
 
 Memos is a privacy-focused passive recording project. It can automatically record screen content, build intelligent indices, and provide a convenient web interface to retrieve historical records.
@@ -21,6 +28,13 @@ This project draws heavily from two other projects: one called [Rewind](https://
 - 🔌 Extensible functionality through plugins
 
 ## Quick Start
+
+<div align="center">
+  <video width="800" controls>
+    <source src="docs/videos/memos-installation.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+</div>
 
 ### 1. Install Memos
 
