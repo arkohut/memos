@@ -26,15 +26,17 @@ This project draws heavily from two other projects: one called [Rewind](https://
 
 ## Quick Start
 
+### MacOS & Windows
+
 ![memos-installation](docs/images/memos-installation.gif)
 
-### 1. Install Pensieve
+#### 1. Install Pensieve
 
 ```sh
 pip install memos
 ```
 
-### 2. Initialize
+#### 2. Initialize
 
 Initialize the pensieve configuration file and sqlite database:
 
@@ -44,7 +46,7 @@ memos init
 
 Data will be stored in the `~/.memos` directory.
 
-### 3. Start the Service
+#### 3. Start the Service
 
 ```sh
 memos enable
@@ -56,6 +58,32 @@ This command will:
 - Begin recording all screens
 - Start the Web service
 - Set the service to start on boot
+
+### Linux
+
+**Note:** Linux support is still under development. At the moment, you can run the app by following the steps below.
+
+**Important:** You need to have `conda` installed to run the app. Also, if something is not working, check the single commands in the shell files to see if they are working.
+
+- [x] Tested on Ubuntu 22.04 + KDE Plasma + Wayland
+
+#### 1. Install Dependencies
+
+```sh
+./linuxdeps.sh
+```
+
+#### 2. Install Pensieve
+
+```sh
+./local_setup.sh
+```
+
+#### 3. Start the App
+
+```sh
+source start.sh
+```
 
 ### 4. Access the Web Interface
 
@@ -88,9 +116,9 @@ Open the `~/.memos/config.yaml` file with your preferred text editor and modify 
 embedding:
   enabled: true
   use_local: true
-  model: jinaai/jina-embeddings-v2-base-en   # Model name used
-  num_dim: 768                               # Model dimensions
-  use_modelscope: false                      # Whether to use ModelScope's model
+  model: jinaai/jina-embeddings-v2-base-en # Model name used
+  num_dim: 768 # Model dimensions
+  use_modelscope: false # Whether to use ModelScope's model
 ```
 
 #### 3. Restart Memos Service
@@ -153,11 +181,11 @@ Open the `~/.memos/config.yaml` file with your preferred text editor and modify 
 
 ```yaml
 vlm:
-  enabled: true                     # Enable VLM feature
-  endpoint: http://localhost:11434  # Ollama service address
-  modelname: minicpm-v              # Model name to use
-  force_jpeg: true                  # Convert images to JPEG format to ensure compatibility
-  prompt: Please describe the content of this image, including the layout and visual elements  # Prompt sent to the model
+  enabled: true # Enable VLM feature
+  endpoint: http://localhost:11434 # Ollama service address
+  modelname: minicpm-v # Model name to use
+  force_jpeg: true # Convert images to JPEG format to ensure compatibility
+  prompt: Please describe the content of this image, including the layout and visual elements # Prompt sent to the model
 ```
 
 Use the above configuration to overwrite the `vlm` configuration in the `~/.memos/config.yaml` file.
@@ -166,8 +194,8 @@ Also, modify the `default_plugins` configuration in the `~/.memos/plugins/vlm/co
 
 ```yaml
 default_plugins:
-- builtin_ocr
-- builtin_vlm
+  - builtin_ocr
+  - builtin_vlm
 ```
 
 This adds the `builtin_vlm` plugin to the default plugin list.
