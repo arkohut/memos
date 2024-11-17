@@ -1,0 +1,1 @@
+sudo apt install -y dbus-python python-xlib slurp grim maim spectacle
