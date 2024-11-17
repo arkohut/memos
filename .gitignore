@@ -10,3 +10,8 @@ test-data/
 memos/static/
 db/
 memos/plugins/ocr/temp_ppocr.yaml
+memos.spec
+memosexec
+screenshots
+screenshots/
+yarn.lock

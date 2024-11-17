@@ -450,30 +450,43 @@ def remove_windows_autostart():
     return False
 
 
-@app.command()
-def disable():
-    """Disable memos from running at startup"""
-    if is_windows():
-        if remove_windows_autostart():
-            typer.echo(
-                "Removed Memos shortcut from startup folder. Memos will no longer run at startup."
-            )
-        else:
-            typer.echo(
-                "Memos shortcut not found in startup folder. Memos is not set to run at startup."
-            )
-    elif is_macos():
-        plist_path = Path.home() / "Library/LaunchAgents/com.user.memos.plist"
-        if plist_path.exists():
-            subprocess.run(["launchctl", "unload", str(plist_path)], check=True)
-            plist_path.unlink()
-            typer.echo(
-                "Unloaded and removed plist file. Memos will no longer run at startup."
-            )
-        else:
-            typer.echo("Plist file does not exist. Memos is not set to run at startup.")
-    else:
-        typer.echo("Unsupported operating system.")
+def generate_systemd_service():
+    """Generate systemd service file for Linux."""
+    memos_dir = settings.resolved_base_dir
+    python_path = get_python_path()
+    log_dir = memos_dir / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    service_content = f"""[Unit]
+Description=Memos Service
+After=network.target
+
+[Service]
+Type=simple
+Environment="PATH={os.environ['PATH']}"
+ExecStart={python_path} -m memos.commands record
+ExecStart={python_path} -m memos.commands serve
+ExecStartPre=/bin/sleep 15
+ExecStart={python_path} -m memos.commands watch
+Restart=always
+User={os.getenv('USER')}
+StandardOutput=append:{log_dir}/memos.log
+StandardError=append:{log_dir}/memos.error.log
+
+[Install]
+WantedBy=default.target
+"""
+
+    service_path = Path.home() / ".config/systemd/user"
+    service_path.mkdir(parents=True, exist_ok=True)
+    service_file = service_path / "memos.service"
+    with open(service_file, "w") as f:
+        f.write(service_content)
+    return service_file
+
+
+def is_linux():
+    return platform.system() == "Linux"
 
 
 @app.command()
@@ -497,9 +510,145 @@ def enable():
         plist_path = generate_plist()
         typer.echo(f"Generated plist file at {plist_path}")
         load_plist(plist_path)
-        typer.echo(
-            "Loaded plist file. Memos is started and will run at next startup or when 'start' command is used."
-        )
+        typer.echo("Loaded plist file. Memos will run at next startup.")
+    elif is_linux():
+        service_file = generate_systemd_service()
+        typer.echo(f"Generated systemd service file at {service_file}")
+        # Enable and start the service
+        subprocess.run(["systemctl", "--user", "enable", "memos.service"], check=True)
+        typer.echo("Enabled memos systemd service for current user.")
+    else:
+        typer.echo("Unsupported operating system.")
+
+
+@app.command()
+def disable():
+    """Disable memos from running at startup"""
+    if is_windows():
+        if remove_windows_autostart():
+            typer.echo("Removed Memos shortcut from startup folder.")
+        else:
+            typer.echo("Memos shortcut not found in startup folder.")
+    elif is_macos():
+        plist_path = Path.home() / "Library/LaunchAgents/com.user.memos.plist"
+        if plist_path.exists():
+            subprocess.run(["launchctl", "unload", str(plist_path)], check=True)
+            plist_path.unlink()
+            typer.echo("Unloaded and removed plist file.")
+        else:
+            typer.echo("Plist file does not exist.")
+    elif is_linux():
+        service_file = Path.home() / ".config/systemd/user/memos.service"
+        if service_file.exists():
+            subprocess.run(
+                ["systemctl", "--user", "disable", "memos.service"], check=True
+            )
+            subprocess.run(["systemctl", "--user", "stop", "memos.service"], check=True)
+            service_file.unlink()
+            typer.echo("Disabled and removed memos systemd service.")
+        else:
+            typer.echo("Systemd service file does not exist.")
+    else:
+        typer.echo("Unsupported operating system.")
+
+
+@app.command()
+def start():
+    """Start all Memos processes"""
+    memos_dir = settings.resolved_base_dir
+
+    if is_windows():
+        bat_path = memos_dir / "launch.bat"
+        if not bat_path.exists():
+            typer.echo("Launch script not found. Please run 'memos enable' first.")
+            return
+        try:
+            subprocess.Popen(
+                [str(bat_path)], shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE
+            )
+            typer.echo("Started Memos processes.")
+        except Exception as e:
+            typer.echo(f"Failed to start Memos processes: {str(e)}")
+    elif is_macos():
+        service_name = "com.user.memos"
+        subprocess.run(["launchctl", "start", service_name], check=True)
+        typer.echo("Started Memos processes.")
+    elif is_linux():
+        try:
+            subprocess.run(
+                ["systemctl", "--user", "start", "memos.service"], check=True
+            )
+            typer.echo("Started Memos processes.")
+        except subprocess.CalledProcessError as e:
+            typer.echo(f"Failed to start Memos processes: {str(e)}")
+    else:
+        typer.echo("Unsupported operating system.")
+
+
+@app.command()
+def stop():
+    """Stop all running Memos processes"""
+    if is_windows():
+        services = ["serve", "watch", "record"]
+        stopped = False
+        for service in services:
+            processes = [
+                p
+                for p in psutil.process_iter(["pid", "name", "cmdline"])
+                if "python" in p.info["name"].lower()
+                and p.info["cmdline"] is not None
+                and "memos.commands" in p.info["cmdline"]
+                and service in p.info["cmdline"]
+            ]
+
+            for process in processes:
+                try:
+                    os.kill(process.info["pid"], signal.SIGTERM)
+                    typer.echo(
+                        f"Stopped {service} process (PID: {process.info['pid']})"
+                    )
+                    stopped = True
+                except ProcessLookupError:
+                    typer.echo(
+                        f"Process {service} (PID: {process.info['pid']}) not found"
+                    )
+                except PermissionError:
+                    typer.echo(
+                        f"Permission denied to stop {service} process (PID: {process.info['pid']})"
+                    )
+
+        if not stopped:
+            typer.echo("No running Memos processes found")
+    elif is_macos():
+        service_name = "com.user.memos"
+        try:
+            subprocess.run(["launchctl", "stop", service_name], check=True)
+            typer.echo("Stopped Memos processes.")
+        except subprocess.CalledProcessError:
+            typer.echo("Failed to stop Memos processes. They may not be running.")
+    elif is_linux():
+        try:
+            subprocess.run(["systemctl", "--user", "stop", "memos.service"], check=True)
+            typer.echo("Stopped Memos processes.")
+        except subprocess.CalledProcessError:
+            # Fallback to manual process killing if systemd service fails
+            services = ["serve", "watch", "record"]
+            stopped = False
+            for service in services:
+                try:
+                    output = subprocess.check_output(
+                        ["pgrep", "-f", f"memos.commands {service}"]
+                    )
+                    pids = output.decode().strip().split()
+                    for pid in pids:
+                        os.kill(int(pid), signal.SIGTERM)
+                        typer.echo(f"Stopped {service} process (PID: {pid})")
+                        stopped = True
+                except (subprocess.CalledProcessError, ProcessLookupError):
+                    continue
+
+            if not stopped:
+                typer.echo("No running Memos processes found")
     else:
         typer.echo("Unsupported operating system.")
 
@@ -536,83 +685,6 @@ def ps():
 
     headers = ["Name", "Status", "PID", "Started At", "Running For"]
     typer.echo(tabulate(table_data, headers=headers, tablefmt="plain"))
-
-
-@app.command()
-def stop():
-    """Stop all running Memos processes"""
-    if is_windows():
-        services = ["serve", "watch", "record"]
-        stopped = False
-
-        for service in services:
-            processes = [
-                p
-                for p in psutil.process_iter(["pid", "name", "cmdline"])
-                if "python" in p.info["name"].lower()
-                and p.info["cmdline"] is not None
-                and "memos.commands" in p.info["cmdline"]
-                and service in p.info["cmdline"]
-            ]
-
-            for process in processes:
-                try:
-                    os.kill(process.info["pid"], signal.SIGTERM)
-                    typer.echo(
-                        f"Stopped {service} process (PID: {process.info['pid']})"
-                    )
-                    stopped = True
-                except ProcessLookupError:
-                    typer.echo(
-                        f"Process {service} (PID: {process.info['pid']}) not found"
-                    )
-                except PermissionError:
-                    typer.echo(
-                        f"Permission denied to stop {service} process (PID: {process.info['pid']})"
-                    )
-
-        if not stopped:
-            typer.echo("No running Memos processes found")
-        else:
-            typer.echo("All Memos processes have been stopped")
-
-    elif is_macos():
-        service_name = "com.user.memos"
-        try:
-            subprocess.run(["launchctl", "stop", service_name], check=True)
-            typer.echo("Stopped Memos processes.")
-        except subprocess.CalledProcessError:
-            typer.echo("Failed to stop Memos processes. They may not be running.")
-
-    else:
-        typer.echo("Unsupported operating system.")
-
-
-@app.command()
-def start():
-    """Start all Memos processes"""
-    memos_dir = settings.resolved_base_dir
-
-    if is_windows():
-        bat_path = memos_dir / "launch.bat"
-        if not bat_path.exists():
-            typer.echo("Launch script not found. Please run 'memos enable' first.")
-            return
-
-        try:
-            subprocess.Popen(
-                [str(bat_path)], shell=True, creationflags=subprocess.CREATE_NEW_CONSOLE
-            )
-            typer.echo("Started Memos processes. Check the logs for more information.")
-        except Exception as e:
-            typer.echo(f"Failed to start Memos processes: {str(e)}")
-
-    elif is_macos():
-        service_name = "com.user.memos"
-        subprocess.run(["launchctl", "start", service_name], check=True)
-        typer.echo("Started Memos processes.")
-    else:
-        typer.echo("Unsupported operating system.")
 
 
 @app.command()

@@ -15,6 +15,8 @@ from functools import lru_cache
 from collections import defaultdict, deque
 
 # Third-party imports
+import platform
+import subprocess
 import typer
 import httpx
 from tqdm import tqdm
@@ -839,12 +841,31 @@ def sync(
 
 @lru_cache(maxsize=1)
 def is_on_battery():
-    try:
-        battery = psutil.sensors_battery()
-        return battery is not None and not battery.power_plugged
-    except:
-        return False  # If unable to detect battery status, assume not on battery
-
+    
+    if platform.system() == "Darwin":
+        try:
+            result = subprocess.check_output(['pmset', '-g', 'batt']).decode()
+            return "'Battery Power'" in result
+        except:
+            return False
+    elif platform.system() == "Windows":
+        try:
+            return psutil.sensors_battery().power_plugged == False
+        except:
+            return False
+    elif platform.system() == "Linux":
+        try:
+            # Try using upower
+            result = subprocess.check_output(['upower', '--show-info', '/org/freedesktop/UPower/devices/battery_BAT0']).decode()
+            return 'state: discharging' in result.lower()
+        except:
+            try:
+                # Fallback to checking /sys/class/power_supply
+                with open('/sys/class/power_supply/BAT0/status', 'r') as f:
+                    return f.read().strip().lower() == 'discharging'
+            except:
+                return False
+    return False
 
 # Modify the LibraryFileHandler class
 class LibraryFileHandler(FileSystemEventHandler):
