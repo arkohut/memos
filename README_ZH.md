@@ -260,4 +260,12 @@ Pensieve 默认需要两个计算密集型的任务：
 
 ## 开发指南
 
-to be continued
+### 拨开第一层洋葱
+
+事实上，Pensieve 启动之后，会运行三个程序：
+
+1. `memos serve` 启动 Web 服务
+2. `memos record` 启动截图记录程序
+3. `memos watch` 监听 `memos record` 所生成的图像事件，并结合实际的处理速度动态的向服务器提交索引请求
+
+所以，如果你是开发者，或者希望更清晰的看到整个项目运行的日志，你完全可以使用这三个命令让每个部分在前台运行，去替代 `memos enable && memos start` 命令。
