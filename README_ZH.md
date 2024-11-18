@@ -86,7 +86,6 @@ Pensieve 通过 embedding 模型来提取语义信息，并构建向量索引。
 
 ```yaml
 embedding:
-  enabled: true
   use_local: true
   model: arkohut/jina-embeddings-v2-base-zh  # 使用的模型名称
   num_dim: 768                               # 模型的维度             
@@ -156,7 +155,6 @@ ollama run minicpm-v "描述一下这是什么服务"
 
 ```yaml
 vlm:
-  enabled: true                     # 启用 VLM 功能
   endpoint: http://localhost:11434  # Ollama 服务地址
   modelname: minicpm-v              # 使用的模型名称
   force_jpeg: true                  # 将图片转换为 JPEG 格式以确保兼容性

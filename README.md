@@ -86,7 +86,6 @@ Open the `~/.memos/config.yaml` file with your preferred text editor and modify 
 
 ```yaml
 embedding:
-  enabled: true
   use_local: true
   model: jinaai/jina-embeddings-v2-base-en   # Model name used
   num_dim: 768                               # Model dimensions
@@ -153,7 +152,6 @@ Open the `~/.memos/config.yaml` file with your preferred text editor and modify 
 
 ```yaml
 vlm:
-  enabled: true                     # Enable VLM feature
   endpoint: http://localhost:11434  # Ollama service address
   modelname: minicpm-v              # Model name to use
   force_jpeg: true                  # Convert images to JPEG format to ensure compatibility

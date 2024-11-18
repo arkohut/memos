@@ -43,7 +43,6 @@ embedding:
 
 # using ollama embedding
 # embedding:
-#   enabled: true
 #   endpoint: http://localhost:11434/api/embed # this is not used
 #   model: arkohut/gte-qwen2-1.5b-instruct:q8_0
 #   num_dim: 1536
