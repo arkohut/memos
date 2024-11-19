@@ -7,6 +7,8 @@ Global:
     min_height: 30
     width_height_ratio: 40
     use_space_char: true
+    max_side_len: 2000
+    min_side_len: 30
 
 Det:
     use_cuda: false
