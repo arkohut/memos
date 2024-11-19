@@ -1,6 +1,6 @@
-<div align="center">
+<!-- <div align="center">
   <img src="web/static/logos/memos_logo_512.png" width="250"/>
-</div>
+</div> -->
 
 [English](README.md) | 简体中文
 
