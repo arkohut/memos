@@ -324,7 +324,7 @@ def run_screen_recorder(threshold, base_dir, previous_hashes):
         except Exception as e:
             logging.error(f"An error occurred: {str(e)}. Skipping this iteration.")
 
-        time.sleep(4)
+        time.sleep(settings.record_interval)
 
 
 def main():

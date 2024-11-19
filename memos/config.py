@@ -75,6 +75,8 @@ class Settings(BaseSettings):
 
     default_plugins: List[str] = ["builtin_ocr"]
 
+    record_interval: int = 4
+
     @classmethod
     def settings_customise_sources(
         cls,

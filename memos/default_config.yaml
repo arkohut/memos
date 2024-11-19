@@ -48,3 +48,5 @@ embedding:
 #   num_dim: 1536
 #   use_local: false
 #   use_modelscope: false
+
+record_interval: 4 # seconds
