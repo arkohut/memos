@@ -67,8 +67,6 @@ Open your browser and visit `http://localhost:8839`
 
 On Mac, Pensieve needs screen recording permission. When the program starts, Mac will prompt for screen recording permission - please allow it to proceed.
 
-![mac permission](docs/images/mac-security-permission.jpg)
-
 ## User Guide
 
 ### Using the Appropriate Embedding Model
