@@ -245,6 +245,8 @@ def record(
     if once:
         run_screen_recorder_once(threshold, base_dir, previous_hashes)
     else:
+        # Log the record interval
+        logging.info(f"Record interval set to {settings.record_interval} seconds.")
         while True:
             try:
                 run_screen_recorder(threshold, base_dir, previous_hashes)
