@@ -137,7 +137,7 @@ def get_or_create_default_library():
     # Check if the library is empty
     if not default_library["folders"]:
         # Add the screenshots directory to the library
-        screenshots_dir = Path(settings.screenshots_dir).resolve()
+        screenshots_dir = Path(settings.resolved_screenshots_dir).resolve()
         folder = {
             "path": str(screenshots_dir),
             "last_modified_at": datetime.fromtimestamp(
