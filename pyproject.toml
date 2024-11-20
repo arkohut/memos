@@ -29,7 +29,7 @@ dependencies = [
     "piexif",
     "imagehash",
     "rapidocr_onnxruntime==1.4.0",
-    "rapidocr_openvino==1.4.0; sys_platform == 'win32'",
+    "rapidocr_openvino==1.3.26; sys_platform == 'win32'",
     "py-cpuinfo",
     "psutil",
     "pywin32; sys_platform == 'win32'",
@@ -48,7 +48,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/arkohut/memos"
+Homepage = "https://github.com/arkohut/pensieve"
 
 [project.scripts]
 memos = "memos.commands:app"
