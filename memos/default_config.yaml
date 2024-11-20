@@ -32,14 +32,19 @@ ocr:
   token: ''
   use_local: true
 
-# using local embedding
+# using local embedding for English as the main language
 embedding:
-  # this is not used if use_local is true
-  endpoint: http://localhost:11434/api/embed
-  model: arkohut/jina-embeddings-v2-base-zh
+  model: arkohut/jina-embeddings-v2-base-en
   num_dim: 768
   use_local: true
   use_modelscope: false
+
+# using local embedding for Chinese as the main language
+# embedding:
+#   model: arkohut/jina-embeddings-v2-base-zh
+#   num_dim: 768
+#   use_local: true
+#   use_modelscope: true
 
 # using ollama embedding
 # embedding:
