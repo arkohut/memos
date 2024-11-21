@@ -2,7 +2,7 @@
   <img src="web/static/logos/memos_logo_512.png" width="250"/>
 </div> -->
 
-English | [简体中文](README_ZH.md)
+English | [简体中文](README_ZH.md) | [日本語](README_JP.md)
 
 ![memos-search](docs/images/memos-search-en.gif)
 
