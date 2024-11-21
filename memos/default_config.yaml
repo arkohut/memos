@@ -20,7 +20,10 @@ vlm:
   endpoint: http://localhost:11434
   force_jpeg: true
   modelname: minicpm-v
+  # 中文版本
   prompt: 请帮描述这个图片中的内容，包括画面格局、出现的视觉元素等
+  # English version
+  prompt: Please describe the content of this image, including the layout and visual elements.
   token: ''
 
 # using local ocr
