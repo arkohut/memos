@@ -2,6 +2,7 @@ from PIL import Image
 import numpy as np
 import logging
 from fastapi import FastAPI, Body, HTTPException
+from contextlib import asynccontextmanager
 import base64
 import io
 import asyncio
@@ -11,16 +12,40 @@ from multiprocessing import Pool
 import threading
 import time
 import uvicorn
+import os
 
 # Configure logger
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-app = FastAPI()
-
 # 创建进程池
 process_pool = None
+
+# 从环境变量中读取参数
+max_workers = int(os.getenv("MAX_WORKERS", 1))
+
+
+def str_to_bool(value):
+    return value.lower() in ("true", "1", "t", "y", "yes")
+
+
+use_gpu = str_to_bool(os.getenv("USE_GPU", "false"))
+
+
+@asynccontextmanager
+async def lifespan(app):
+    global process_pool
+    if process_pool is None:
+        init_process_pool(max_workers=max_workers, use_gpu=use_gpu)
+    yield
+    if process_pool:
+        logger.info("Shutting down process pool...")
+        process_pool.close()
+        process_pool.join()
+        logger.info("Process pool shut down.")
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 def init_worker(use_gpu):
@@ -53,7 +78,7 @@ def init_ocr(use_gpu):
         try:
             from rapidocr_onnxruntime import RapidOCR
 
-            ocr = RapidOCR(config_path="ppocr.yaml")
+            ocr = RapidOCR()
             logger.info("Initialized OCR with RapidOCR ONNX Runtime (CPU)")
         except ImportError:
             logger.error(
@@ -198,12 +223,5 @@ if __name__ == "__main__":
     max_workers = args.max_workers
     use_gpu = args.gpu
 
-    try:
-        init_process_pool(max_workers, use_gpu)
-        run_server(app, "0.0.0.0", port)
-    finally:
-        logger.info("Shutting down process pool...")
-        if process_pool:
-            process_pool.close()
-            process_pool.join()
-        logger.info("Process pool shut down.")
+    run_server(app, "0.0.0.0", port)
+
