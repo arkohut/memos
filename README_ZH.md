@@ -28,6 +28,18 @@ Pensieve 是一个专注于隐私的被动记录项目。它可以自动记录�
 
 ![memos-installation](docs/images/memos-installation.gif)
 
+> [!IMPORTANT]  
+> 似乎不是所有版本的 Python 的 sqlite3 库都支持 `enable_load_extension`。不过，我不确定哪些环境或 Python 版本会遇到这个问题。我使用 `conda` 来管理 Python，通过 `conda` 安装的 Python macOS、Windows x86 和 Ubuntu 22.04 上都可以正常工作。
+>
+> 请确认以下命令在你的 Python 环境中是否正常工作：
+>
+> ```python
+> import sqlite3
+> print(sqlite3.sqlite_version)
+> ```
+>
+> 如果你发现这样无法正常工作，那么可以安装 [miniconda](https://docs.conda.io/en/latest/miniconda.html) 来管理 Python 环境。或者查看目前的 issue 列表，看看是否有其他人遇到同样的问题。
+
 ### 1. 安装 Pensieve
 
 ```sh
