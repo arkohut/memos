@@ -7,11 +7,6 @@ from tqdm import tqdm
 
 from memos.utils import write_image_metadata, get_image_metadata
 
-parser = argparse.ArgumentParser(description="Compress and save image(s) with metadata")
-parser.add_argument("path", type=str, help="path to the directory or image file")
-args = parser.parse_args()
-input_path = args.path.rstrip("/")
-
 
 def compress_and_save_image(image_path, order):
     # Open the image
@@ -45,11 +40,8 @@ def process_image(args):
         display_name = parts[-1].rsplit(".", 1)[0]
         screens.append(display_name)
 
-        # call the function with the filename of the image
-        # add_datetime_to_image(os.path.join(directory, filename), os.path.join(directory, filename))
 
-
-def process_directory(directory):
+def process_directory(directory, compress=False):
     screens = []
     with Manager() as manager:
         screens = manager.list()
@@ -102,7 +94,8 @@ def process_directory(directory):
                 for frame, filename in enumerate(sorted(files)):
                     f.write(f"{frame},{filename}\n")
 
-            # Modify the ffmpeg command to support WebP
+            # Adjust the params to fit your quality or storage requirements
+            # For example to get a smaller file size, you can use libx265 instead of libx264
             command = f"ffmpeg -y -framerate 15 -pattern_type glob -i '{input_pattern}' -c:v libx264 -pix_fmt yuv420p {directory}/{screen}.mp4"
 
             # Start the process
@@ -118,30 +111,42 @@ def process_directory(directory):
             for line in process.stdout:
                 print(line, end="")
 
-        # Compress and save all images after video generation
-        for screen in screens:
-            files = [
-                f
-                for f in os.listdir(directory)
-                if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
-                and screen in f
-            ]
+        if compress:
+            for screen in screens:
+                files = [
+                    f
+                    for f in os.listdir(directory)
+                    if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
+                    and screen in f
+                ]
 
-            for frame, filename in enumerate(
-                tqdm(sorted(files), desc=f"Compressing {screen} images", unit="file")
-            ):
-                compress_and_save_image(os.path.join(directory, filename), frame)
-
-        # for filename in os.listdir(directory):
-        #     if filename.endswith(('.jpg', '.png')):
-        #         os.remove(os.path.join(directory, filename))
+                for frame, filename in enumerate(
+                    tqdm(
+                        sorted(files), desc=f"Compressing {screen} images", unit="file"
+                    )
+                ):
+                    compress_and_save_image(os.path.join(directory, filename), frame)
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Generate videos from images and optionally compress them"
+    )
+    parser.add_argument("path", type=str, help="path to the directory or image file")
+    parser.add_argument(
+        "--compress", action="store_true", help="compress images after video generation"
+    )
+    args = parser.parse_args()
+
+    input_path = args.path.rstrip("/")
+
     if os.path.isdir(input_path):
-        process_directory(input_path)
+        process_directory(input_path, compress=args.compress)
     elif os.path.isfile(input_path):
-        compress_and_save_image(input_path, 0)
+        if args.compress:
+            compress_and_save_image(input_path, 0)
+        else:
+            print("Skipping compression as --compress flag is not set")
     else:
         print("Invalid path. Please provide a valid directory or file path.")
 
