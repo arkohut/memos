@@ -6,6 +6,8 @@
 
 ![memos-search](docs/images/memos-search-en.gif)
 
+[![哔哩哔哩](https://img.shields.io/badge/Bilibili-哔哩哔哩-%23fb7299)](https://www.bilibili.com/video/BV16XUkY7EJm)
+
 > 名前をPensieveに変更しました。Memosという名前は既に使用されていたためです。
 
 # Pensieve（以前の名前はMemos）

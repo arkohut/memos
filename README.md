@@ -6,6 +6,8 @@ English | [简体中文](README_ZH.md) | [日本語](README_JP.md)
 
 ![memos-search](docs/images/memos-search-en.gif)
 
+[![哔哩哔哩](https://img.shields.io/badge/Bilibili-哔哩哔哩-%23fb7299)](https://www.bilibili.com/video/BV16XUkY7EJm)
+
 > I changed the name to Pensieve because Memos was already taken.
 
 # Pensieve (previously named Memos)

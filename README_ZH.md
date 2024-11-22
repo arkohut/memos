@@ -6,6 +6,8 @@
 
 ![memos-search](docs/images/memos-search-cn.gif)
 
+[![哔哩哔哩](https://img.shields.io/badge/Bilibili-哔哩哔哩-%23fb7299)](https://www.bilibili.com/video/BV16XUkY7EJm)
+
 > 我对名字进行了调整，因为 Memos 这个名字已经被其他人注册了，所以改成了 Pensieve。
 
 # Pensieve（原 Memos）
