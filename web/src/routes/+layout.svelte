@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-	<title>memos</title>
+	<title>Pensieve</title>
 </svelte:head>
 
 <Toaster />
