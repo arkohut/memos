@@ -132,6 +132,8 @@ yaml.add_representer(SecretStr, secret_str_representer)
 
 
 def create_default_config():
+    # the config file is always created in the home directory
+    # not influenced by the base_dir setting
     config_path = Path.home() / ".memos" / "config.yaml"
     if not config_path.exists():
         template_path = Path(__file__).parent / "default_config.yaml"
