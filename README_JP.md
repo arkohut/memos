@@ -28,6 +28,18 @@ Pensieveはプライバシーに焦点を当てたパッシブレコーディン
 
 ![memos-installation](docs/images/memos-installation.gif)
 
+> [!重要]  
+> Pythonのsqlite3ライブラリのすべてのバージョンが`enable_load_extension`をサポートしているわけではないようです。しかし、どの環境やPythonのバージョンでこの問題が発生するかはわかりません。私はPythonを管理するために`conda`を使用しており、`conda`を介してインストールされたPythonはmacOS、Windows x86、およびUbuntu 22.04で正常に動作します。
+>
+> 次のコマンドがPython環境で動作することを確認してください：
+>
+> ```python
+> import sqlite3
+> print(sqlite3.sqlite_version)
+> ```
+>
+> これが正しく動作しない場合は、Python環境を管理するために[miniconda](https://docs.conda.io/en/latest/miniconda.html)をインストールすることができます。あるいは、他の人が同じ問題に遭遇しているかどうかを確認するために、現在の問題リストをチェックしてください。
+
 ### 1. Pensieveのインストール
 
 ```sh

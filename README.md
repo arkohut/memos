@@ -28,6 +28,18 @@ This project draws heavily from two other projects: one called [Rewind](https://
 
 ![memos-installation](docs/images/memos-installation.gif)
 
+> [!IMPORTANT]  
+> It seems that not all versions of Python's sqlite3 library support `enable_load_extension`. However, I'm not sure which environments or Python versions might encounter this issue. I use `conda` to manage Python, and Python installed via `conda` works fine on macOS, Windows x86, and Ubuntu 22.04.
+>
+> Please ensure the following command works in your Python environment:
+>
+> ```python
+> import sqlite3
+> print(sqlite3.sqlite_version)
+> ```
+>
+> If you find that this does not work properly, you can install [miniconda](https://docs.conda.io/en/latest/miniconda.html) to manage your Python environment. Alternatively, check the current issue list to see if others have encountered the same problem.
+
 ### 1. Install Pensieve
 
 ```sh
