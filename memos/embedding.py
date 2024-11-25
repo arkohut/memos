@@ -72,14 +72,35 @@ def get_embeddings(texts: List[str]) -> List[List[float]]:
 
 
 def get_remote_embeddings(texts: List[str]) -> List[List[float]]:
-    payload = {"model": settings.embedding.model, "input": texts}
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    if settings.embedding.token.get_secret_value():
+        headers["Authorization"] = f"Bearer {settings.embedding.token.get_secret_value()}"
+
+    endpoint = settings.embedding.endpoint
+    is_ollama = endpoint.endswith("/embed")
+
+    if is_ollama:
+        payload = {"model": settings.embedding.model, "input": texts}
+    else:  # openai compatible api
+        payload = {
+            "input": texts,
+            "model": settings.embedding.model,
+            "encoding_format": "float"
+        }
 
     with httpx.Client(timeout=60) as client:
         try:
-            response = client.post(settings.embedding.endpoint, json=payload)
+            response = client.post(endpoint, json=payload, headers=headers)
             response.raise_for_status()
             result = response.json()
-            return result["embeddings"]
+
+            if is_ollama:
+                return result["embeddings"]
+            else:  # openai compatible api
+                return [item["embedding"] for item in result["data"]]
         except httpx.RequestError as e:
             logger.error(f"Error fetching embeddings from remote endpoint: {e}")
             return []  # Return an empty list instead of raising an exception
