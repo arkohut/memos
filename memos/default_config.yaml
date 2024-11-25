@@ -51,7 +51,7 @@ embedding:
 
 # using ollama embedding
 # embedding:
-#   endpoint: http://localhost:11434/api/embed # this is not used
+#   endpoint: http://localhost:11434/v1/embeddings # this is not used
 #   model: arkohut/gte-qwen2-1.5b-instruct:q8_0
 #   num_dim: 1536
 #   use_local: false

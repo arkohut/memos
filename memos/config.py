@@ -37,11 +37,12 @@ class OCRSettings(BaseModel):
 class EmbeddingSettings(BaseModel):
     num_dim: int = 768
     # will be ignored if use_local is True
-    endpoint: str = "http://localhost:11434/api/embed"
+    endpoint: str = "http://localhost:11434/v1/embeddings"
     model: str = "jinaai/jina-embeddings-v2-base-zh"
     # pull model from huggingface by default, make it true if you want to pull from modelscope
     use_modelscope: bool = False
     use_local: bool = True
+    token: SecretStr = SecretStr("")
 
 
 class Settings(BaseSettings):
