@@ -17,7 +17,7 @@ import typer
 class VLMSettings(BaseModel):
     modelname: str = "minicpm-v"
     endpoint: str = "http://localhost:11434"
-    token: str = ""
+    token: SecretStr = SecretStr("")
     concurrency: int = 8
     # some vlm models do not support webp
     force_jpeg: bool = True
@@ -28,7 +28,7 @@ class VLMSettings(BaseModel):
 class OCRSettings(BaseModel):
     # will by ignored if use_local is True
     endpoint: str = "http://localhost:5555/predict"
-    token: str = ""
+    token: SecretStr = SecretStr("")
     concurrency: int = 8
     use_local: bool = True
     force_jpeg: bool = False
