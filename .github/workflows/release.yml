@@ -38,15 +38,20 @@ jobs:
         path: dist
 
   release:
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Build Changelog
+        id: github_release
         uses: mikepenz/release-changelog-builder-action@v5
         with:
           mode: HYBRID
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{steps.github_release.outputs.changelog}}
   pypi:
     needs: release
     name: Upload release to PyPI
