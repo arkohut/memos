@@ -17,7 +17,7 @@ import typer
 class VLMSettings(BaseModel):
     modelname: str = "minicpm-v"
     endpoint: str = "http://localhost:11434"
-    token: str = ""
+    token: SecretStr = SecretStr("")
     concurrency: int = 8
     # some vlm models do not support webp
     force_jpeg: bool = True
@@ -28,7 +28,7 @@ class VLMSettings(BaseModel):
 class OCRSettings(BaseModel):
     # will by ignored if use_local is True
     endpoint: str = "http://localhost:5555/predict"
-    token: str = ""
+    token: SecretStr = SecretStr("")
     concurrency: int = 8
     use_local: bool = True
     force_jpeg: bool = False
@@ -157,17 +157,24 @@ def get_database_path():
     return str(settings.resolved_database_path)
 
 
-def format_value(value):
+def format_value(value, indent_level=0):
+    indent = "  " * indent_level
     if isinstance(value, dict):
-        # Format nested dictionary with proper indentation
+        if not value:
+            return "{}"
         formatted_items = []
         for k, v in value.items():
-            # Add proper indentation and alignment for nested items
-            formatted_value = str(v)
-            formatted_items.append(f"    {k:<12} : {formatted_value}")
-        return "\n" + "\n".join(formatted_items)
+            formatted_value = format_value(v, indent_level + 1)
+            if isinstance(v, (dict, list, tuple)) and v:
+                formatted_items.append(f"{indent}  {k}:\n{formatted_value}")
+            else:
+                formatted_items.append(f"{indent}  {k}: {formatted_value}")
+        return "\n".join(formatted_items)
     elif isinstance(value, (list, tuple)):
-        return f"[{', '.join(map(str, value))}]"
+        if not value:
+            return "[]"
+        formatted_items = [f"{indent}  - {format_value(item, indent_level + 1)}" for item in value]
+        return "\n".join(formatted_items)
     elif isinstance(value, SecretStr):
         return "********"  # Hide the actual value of SecretStr
     else:
@@ -177,18 +184,19 @@ def format_value(value):
 def display_config():
     settings = Settings()
     config_dict = settings.model_dump()
-    max_key_length = max(len(key) for key in config_dict.keys())
 
     typer.echo("Current configuration settings:")
     for key, value in config_dict.items():
         formatted_value = format_value(value)
+        
         if key in ["base_dir", "database_path", "screenshots_dir"]:
             resolved_value = getattr(settings, f"resolved_{key}")
-            formatted_value += f" (resolved: {resolved_value})"
-        
-        # 如果值包含换行符，使用多行格式打印
-        if "\n" in formatted_value:
-            typer.echo(f"{key.ljust(max_key_length)} :{formatted_value}")
+            typer.echo(f"{key}:")
+            typer.echo(f"  value: {value}")
+            typer.echo(f"  resolved: {resolved_value}")
         else:
-            # 对于单行值，在同一行打印
-            typer.echo(f"{key.ljust(max_key_length)} : {formatted_value}")
+            if isinstance(value, (dict, list, tuple)) and value:
+                typer.echo(f"{key}:")
+                typer.echo(formatted_value)
+            else:
+                typer.echo(f"{key}: {formatted_value}")
