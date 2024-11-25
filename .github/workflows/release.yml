@@ -38,7 +38,17 @@ jobs:
         path: dist
 
   release:
-    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build Changelog
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          mode: HYBRID
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pypi:
+    needs: release
     name: Upload release to PyPI
     runs-on: ubuntu-latest
     environment:
