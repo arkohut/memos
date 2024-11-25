@@ -75,7 +75,7 @@ memos start
 
 打开浏览器，访问 `http://localhost:8839`
 
-![init page](docs/images/init-page-cn.png)
+![init page](docs/images/init-page-en.png)
 
 ### Mac 下的权限问题
 
