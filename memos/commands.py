@@ -636,7 +636,9 @@ def version():
     machine = platform.machine()
 
     # Output all information in a single line
-    typer.echo(f"Package Version: {__version__}, Python Version: {python_version}, System: {system}, Machine: {machine}")
+    typer.echo(
+        f"Package: {__version__}, Python: {python_version}, System: {system.lower()}/{machine.lower()}"
+    )
 
 
 if __name__ == "__main__":
