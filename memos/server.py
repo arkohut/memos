@@ -1,7 +1,8 @@
 import os
 import httpx
 import uvicorn
-from fastapi import FastAPI, HTTPException, Depends, status, Query, Request, APIRouter
+import mimetypes
+from fastapi import FastAPI, HTTPException, Depends, status, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
@@ -49,6 +50,13 @@ from .models import load_extension
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+
+# Configure mimetypes for JavaScript files
+# This is a workaround for the issue:
+# https://github.com/python/cpython/issues/88141#issuecomment-1631735902
+# Without this, the mime type of .js files will be text/plain and
+# the browser will not render them correctly in some windows machines.
+mimetypes.add_type("application/javascript", ".js")
 
 app = FastAPI()
 
@@ -224,8 +232,8 @@ async def new_entity(
         await trigger_webhooks(library, entity, request, plugins)
 
     if update_index:
-        crud.update_entity_index(entity, db) 
-        
+        crud.update_entity_index(entity, db)
+
     return entity
 
 
@@ -364,7 +372,7 @@ def update_entity_last_scan_at(entity_id: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Entity not found",
         )
-    
+
 
 @app.post(
     "/entities/{entity_id}/index",
@@ -381,7 +389,7 @@ def update_index(entity_id: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Entity not found",
         )
-    
+
     crud.update_entity_index(entity, db)
 
 
@@ -390,10 +398,7 @@ def update_index(entity_id: int, db: Session = Depends(get_db)):
     status_code=status.HTTP_204_NO_CONTENT,
     tags=["entity"],
 )
-async def batch_update_index(
-    request: BatchIndexRequest,
-    db: Session = Depends(get_db)
-):
+async def batch_update_index(request: BatchIndexRequest, db: Session = Depends(get_db)):
     """
     Batch update the FTS and vector indexes for multiple entities.
     """
