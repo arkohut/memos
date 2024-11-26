@@ -185,7 +185,6 @@ def display_config():
     settings = Settings()
     config_dict = settings.model_dump()
 
-    typer.echo("Current configuration settings:")
     for key, value in config_dict.items():
         formatted_value = format_value(value)
         
