@@ -24,7 +24,7 @@ import psutil
 import signal
 from tabulate import tabulate
 
-import pkg_resources
+from memos import __version__
 
 
 app = typer.Typer(context_settings={"help_option_names": ["-h", "--help"]})
@@ -628,12 +628,6 @@ def config():
 @app.command("version")
 def version():
     """Output the package version, Python version, and platform information in a single line."""
-    # Get package version
-    try:
-        package_version = pkg_resources.get_distribution("memos").version
-    except pkg_resources.DistributionNotFound:
-        package_version = "Unknown"
-
     # Get Python version
     python_version = sys.version.split()[0]  # Only get the version number
 
@@ -642,9 +636,7 @@ def version():
     machine = platform.machine()
 
     # Output all information in a single line
-    typer.echo(
-        f"Package: {package_version}, Python: {python_version}, System: {system.lower()}/{machine.lower()}"
-    )
+    typer.echo(f"Package Version: {__version__}, Python Version: {python_version}, System: {system}, Machine: {machine}")
 
 
 if __name__ == "__main__":
