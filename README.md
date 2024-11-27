@@ -4,7 +4,7 @@
 
 English | [简体中文](README_ZH.md) | [日本語](README_JP.md)
 
-![memos-search](docs/images/memos-search-en.gif)
+![pensieve-search](docs/images/pensieve-search-en.gif)
 
 [![哔哩哔哩](https://img.shields.io/badge/Bilibili-哔哩哔哩-%23fb7299)](https://www.bilibili.com/video/BV16XUkY7EJm)
 
