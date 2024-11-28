@@ -174,198 +174,144 @@ async def loop_files(library_id, folder, folder_path, force, plugins, batch_size
     added_file_count = 0
     scanned_files = set()
     semaphore = asyncio.Semaphore(batch_size)
+    batching = 200
 
     async with httpx.AsyncClient(timeout=60) as client:
-        tasks = []
+        # First, collect all candidate files
+        candidate_files = []
         for root, _, files in os.walk(folder_path):
             with tqdm(total=len(files), desc=f"Scanning {root}", leave=True) as pbar:
-                candidate_files = []
                 for file in files:
                     file_path = Path(root) / file
                     absolute_file_path = file_path.resolve()  # Get absolute path
                     relative_path = absolute_file_path.relative_to(folder_path)
 
                     # Check if the file extension is in the include_files list and not a temp file
-                    if file_path.suffix.lower() in include_files and not is_temp_file(
-                        file
-                    ):
+                    if file_path.suffix.lower() in include_files and not is_temp_file(file):
                         scanned_files.add(str(absolute_file_path))
                         candidate_files.append(str(absolute_file_path))
+                    pbar.update(1)
 
-                batching = 200
-                for i in range(0, len(candidate_files), batching):
-                    batch = candidate_files[i : i + batching]
+        # Process files in batches
+        with tqdm(total=len(candidate_files), desc="Processing files", leave=True) as pbar:
+            for i in range(0, len(candidate_files), batching):
+                batch = candidate_files[i:i + batching]
+                tasks = []
 
-                    # Get batch of entities
-                    get_response = await client.post(
-                        f"{BASE_URL}/libraries/{library_id}/entities/by-filepaths",
-                        json=batch,
-                    )
+                # Get batch of entities
+                get_response = await client.post(
+                    f"{BASE_URL}/libraries/{library_id}/entities/by-filepaths",
+                    json=batch,
+                )
 
-                    if get_response.status_code == 200:
-                        existing_entities = get_response.json()
-                    else:
-                        print(
-                            f"Failed to get entities: {get_response.status_code} - {get_response.text}"
-                        )
-                        continue
+                if get_response.status_code == 200:
+                    existing_entities = get_response.json()
+                else:
+                    print(f"Failed to get entities: {get_response.status_code} - {get_response.text}")
+                    pbar.update(len(batch))
+                    continue
 
-                    existing_entities_dict = {
-                        entity["filepath"]: entity for entity in existing_entities
+                existing_entities_dict = {
+                    entity["filepath"]: entity for entity in existing_entities
+                }
+
+                for file_path in batch:
+                    absolute_file_path = Path(file_path).resolve()
+                    file_stat = absolute_file_path.stat()
+                    file_type, file_type_group = get_file_type(absolute_file_path)
+
+                    new_entity = {
+                        "filename": absolute_file_path.name,
+                        "filepath": str(absolute_file_path),
+                        "size": file_stat.st_size,
+                        "file_created_at": format_timestamp(file_stat.st_ctime),
+                        "file_last_modified_at": format_timestamp(file_stat.st_mtime),
+                        "file_type": file_type,
+                        "file_type_group": file_type_group,
+                        "folder_id": folder["id"],
                     }
 
-                    for file_path in batch:
-                        absolute_file_path = Path(file_path).resolve()
-                        file_stat = absolute_file_path.stat()
-                        file_type, file_type_group = get_file_type(absolute_file_path)
+                    is_thumbnail = False
 
-                        new_entity = {
-                            "filename": absolute_file_path.name,
-                            "filepath": str(absolute_file_path),
-                            "size": file_stat.st_size,
-                            "file_created_at": format_timestamp(file_stat.st_ctime),
-                            "file_last_modified_at": format_timestamp(
-                                file_stat.st_mtime
-                            ),
-                            "file_type": file_type,
-                            "file_type_group": file_type_group,
-                            "folder_id": folder["id"],
-                        }
-
-                        is_thumbnail = False
-
-                        if file_type_group == "image":
-                            metadata = get_image_metadata(absolute_file_path)
-                            if metadata:
-                                if (
-                                    "active_window" in metadata
-                                    and "active_app" not in metadata
-                                ):
-                                    metadata["active_app"] = metadata[
-                                        "active_window"
-                                    ].split(" - ")[0]
-                                new_entity["metadata_entries"] = [
-                                    {
-                                        "key": key,
-                                        "value": str(value),
-                                        "source": MetadataSource.SYSTEM_GENERATED.value,
-                                        "data_type": (
-                                            "number"
-                                            if isinstance(value, (int, float))
-                                            else "text"
-                                        ),
-                                    }
-                                    for key, value in metadata.items()
-                                    if key != IS_THUMBNAIL
-                                ]
-                                if "active_app" in metadata:
-                                    new_entity.setdefault("tags", []).append(
-                                        metadata["active_app"]
-                                    )
-                                is_thumbnail = metadata.get(IS_THUMBNAIL, False)
-
-                        existing_entity = existing_entities_dict.get(
-                            str(absolute_file_path)
-                        )
-                        if existing_entity:
-                            existing_created_at = format_timestamp(
-                                existing_entity["file_created_at"]
-                            )
-                            new_created_at = format_timestamp(
-                                new_entity["file_created_at"]
-                            )
-                            existing_modified_at = format_timestamp(
-                                existing_entity["file_last_modified_at"]
-                            )
-                            new_modified_at = format_timestamp(
-                                new_entity["file_last_modified_at"]
-                            )
-
-                            # Ignore file changes for thumbnails
-                            if is_thumbnail:
-                                new_entity["file_created_at"] = existing_entity[
-                                    "file_created_at"
-                                ]
-                                new_entity["file_last_modified_at"] = existing_entity[
-                                    "file_last_modified_at"
-                                ]
-                                new_entity["file_type"] = existing_entity["file_type"]
-                                new_entity["file_type_group"] = existing_entity[
-                                    "file_type_group"
-                                ]
-                                new_entity["size"] = existing_entity["size"]
-
-                            # Merge existing metadata with new metadata
-                            if new_entity.get("metadata_entries"):
-                                new_metadata_keys = {
-                                    entry["key"]
-                                    for entry in new_entity["metadata_entries"]
+                    if file_type_group == "image":
+                        metadata = get_image_metadata(absolute_file_path)
+                        if metadata:
+                            if "active_window" in metadata and "active_app" not in metadata:
+                                metadata["active_app"] = metadata["active_window"].split(" - ")[0]
+                            new_entity["metadata_entries"] = [
+                                {
+                                    "key": key,
+                                    "value": str(value),
+                                    "source": MetadataSource.SYSTEM_GENERATED.value,
+                                    "data_type": "number" if isinstance(value, (int, float)) else "text",
                                 }
-                                for existing_entry in existing_entity[
-                                    "metadata_entries"
-                                ]:
-                                    if existing_entry["key"] not in new_metadata_keys:
-                                        new_entity["metadata_entries"].append(
-                                            existing_entry
-                                        )
+                                for key, value in metadata.items()
+                                if key != IS_THUMBNAIL
+                            ]
+                            if "active_app" in metadata:
+                                new_entity.setdefault("tags", []).append(metadata["active_app"])
+                            is_thumbnail = metadata.get(IS_THUMBNAIL, False)
 
-                            if (
-                                force
-                                or existing_created_at != new_created_at
-                                or existing_modified_at != new_modified_at
-                            ):
-                                tasks.append(
-                                    update_entity(
-                                        client,
-                                        semaphore,
-                                        plugins,
-                                        new_entity,
-                                        existing_entity,
-                                    )
-                                )
-                        elif not is_thumbnail:  # Ignore thumbnails
-                            tasks.append(
-                                add_entity(
-                                    client, semaphore, library_id, plugins, new_entity
-                                )
-                            )
-                    pbar.update(len(batch))
-                    pbar.set_postfix({"Candidates": len(tasks)}, refresh=True)
+                    existing_entity = existing_entities_dict.get(str(absolute_file_path))
+                    if existing_entity:
+                        existing_created_at = format_timestamp(existing_entity["file_created_at"])
+                        new_created_at = format_timestamp(new_entity["file_created_at"])
+                        existing_modified_at = format_timestamp(existing_entity["file_last_modified_at"])
+                        new_modified_at = format_timestamp(new_entity["file_last_modified_at"])
 
-        # Process all tasks after they've been created
-        for future in tqdm(
-            asyncio.as_completed(tasks),
-            desc=f"Processing {folder_path}",
-            total=len(tasks),
-            leave=True,
-        ):
-            file_path, file_status, succeeded, response = await future
-            if file_status == FileStatus.ADDED:
-                if succeeded:
-                    added_file_count += 1
-                    tqdm.write(f"Added file to library: {file_path}")
-                else:
-                    error_message = "Failed to add file"
-                    if hasattr(response, "status_code"):
-                        error_message += f": {response.status_code}"
-                    if hasattr(response, "text"):
-                        error_message += f" - {response.text}"
-                    else:
-                        error_message += " - Unknown error occurred"
-                    tqdm.write(error_message)
-            elif file_status == FileStatus.UPDATED:
-                if succeeded:
-                    updated_file_count += 1
-                    tqdm.write(f"Updated file in library: {file_path}")
-                else:
-                    error_message = "Failed to update file"
-                    if hasattr(response, "status_code"):
-                        error_message += f": {response.status_code}"
-                    elif hasattr(response, "text"):
-                        error_message += f" - {response.text}"
-                    else:
-                        error_message += f" - Unknown error occurred"
-                    tqdm.write(error_message)
+                        # Ignore file changes for thumbnails
+                        if is_thumbnail:
+                            new_entity["file_created_at"] = existing_entity["file_created_at"]
+                            new_entity["file_last_modified_at"] = existing_entity["file_last_modified_at"]
+                            new_entity["file_type"] = existing_entity["file_type"]
+                            new_entity["file_type_group"] = existing_entity["file_type_group"]
+                            new_entity["size"] = existing_entity["size"]
+
+                        # Merge existing metadata with new metadata
+                        if new_entity.get("metadata_entries"):
+                            new_metadata_keys = {entry["key"] for entry in new_entity["metadata_entries"]}
+                            for existing_entry in existing_entity["metadata_entries"]:
+                                if existing_entry["key"] not in new_metadata_keys:
+                                    new_entity["metadata_entries"].append(existing_entry)
+
+                        if force or existing_created_at != new_created_at or existing_modified_at != new_modified_at:
+                            tasks.append(update_entity(client, semaphore, plugins, new_entity, existing_entity))
+                    elif not is_thumbnail:  # Ignore thumbnails
+                        tasks.append(add_entity(client, semaphore, library_id, plugins, new_entity))
+
+                # Process tasks for this batch immediately
+                if tasks:
+                    for future in asyncio.as_completed(tasks):
+                        file_path, file_status, succeeded, response = await future
+                        if file_status == FileStatus.ADDED:
+                            if succeeded:
+                                added_file_count += 1
+                                tqdm.write(f"Added file to library: {file_path}")
+                            else:
+                                error_message = "Failed to add file"
+                                if hasattr(response, "status_code"):
+                                    error_message += f": {response.status_code}"
+                                if hasattr(response, "text"):
+                                    error_message += f" - {response.text}"
+                                else:
+                                    error_message += " - Unknown error occurred"
+                                tqdm.write(error_message)
+                        elif file_status == FileStatus.UPDATED:
+                            if succeeded:
+                                updated_file_count += 1
+                                tqdm.write(f"Updated file in library: {file_path}")
+                            else:
+                                error_message = "Failed to update file"
+                                if hasattr(response, "status_code"):
+                                    error_message += f": {response.status_code}"
+                                elif hasattr(response, "text"):
+                                    error_message += f" - {response.text}"
+                                else:
+                                    error_message += f" - Unknown error occurred"
+                                tqdm.write(error_message)
+
+                pbar.update(len(batch))
+                pbar.set_postfix({"Added": added_file_count, "Updated": updated_file_count}, refresh=True)
 
         return added_file_count, updated_file_count, scanned_files
 
