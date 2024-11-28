@@ -60,7 +60,14 @@ mimetypes.add_type("application/javascript", ".js")
 
 app = FastAPI()
 
-engine = create_engine(f"sqlite:///{get_database_path()}")
+engine = create_engine(
+    f"sqlite:///{get_database_path()}",
+    pool_size=10,
+    max_overflow=20,
+    pool_timeout=60,
+    pool_recycle=3600,
+    connect_args={"timeout": 60},
+)
 event.listen(engine, "connect", load_extension)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -405,10 +412,7 @@ async def batch_update_index(request: BatchIndexRequest, db: Session = Depends(g
     try:
         crud.batch_update_entity_indices(request.entity_ids, db)
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @app.put("/entities/{entity_id}/tags", response_model=Entity, tags=["entity"])

@@ -243,10 +243,11 @@ def init_database():
     db_path = get_database_path()
     engine = create_engine(
         f"sqlite:///{db_path}",
-        pool_size=3,
-        max_overflow=0,
-        pool_timeout=30,
-        connect_args={"timeout": 30}
+        pool_size=10,
+        max_overflow=20,
+        pool_timeout=60,
+        pool_recycle=3600,
+        connect_args={"timeout": 60}
     )
 
     # Use a single event listener for both extension loading and WAL mode setting
