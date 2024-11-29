@@ -254,6 +254,7 @@ def list_entities_in_folder(
     folder_id: int,
     limit: Annotated[int, Query(ge=1, le=400)] = 10,
     offset: int = 0,
+    path_prefix: str | None = None,
     db: Session = Depends(get_db),
 ):
     library = crud.get_library_by_id(library_id, db)
@@ -269,7 +270,7 @@ def list_entities_in_folder(
         )
 
     entities, total_count = crud.get_entities_of_folder(
-        library_id, folder_id, db, limit, offset
+        library_id, folder_id, db, limit, offset, path_prefix
     )
     return JSONResponse(
         content=jsonable_encoder(entities), headers={"X-Total-Count": str(total_count)}

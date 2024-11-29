@@ -158,20 +158,23 @@ def get_entity_by_id(entity_id: int, db: Session) -> Entity | None:
 
 
 def get_entities_of_folder(
-    library_id: int, folder_id: int, db: Session, limit: int = 10, offset: int = 0
+    library_id: int,
+    folder_id: int,
+    db: Session,
+    limit: int = 10,
+    offset: int = 0,
+    path_prefix: str | None = None,
 ) -> Tuple[List[Entity], int]:
-    folder = (
-        db.query(FolderModel)
-        .filter(FolderModel.id == folder_id, FolderModel.library_id == library_id)
-        .first()
+    query = db.query(EntityModel).filter(
+        EntityModel.folder_id == folder_id,
+        EntityModel.library_id == library_id,
     )
-    if folder is None:
-        return [], 0
 
-    query = db.query(EntityModel).filter(EntityModel.folder_id == folder_id)
+    # Add path_prefix filter if provided
+    if path_prefix:
+        query = query.filter(EntityModel.filepath.like(f"{path_prefix}%"))
 
     total_count = query.count()
-
     entities = query.limit(limit).offset(offset).all()
 
     return entities, total_count
