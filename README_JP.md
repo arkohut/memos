@@ -37,7 +37,19 @@ Pensieveはプライバシーに焦点を当てたパッシブレコーディン
 >
 > ```python
 > import sqlite3
-> print(sqlite3.sqlite_version)
+> 
+> # Check sqlite version
+> print(f"SQLite version: {sqlite3.sqlite_version}")
+> 
+> # Test if enable_load_extension is supported
+> try:
+>     conn = sqlite3.connect(':memory:')
+>     conn.enable_load_extension(True)
+>     print("enable_load_extension is supported")
+> except AttributeError:
+>     print("enable_load_extension is not supported")
+> finally:
+>     conn.close()
 > ```
 >
 > これが正しく動作しない場合は、Python環境を管理するために[miniconda](https://docs.conda.io/en/latest/miniconda.html)をインストールすることができます。あるいは、他の人が同じ問題に遭遇しているかどうかを確認するために、現在の問題リストをチェックしてください。

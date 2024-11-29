@@ -37,7 +37,19 @@ Pensieve 是一个专注于隐私的被动记录项目。它可以自动记录�
 >
 > ```python
 > import sqlite3
-> print(sqlite3.sqlite_version)
+> 
+> # Check sqlite version
+> print(f"SQLite version: {sqlite3.sqlite_version}")
+> 
+> # Test if enable_load_extension is supported
+> try:
+>     conn = sqlite3.connect(':memory:')
+>     conn.enable_load_extension(True)
+>     print("enable_load_extension is supported")
+> except AttributeError:
+>     print("enable_load_extension is not supported")
+> finally:
+>     conn.close()
 > ```
 >
 > 如果你发现这样无法正常工作，那么可以安装 [miniconda](https://docs.conda.io/en/latest/miniconda.html) 来管理 Python 环境。或者查看目前的 issue 列表，看看是否有其他人遇到同样的问题。
