@@ -182,20 +182,20 @@ async def loop_files(library_id, folder, folder_path, force, plugins, batch_size
         batch_size: Batch size
 
     Returns:
-        Tuple[int, int, Set[str]]: (Number of files added, Number of files updated, Set of scanned files)
+        Tuple[int, int, int]: (Number of files added, Number of files updated, Number of files deleted)
     """
     updated_file_count = 0
     added_file_count = 0
-    scanned_files = set()
+    deleted_file_count = 0
     semaphore = asyncio.Semaphore(batch_size)
 
     async with httpx.AsyncClient(timeout=60) as client:
         # 1. Collect candidate files
         candidate_files = await collect_candidate_files(folder_path)
-        scanned_files.update(candidate_files)
+        scanned_files = set(candidate_files)
 
         # 2. Process file batches
-        added_count, updated_count = await process_file_batches(
+        added_file_count, updated_file_count = await process_file_batches(
             client,
             library_id,
             folder,
@@ -205,15 +205,12 @@ async def loop_files(library_id, folder, folder_path, force, plugins, batch_size
             semaphore,
         )
 
-        added_file_count += added_count
-        updated_file_count += updated_count
-
         # 3. Check for deleted files
-        await check_deleted_files(
+        deleted_file_count = await check_deleted_files(
             client, library_id, folder, folder_path, scanned_files
         )
 
-        return added_file_count, updated_file_count, scanned_files
+        return added_file_count, updated_file_count, deleted_file_count
 
 
 @lib_app.command("scan")
@@ -274,66 +271,12 @@ def scan(
             tqdm.write(f"Folder does not exist or is not a directory: {folder_path}")
             continue
 
-        added_file_count, updated_file_count, scanned_files = asyncio.run(
+        added_file_count, updated_file_count, deleted_file_count = asyncio.run(
             loop_files(library_id, folder, folder_path, force, plugins, batch_size)
         )
         total_files_added += added_file_count
         total_files_updated += updated_file_count
-
-        # Check for deleted files
-        limit = 100
-        offset = 0
-        total_entities = 0  # We'll update this after the first request
-        with tqdm(
-            total=total_entities, desc="Checking for deleted files", leave=True
-        ) as pbar2:
-            while True:
-                existing_files_response = httpx.get(
-                    f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
-                    params={"limit": limit, "offset": offset},
-                    timeout=60,
-                )
-                if existing_files_response.status_code != 200:
-                    pbar2.write(
-                        f"Failed to retrieve existing files: {existing_files_response.status_code} - {existing_files_response.text}"
-                    )
-                    break
-
-                existing_files = existing_files_response.json()
-                if not existing_files:
-                    break
-
-                # Update total if this is the first request
-                if offset == 0:
-                    total_entities = int(
-                        existing_files_response.headers.get(
-                            "X-Total-Count", total_entities
-                        )
-                    )
-                    pbar2.total = total_entities
-                    pbar2.refresh()
-
-                for existing_file in existing_files:
-                    if (
-                        Path(existing_file["filepath"]).is_relative_to(folder_path)
-                        and existing_file["filepath"] not in scanned_files
-                    ):
-                        # File has been deleted
-                        delete_response = httpx.delete(
-                            f"{BASE_URL}/libraries/{library_id}/entities/{existing_file['id']}"
-                        )
-                        if 200 <= delete_response.status_code < 300:
-                            pbar2.write(
-                                f"Deleted file from library: {existing_file['filepath']}"
-                            )
-                            total_files_deleted += 1
-                        else:
-                            pbar2.write(
-                                f"Failed to delete file: {delete_response.status_code} - {delete_response.text}"
-                            )
-                    pbar2.update(1)
-
-                offset += limit
+        total_files_deleted += deleted_file_count
 
     print(f"Total files added: {total_files_added}")
     print(f"Total files updated: {total_files_updated}")
@@ -1208,9 +1151,14 @@ async def check_deleted_files(
         total=total_entities, desc="Checking for deleted files", leave=True
     ) as pbar:
         while True:
+            # Add path_prefix parameter to only get entities under the folder_path
             existing_files_response = await client.get(
                 f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
-                params={"limit": limit, "offset": offset},
+                params={
+                    "limit": limit, 
+                    "offset": offset,
+                    "path_prefix": str(folder_path)
+                },
                 timeout=60,
             )
 
@@ -1234,6 +1182,10 @@ async def check_deleted_files(
 
             for existing_file in existing_files:
                 if (
+                    # path_prefix may include files not in the folder_path,
+                    # for example when folder_path is 20241101 but there is another folder 20241101-copy
+                    # so check the existing_file is relative_to folder_path is required,
+                    # do not remove this.
                     Path(existing_file["filepath"]).is_relative_to(folder_path)
                     and existing_file["filepath"] not in scanned_files
                 ):
