@@ -152,7 +152,7 @@ async def predict_remote(
     async with httpx.AsyncClient() as client:
         headers = {}
         if token:
-            headers["Authorization"] = f"Bearer {token}"
+            headers["Authorization"] = f"Bearer {token.get_secret_value()}"
         return await fetch(endpoint, client, request_data, headers=headers)
 
 
