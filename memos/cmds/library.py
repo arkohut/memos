@@ -1134,6 +1134,10 @@ async def process_file_batches(
                                 client, semaphore, plugins, new_entity, existing_entity
                             )
                         )
+                    else:
+                        pbar.write(f"Skipping file: {file_path}")
+                        pbar.update(1)
+                        continue
                 else:
                     tasks.append(
                         add_entity(client, semaphore, library_id, plugins, new_entity)
