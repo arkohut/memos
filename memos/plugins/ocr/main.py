@@ -36,6 +36,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def get_metadata_name() -> str:
+    """Return the metadata field name used by this plugin."""
+    return METADATA_FIELD_NAME
+
+
 def image2base64(img_path):
     try:
         with Image.open(img_path) as img:
@@ -139,19 +144,20 @@ async def read_root():
 @router.post("", include_in_schema=False)
 @router.post("/")
 async def ocr(entity: Entity, request: Request):
+    metadata_field_name = get_metadata_name()
     if not entity.file_type_group == "image":
-        return {METADATA_FIELD_NAME: "{}"}
+        return {metadata_field_name: "{}"}
 
     # Check if the metadata field already exists and has a non-empty value
-    existing_metadata = entity.get_metadata_by_key(METADATA_FIELD_NAME)
+    existing_metadata = entity.get_metadata_by_key(metadata_field_name)
     if existing_metadata and existing_metadata.value and existing_metadata.value.strip():
         logger.info(f"Skipping OCR processing for file: {entity.filepath} due to existing metadata")
-        return {METADATA_FIELD_NAME: existing_metadata.value}
+        return {metadata_field_name: existing_metadata.value}
 
     # Check if the entity contains the tag "low_info"
     if any(tag.name == "low_info" for tag in entity.tags):
         logger.info(f"Skipping OCR processing for file: {entity.filepath} due to 'low_info' tag")
-        return {METADATA_FIELD_NAME: "{}"}
+        return {metadata_field_name: "{}"}
 
     location_url = request.headers.get("Location")
     if not location_url:
@@ -167,7 +173,7 @@ async def ocr(entity: Entity, request: Request):
         logger.info(f"First {len(texts)}/{total} OCR results: {texts}")
     else:
         logger.info(f"No OCR result found for file: {entity.filepath}")
-        return {METADATA_FIELD_NAME: "{}"}
+        return {metadata_field_name: "{}"}
 
     # Call the URL to patch the entity's metadata
     async with httpx.AsyncClient() as client:
@@ -176,7 +182,7 @@ async def ocr(entity: Entity, request: Request):
             json={
                 "metadata_entries": [
                     {
-                        "key": METADATA_FIELD_NAME,
+                        "key": metadata_field_name,
                         "value": json.dumps(
                             ocr_result,
                             default=lambda o: o.item() if hasattr(o, "item") else o,
@@ -196,7 +202,7 @@ async def ocr(entity: Entity, request: Request):
         )
 
     return {
-        METADATA_FIELD_NAME: json.dumps(
+        metadata_field_name: json.dumps(
             ocr_result,
             default=lambda o: o.item() if hasattr(o, "item") else o,
         )

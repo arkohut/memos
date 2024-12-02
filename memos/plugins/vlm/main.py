@@ -12,6 +12,10 @@ import io
 import numpy as np
 
 
+# Configure logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 PLUGIN_NAME = "vlm"
 
 router = APIRouter(tags=[PLUGIN_NAME], responses={404: {"description": "Not found"}})
@@ -24,9 +28,11 @@ semaphore = None
 force_jpeg = None
 prompt = None
 
-# Configure logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
+def get_metadata_name() -> str:
+    """Return the metadata field name used by this plugin."""
+    global modelname
+    return f"{modelname.replace('-', '_')}_result"
 
 
 def image2base64(img_path):
@@ -70,7 +76,7 @@ def image2base64(img_path):
 
 
 async def fetch(endpoint: str, client, request_data, headers: Optional[dict] = None):
-    async with semaphore:  # 使用信号量控制并发
+    async with semaphore:
         try:
             response = await client.post(
                 f"{endpoint}/v1/chat/completions",
@@ -159,7 +165,7 @@ async def read_root():
 @router.post("/")
 async def vlm(entity: Entity, request: Request):
     global modelname, endpoint, token
-    metadata_field_name = f"{modelname.replace('-', '_')}_result"
+    metadata_field_name = get_metadata_name()
     if not entity.file_type_group == "image":
         return {metadata_field_name: ""}
 
