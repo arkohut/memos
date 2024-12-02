@@ -132,7 +132,7 @@ async def predict(img_path):
         return None
 
     async with httpx.AsyncClient() as client:
-        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        headers = {"Authorization": f"Bearer {token.get_secret_value()}"} if token else {}
         return await fetch(endpoint, client, image_base64, headers)
 
 
