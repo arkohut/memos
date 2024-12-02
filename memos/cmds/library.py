@@ -586,6 +586,10 @@ def sync(
                 new_entity.setdefault("tags", []).append(metadata["active_app"])
             is_thumbnail = metadata.get(IS_THUMBNAIL, False)
 
+            if is_thumbnail:
+                typer.echo(f"Skipping thumbnail file: {file_path}")
+                return
+
     if response.status_code == 200:
         # File exists, update it
         existing_entity = response.json()
@@ -608,7 +612,7 @@ def sync(
             for existing_entry in existing_entity.get("metadata_entries", []):
                 if existing_entry["key"] not in new_metadata_keys:
                     new_entity["metadata_entries"].append(existing_entry)
-            
+
             # Merge existing tags with new tags
             existing_tags = {tag["name"] for tag in existing_entity.get("tags", [])}
             new_tags = set(new_entity.get("tags", []))
