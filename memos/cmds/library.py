@@ -1133,6 +1133,10 @@ async def process_file_batches(
             for file_path in batch:
                 new_entity = await prepare_entity(file_path, folder["id"])
 
+                if new_entity.get("is_thumbnail", False):
+                    typer.echo(f"Skipping thumbnail file: {file_path}")
+                    continue
+
                 existing_entity = existing_entities_dict.get(str(file_path))
                 if existing_entity:
                     if should_update_entity(new_entity, existing_entity, force):
@@ -1141,7 +1145,7 @@ async def process_file_batches(
                                 client, semaphore, plugins, new_entity, existing_entity
                             )
                         )
-                elif not new_entity.get("is_thumbnail", False):
+                else:
                     tasks.append(
                         add_entity(client, semaphore, library_id, plugins, new_entity)
                     )
