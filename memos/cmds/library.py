@@ -474,6 +474,47 @@ def reindex(
     print(f"Reindexing completed for library {library_id}")
 
 
+def has_entity_changes(new_entity: dict, existing_entity: dict) -> bool:
+    """
+    Compare new_entity with existing_entity to determine if there are actual changes.
+    Returns True if there are differences, False otherwise.
+    """
+    # Compare basic fields
+    basic_fields = [
+        "filename",
+        "filepath",
+        "size",
+        "file_created_at",
+        "file_last_modified_at",
+        "file_type",
+        "file_type_group",
+    ]
+
+    for field in basic_fields:
+        if new_entity.get(field) != existing_entity.get(field):
+            return True
+
+    # Compare metadata entries
+    new_metadata = {
+        (entry["key"], entry["value"])
+        for entry in new_entity.get("metadata_entries", [])
+    }
+    existing_metadata = {
+        (entry["key"], entry["value"])
+        for entry in existing_entity.get("metadata_entries", [])
+    }
+    if new_metadata != existing_metadata:
+        return True
+
+    # Compare tags
+    new_tags = set(new_entity.get("tags", []))
+    existing_tags = {tag["name"] for tag in existing_entity.get("tags", [])}
+    if new_tags != existing_tags:
+        return True
+
+    return False
+
+
 @lib_app.command("sync")
 def sync(
     library_id: int,
@@ -545,6 +586,10 @@ def sync(
                 new_entity.setdefault("tags", []).append(metadata["active_app"])
             is_thumbnail = metadata.get(IS_THUMBNAIL, False)
 
+            if is_thumbnail:
+                typer.echo(f"Skipping thumbnail file: {file_path}")
+                return
+
     if response.status_code == 200:
         # File exists, update it
         existing_entity = response.json()
@@ -559,20 +604,23 @@ def sync(
             new_entity["file_type_group"] = existing_entity["file_type_group"]
             new_entity["size"] = existing_entity["size"]
 
-        # Merge existing metadata with new metadata
-        if new_entity.get("metadata_entries"):
+        if not force:
+            # Merge existing metadata with new metadata
             new_metadata_keys = {
-                entry["key"] for entry in new_entity["metadata_entries"]
+                entry["key"] for entry in new_entity.get("metadata_entries", [])
             }
-            for existing_entry in existing_entity["metadata_entries"]:
+            for existing_entry in existing_entity.get("metadata_entries", []):
                 if existing_entry["key"] not in new_metadata_keys:
                     new_entity["metadata_entries"].append(existing_entry)
 
-        if force or (
-            existing_entity["file_last_modified_at"]
-            != new_entity["file_last_modified_at"]
-            or existing_entity["size"] != new_entity["size"]
-        ):
+            # Merge existing tags with new tags
+            existing_tags = {tag["name"] for tag in existing_entity.get("tags", [])}
+            new_tags = set(new_entity.get("tags", []))
+            merged_tags = new_tags.union(existing_tags)
+            new_entity["tags"] = list(merged_tags)
+
+        # Only update if there are actual changes or force flag is set
+        if force or has_entity_changes(new_entity, existing_entity):
             update_response = httpx.put(
                 f"{BASE_URL}/entities/{existing_entity['id']}",
                 json=new_entity,
@@ -589,7 +637,7 @@ def sync(
                     f"Error updating file: {update_response.status_code} - {update_response.text}"
                 )
         else:
-            typer.echo(f"File {file_path} is up to date. No changes made.")
+            typer.echo(f"File {file_path} is up to date. No changes detected.")
 
     else:
         # 3. File doesn't exist, check if it belongs to a folder in the library
@@ -974,35 +1022,6 @@ async def prepare_entity(file_path: str, folder_id: int) -> Dict[str, Any]:
     return new_entity
 
 
-def should_update_entity(
-    new_entity: Dict[str, Any], existing_entity: Dict[str, Any], force: bool
-) -> bool:
-    """
-    Determine whether to update the entity
-
-    Args:
-        new_entity: New entity data
-        existing_entity: Existing entity data
-        force: Whether to force update
-
-    Returns:
-        bool: Whether to update the entity
-    """
-    if new_entity.get("is_thumbnail", False):
-        return False
-
-    existing_created_at = format_timestamp(existing_entity["file_created_at"])
-    new_created_at = format_timestamp(new_entity["file_created_at"])
-    existing_modified_at = format_timestamp(existing_entity["file_last_modified_at"])
-    new_modified_at = format_timestamp(new_entity["file_last_modified_at"])
-
-    return (
-        force
-        or existing_created_at != new_created_at
-        or existing_modified_at != new_modified_at
-    )
-
-
 def format_error_message(
     file_status: FileStatus, response: Optional[httpx.Response]
 ) -> str:
@@ -1085,15 +1104,41 @@ async def process_file_batches(
             for file_path in batch:
                 new_entity = await prepare_entity(file_path, folder["id"])
 
+                if new_entity.get("is_thumbnail", False):
+                    typer.echo(f"Skipping thumbnail file: {file_path}")
+                    continue
+
                 existing_entity = existing_entities_dict.get(str(file_path))
                 if existing_entity:
-                    if should_update_entity(new_entity, existing_entity, force):
+                    if not force:
+                        # Merge existing metadata with new metadata
+                        new_metadata_keys = {
+                            entry["key"] for entry in new_entity.get("metadata_entries", [])
+                        }
+                        for existing_entry in existing_entity.get("metadata_entries", []):
+                            if existing_entry["key"] not in new_metadata_keys:
+                                new_entity.setdefault("metadata_entries", []).append(
+                                    existing_entry
+                                )
+
+                        # Merge existing tags with new tags
+                        existing_tags = {tag["name"] for tag in existing_entity.get("tags", [])}
+                        new_tags = set(new_entity.get("tags", []))
+                        merged_tags = new_tags.union(existing_tags)
+                        new_entity["tags"] = list(merged_tags)
+
+                    # Only update if there are actual changes or force flag is set
+                    if force or has_entity_changes(new_entity, existing_entity):
                         tasks.append(
                             update_entity(
                                 client, semaphore, plugins, new_entity, existing_entity
                             )
                         )
-                elif not new_entity.get("is_thumbnail", False):
+                    else:
+                        pbar.write(f"Skipping file: {file_path}")
+                        pbar.update(1)
+                        continue
+                else:
                     tasks.append(
                         add_entity(client, semaphore, library_id, plugins, new_entity)
                     )
@@ -1112,11 +1157,12 @@ async def process_file_batches(
                     else:
                         error_message = format_error_message(file_status, response)
                         tqdm.write(error_message)
-                    
+
                     # Update progress bar for each file processed
                     pbar.update(1)
                     pbar.set_postfix(
-                        {"Added": added_file_count, "Updated": updated_file_count}, refresh=True
+                        {"Added": added_file_count, "Updated": updated_file_count},
+                        refresh=True,
                     )
 
     return added_file_count, updated_file_count
@@ -1155,9 +1201,9 @@ async def check_deleted_files(
             existing_files_response = await client.get(
                 f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
                 params={
-                    "limit": limit, 
+                    "limit": limit,
                     "offset": offset,
-                    "path_prefix": str(folder_path)
+                    "path_prefix": str(folder_path),
                 },
                 timeout=60,
             )
