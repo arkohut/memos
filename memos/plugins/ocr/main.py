@@ -160,8 +160,12 @@ async def ocr(entity: Entity, request: Request):
     patch_url = f"{location_url}/metadata"
 
     ocr_result = await predict(entity.filepath)
-    logger.info(ocr_result)
-    if not ocr_result:
+    if ocr_result:
+        filtered_results = [r for r in ocr_result if r['score'] > 0.5][:10]
+        texts = [f"{r['rec_txt']}({r['score']:.2f})" for r in filtered_results]
+        total = len(ocr_result)
+        logger.info(f"First {len(texts)}/{total} OCR results: {texts}")
+    else:
         logger.info(f"No OCR result found for file: {entity.filepath}")
         return {METADATA_FIELD_NAME: "{}"}
 
