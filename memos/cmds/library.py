@@ -474,6 +474,47 @@ def reindex(
     print(f"Reindexing completed for library {library_id}")
 
 
+def has_entity_changes(new_entity: dict, existing_entity: dict) -> bool:
+    """
+    Compare new_entity with existing_entity to determine if there are actual changes.
+    Returns True if there are differences, False otherwise.
+    """
+    # Compare basic fields
+    basic_fields = [
+        "filename",
+        "filepath",
+        "size",
+        "file_created_at",
+        "file_last_modified_at",
+        "file_type",
+        "file_type_group",
+    ]
+
+    for field in basic_fields:
+        if new_entity.get(field) != existing_entity.get(field):
+            return True
+
+    # Compare metadata entries
+    new_metadata = {
+        (entry["key"], entry["value"])
+        for entry in new_entity.get("metadata_entries", [])
+    }
+    existing_metadata = {
+        (entry["key"], entry["value"])
+        for entry in existing_entity.get("metadata_entries", [])
+    }
+    if new_metadata != existing_metadata:
+        return True
+
+    # Compare tags
+    new_tags = set(new_entity.get("tags", []))
+    existing_tags = {tag["name"] for tag in existing_entity.get("tags", [])}
+    if new_tags != existing_tags:
+        return True
+
+    return False
+
+
 @lib_app.command("sync")
 def sync(
     library_id: int,
@@ -559,20 +600,23 @@ def sync(
             new_entity["file_type_group"] = existing_entity["file_type_group"]
             new_entity["size"] = existing_entity["size"]
 
-        # Merge existing metadata with new metadata
-        if new_entity.get("metadata_entries"):
+        if not force:
+            # Merge existing metadata with new metadata
             new_metadata_keys = {
-                entry["key"] for entry in new_entity["metadata_entries"]
+                entry["key"] for entry in new_entity.get("metadata_entries", [])
             }
-            for existing_entry in existing_entity["metadata_entries"]:
+            for existing_entry in existing_entity.get("metadata_entries", []):
                 if existing_entry["key"] not in new_metadata_keys:
                     new_entity["metadata_entries"].append(existing_entry)
+            
+            # Merge existing tags with new tags
+            existing_tags = {tag["name"] for tag in existing_entity.get("tags", [])}
+            new_tags = set(new_entity.get("tags", []))
+            merged_tags = new_tags.union(existing_tags)
+            new_entity["tags"] = list(merged_tags)
 
-        if force or (
-            existing_entity["file_last_modified_at"]
-            != new_entity["file_last_modified_at"]
-            or existing_entity["size"] != new_entity["size"]
-        ):
+        # Only update if there are actual changes or force flag is set
+        if force or has_entity_changes(new_entity, existing_entity):
             update_response = httpx.put(
                 f"{BASE_URL}/entities/{existing_entity['id']}",
                 json=new_entity,
@@ -589,7 +633,7 @@ def sync(
                     f"Error updating file: {update_response.status_code} - {update_response.text}"
                 )
         else:
-            typer.echo(f"File {file_path} is up to date. No changes made.")
+            typer.echo(f"File {file_path} is up to date. No changes detected.")
 
     else:
         # 3. File doesn't exist, check if it belongs to a folder in the library
@@ -1112,11 +1156,12 @@ async def process_file_batches(
                     else:
                         error_message = format_error_message(file_status, response)
                         tqdm.write(error_message)
-                    
+
                     # Update progress bar for each file processed
                     pbar.update(1)
                     pbar.set_postfix(
-                        {"Added": added_file_count, "Updated": updated_file_count}, refresh=True
+                        {"Added": added_file_count, "Updated": updated_file_count},
+                        refresh=True,
                     )
 
     return added_file_count, updated_file_count
@@ -1155,9 +1200,9 @@ async def check_deleted_files(
             existing_files_response = await client.get(
                 f"{BASE_URL}/libraries/{library_id}/folders/{folder['id']}/entities",
                 params={
-                    "limit": limit, 
+                    "limit": limit,
                     "offset": offset,
-                    "path_prefix": str(folder_path)
+                    "path_prefix": str(folder_path),
                 },
                 timeout=60,
             )
