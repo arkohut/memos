@@ -1022,35 +1022,6 @@ async def prepare_entity(file_path: str, folder_id: int) -> Dict[str, Any]:
     return new_entity
 
 
-def should_update_entity(
-    new_entity: Dict[str, Any], existing_entity: Dict[str, Any], force: bool
-) -> bool:
-    """
-    Determine whether to update the entity
-
-    Args:
-        new_entity: New entity data
-        existing_entity: Existing entity data
-        force: Whether to force update
-
-    Returns:
-        bool: Whether to update the entity
-    """
-    if new_entity.get("is_thumbnail", False):
-        return False
-
-    existing_created_at = format_timestamp(existing_entity["file_created_at"])
-    new_created_at = format_timestamp(new_entity["file_created_at"])
-    existing_modified_at = format_timestamp(existing_entity["file_last_modified_at"])
-    new_modified_at = format_timestamp(new_entity["file_last_modified_at"])
-
-    return (
-        force
-        or existing_created_at != new_created_at
-        or existing_modified_at != new_modified_at
-    )
-
-
 def format_error_message(
     file_status: FileStatus, response: Optional[httpx.Response]
 ) -> str:
@@ -1139,7 +1110,25 @@ async def process_file_batches(
 
                 existing_entity = existing_entities_dict.get(str(file_path))
                 if existing_entity:
-                    if should_update_entity(new_entity, existing_entity, force):
+                    if not force:
+                        # Merge existing metadata with new metadata
+                        new_metadata_keys = {
+                            entry["key"] for entry in new_entity.get("metadata_entries", [])
+                        }
+                        for existing_entry in existing_entity.get("metadata_entries", []):
+                            if existing_entry["key"] not in new_metadata_keys:
+                                new_entity.setdefault("metadata_entries", []).append(
+                                    existing_entry
+                                )
+
+                        # Merge existing tags with new tags
+                        existing_tags = {tag["name"] for tag in existing_entity.get("tags", [])}
+                        new_tags = set(new_entity.get("tags", []))
+                        merged_tags = new_tags.union(existing_tags)
+                        new_entity["tags"] = list(merged_tags)
+
+                    # Only update if there are actual changes or force flag is set
+                    if force or has_entity_changes(new_entity, existing_entity):
                         tasks.append(
                             update_entity(
                                 client, semaphore, plugins, new_entity, existing_entity
