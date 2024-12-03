@@ -20,16 +20,6 @@ body:
         Please provide the output of the following commands:
         1. Run `memos version` and paste the output
         2. Run `memos config` and paste the output
-      placeholder: |
-        ```sh
-        $ memos version
-        [paste output here]
-        ```
-
-        ```sh
-        $ memos config
-        [paste output here]
-        ```
     validations:
       required: true
   - type: textarea
