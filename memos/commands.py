@@ -262,13 +262,22 @@ def record(
 @app.command("watch")
 def watch_default_library(
     rate_window_size: int = typer.Option(
-        10, "--rate-window", "-rw", help="Window size for rate calculation"
+        settings.watch.rate_window_size,
+        "--rate-window",
+        "-rw",
+        help="Window size for rate calculation",
     ),
     sparsity_factor: float = typer.Option(
-        3.0, "--sparsity-factor", "-sf", help="Sparsity factor for file processing"
+        settings.watch.sparsity_factor,
+        "--sparsity-factor",
+        "-sf",
+        help="Sparsity factor for file processing",
     ),
     processing_interval: int = typer.Option(
-        12, "--processing-interval", "-pi", help="Processing interval for file processing"
+        settings.watch.processing_interval,
+        "--processing-interval",
+        "-pi",
+        help="Processing interval for file processing",
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose logging"
@@ -277,6 +286,11 @@ def watch_default_library(
     """
     Watch the default library for file changes and sync automatically.
     """
+    typer.echo(f"Watch settings:")
+    typer.echo(f"  rate_window_size: {rate_window_size}")
+    typer.echo(f"  sparsity_factor: {sparsity_factor}")
+    typer.echo(f"  processing_interval: {processing_interval}")
+
     from .cmds.library import watch
 
     default_library = get_or_create_default_library()
