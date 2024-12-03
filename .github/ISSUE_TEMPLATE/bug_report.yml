@@ -1,0 +1,39 @@
+name: Bug Report
+description: If something isn't working as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting a bug report, please check if the issue is already present in the issues. If it is, please add a reaction to the issue. If it isn't, please fill out the form below.
+  - type: textarea
+    attributes:
+      label: Describe the bug
+      description: |
+        Briefly describe the problem you are having in a few paragraphs. And provide the steps to reproduce the issue.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Command outputs
+      description: |
+        Please provide the output of the following commands:
+        1. Run `memos version` and paste the output
+        2. Run `memos config` and paste the output
+      placeholder: |
+        ```sh
+        $ memos version
+        [paste output here]
+        ```
+
+        ```sh
+        $ memos config
+        [paste output here]
+        ```
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Screenshots or additional context
+      description: |
+        You can get logs in `~/.memos/logs` directory. Try to get some error logs and paste them here.
