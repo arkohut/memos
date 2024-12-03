@@ -696,7 +696,8 @@ class LibraryFileHandler(FileSystemEventHandler):
         include_files,
         max_workers=2,
         sparsity_factor=3,
-        window_size=10,
+        rate_window_size=10,
+        processing_interval=12,
     ):
         self.library_id = library_id
         self.include_files = include_files
@@ -706,12 +707,12 @@ class LibraryFileHandler(FileSystemEventHandler):
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.lock = threading.Lock()
 
-        self.sparsity_window = 12
+        self.processing_interval = processing_interval
         self.sparsity_factor = sparsity_factor
-        self.window_size = window_size
+        self.rate_window_size = rate_window_size
 
-        self.pending_times = deque(maxlen=window_size)
-        self.sync_times = deque(maxlen=window_size)
+        self.pending_times = deque(maxlen=rate_window_size)
+        self.sync_times = deque(maxlen=rate_window_size)
 
         self.file_count = 0
         self.file_submitted = 0
@@ -719,7 +720,6 @@ class LibraryFileHandler(FileSystemEventHandler):
         self.file_skipped = 0
         self.logger = logger
 
-        self.base_sparsity_window = self.sparsity_window
         self.last_battery_check = 0
         self.battery_check_interval = 60  # Check battery status every 60 seconds
 
@@ -749,10 +749,10 @@ class LibraryFileHandler(FileSystemEventHandler):
                     processed_in_current_loop += 1
                     if os.path.exists(path) and os.path.getsize(path) > 0:
                         self.file_count += 1
-                        if self.file_count % self.sparsity_window == 0:
+                        if self.file_count % self.processing_interval == 0:
                             files_to_process_with_plugins.append(path)
                             print(
-                                f"file_count % sparsity_window: {self.file_count} % {self.sparsity_window} == 0"
+                                f"file_count % processing_interval: {self.file_count} % {self.processing_interval} == 0"
                             )
                             print(f"Picked file for processing with plugins: {path}")
                         else:
@@ -776,7 +776,7 @@ class LibraryFileHandler(FileSystemEventHandler):
                 f"File count: {self.file_count}, Files submitted: {self.file_submitted}, Files synced: {self.file_synced}, Files skipped: {self.file_skipped}"
             )
 
-        self.update_sparsity_window()
+        self.update_processing_interval()
 
     def process_file(self, path, no_plugins):
         self.logger.debug(f"Processing file: {path} (with plugins: {not no_plugins})")
@@ -788,8 +788,8 @@ class LibraryFileHandler(FileSystemEventHandler):
                 self.sync_times.append(end_time - start_time)
                 self.file_synced += 1
 
-    def update_sparsity_window(self):
-        min_samples = max(3, self.window_size // 3)
+    def update_processing_interval(self):
+        min_samples = max(3, self.rate_window_size // 3)
         max_interval = 60  # Maximum allowed interval between events in seconds
 
         if (
@@ -816,21 +816,23 @@ class LibraryFileHandler(FileSystemEventHandler):
 
             if pending_files_per_second > 0 and sync_files_per_second > 0:
                 rate = pending_files_per_second / sync_files_per_second
-                new_sparsity_window = max(1, math.ceil(self.sparsity_factor * rate))
+                new_processing_interval = max(1, math.ceil(self.sparsity_factor * rate))
 
                 current_time = time.time()
                 if current_time - self.last_battery_check > self.battery_check_interval:
                     self.last_battery_check = current_time
                     is_on_battery.cache_clear()  # Clear the cache to get fresh battery status
-                new_sparsity_window = (
-                    new_sparsity_window * 2 if is_on_battery() else new_sparsity_window
+                new_processing_interval = (
+                    new_processing_interval * 2
+                    if is_on_battery()
+                    else new_processing_interval
                 )
 
-                if new_sparsity_window != self.sparsity_window:
-                    old_sparsity_window = self.sparsity_window
-                    self.sparsity_window = new_sparsity_window
+                if new_processing_interval != self.processing_interval:
+                    old_processing_interval = self.processing_interval
+                    self.processing_interval = new_processing_interval
                     self.logger.info(
-                        f"Updated sparsity window: {old_sparsity_window} -> {self.sparsity_window}"
+                        f"Updated processing interval: {old_processing_interval} -> {self.processing_interval}"
                     )
                     self.logger.debug(
                         f"Pending files per second: {pending_files_per_second:.2f}"
@@ -880,8 +882,17 @@ def watch(
     sparsity_factor: float = typer.Option(
         3.0, "--sparsity-factor", "-sf", help="Sparsity factor for file processing"
     ),
-    window_size: int = typer.Option(
-        10, "--window-size", "-ws", help="Window size for rate calculation"
+    processing_interval: int = typer.Option(
+        12,
+        "--processing-interval",
+        "-pi",
+        help="Process one file with plugins for every N files (higher means less frequent processing)",
+    ),
+    rate_window_size: int = typer.Option(
+        10,
+        "--rate-window",
+        "-rw",
+        help="Number of recent events to consider when calculating processing rates",
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose logging"
@@ -925,7 +936,8 @@ def watch(
             library_id,
             include_files,
             sparsity_factor=sparsity_factor,
-            window_size=window_size,
+            processing_interval=processing_interval,
+            rate_window_size=rate_window_size,
         )
         handlers.append(event_handler)
         observer.schedule(event_handler, str(folder_path), recursive=True)
@@ -1113,16 +1125,21 @@ async def process_file_batches(
                     if not force:
                         # Merge existing metadata with new metadata
                         new_metadata_keys = {
-                            entry["key"] for entry in new_entity.get("metadata_entries", [])
+                            entry["key"]
+                            for entry in new_entity.get("metadata_entries", [])
                         }
-                        for existing_entry in existing_entity.get("metadata_entries", []):
+                        for existing_entry in existing_entity.get(
+                            "metadata_entries", []
+                        ):
                             if existing_entry["key"] not in new_metadata_keys:
                                 new_entity.setdefault("metadata_entries", []).append(
                                     existing_entry
                                 )
 
                         # Merge existing tags with new tags
-                        existing_tags = {tag["name"] for tag in existing_entity.get("tags", [])}
+                        existing_tags = {
+                            tag["name"] for tag in existing_entity.get("tags", [])
+                        }
                         new_tags = set(new_entity.get("tags", []))
                         merged_tags = new_tags.union(existing_tags)
                         new_entity["tags"] = list(merged_tags)

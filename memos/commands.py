@@ -261,11 +261,14 @@ def record(
 
 @app.command("watch")
 def watch_default_library(
-    window_size: int = typer.Option(
-        10, "--window-size", "-ws", help="Window size for rate calculation"
+    rate_window_size: int = typer.Option(
+        10, "--rate-window", "-rw", help="Window size for rate calculation"
     ),
     sparsity_factor: float = typer.Option(
         3.0, "--sparsity-factor", "-sf", help="Sparsity factor for file processing"
+    ),
+    processing_interval: int = typer.Option(
+        12, "--processing-interval", "-pi", help="Processing interval for file processing"
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose logging"
@@ -283,8 +286,9 @@ def watch_default_library(
     watch(
         default_library["id"],
         folders=None,
-        window_size=window_size,
+        rate_window_size=rate_window_size,
         sparsity_factor=sparsity_factor,
+        processing_interval=processing_interval,
         verbose=verbose,
     )
 
