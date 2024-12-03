@@ -45,6 +45,12 @@ class EmbeddingSettings(BaseModel):
     token: SecretStr = SecretStr("")
 
 
+class WatchSettings(BaseModel):
+    rate_window_size: int = 10
+    sparsity_factor: float = 3.0
+    processing_interval: int = 12
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         yaml_file=str(Path.home() / ".memos" / "config.yaml"),
@@ -77,6 +83,8 @@ class Settings(BaseSettings):
     default_plugins: List[str] = ["builtin_ocr"]
 
     record_interval: int = 4
+
+    watch: WatchSettings = WatchSettings()
 
     @classmethod
     def settings_customise_sources(

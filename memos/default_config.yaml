@@ -42,6 +42,26 @@ embedding:
   use_local: true
   use_modelscope: false
 
+watch:
+  # number of recent events to consider when calculating processing rates
+  rate_window_size: 10
+  # sparsity factor for file processing
+  # a higher value means less frequent processing
+  # 1.0 means process every file
+  sparsity_factor: 3.0
+  # initial processing interval for file processing, means process one file with plugins for every N files
+  # but will be adjusted automatically based on the processing rate
+  # 1 means process the first file at the beginning
+  processing_interval: 12
+
+# A watch config like this means process every file with plugins at the beginning
+# but if the processing rate is slower than file generated, the processing interval 
+# will be increased automatically
+# watch:
+#   rate_window_size: 10
+#   sparsity_factor: 1.0
+#   processing_interval: 1
+
 # using local embedding for Chinese as the main language
 # embedding:
 #   model: arkohut/jina-embeddings-v2-base-zh
