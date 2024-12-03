@@ -711,8 +711,8 @@ class LibraryFileHandler(FileSystemEventHandler):
         self.sparsity_factor = sparsity_factor
         self.rate_window_size = rate_window_size
 
-        self.pending_times = deque(maxlen=rate_window_size)
-        self.sync_times = deque(maxlen=rate_window_size)
+        self.file_change_intervals = deque(maxlen=rate_window_size)
+        self.file_processing_durations = deque(maxlen=rate_window_size)
 
         self.file_count = 0
         self.file_submitted = 0
@@ -731,7 +731,7 @@ class LibraryFileHandler(FileSystemEventHandler):
 
                 if current_time - file_info["timestamp"] > self.buffer_time:
                     file_info["timestamp"] = current_time
-                    self.pending_times.append(current_time)
+                    self.file_change_intervals.append(current_time)
 
                 file_info["last_size"] = os.path.getsize(event.src_path)
 
@@ -785,7 +785,7 @@ class LibraryFileHandler(FileSystemEventHandler):
         end_time = time.time()
         if not no_plugins:
             with self.lock:
-                self.sync_times.append(end_time - start_time)
+                self.file_processing_durations.append(end_time - start_time)
                 self.file_synced += 1
 
     def update_processing_interval(self):
@@ -793,54 +793,52 @@ class LibraryFileHandler(FileSystemEventHandler):
         max_interval = 60  # Maximum allowed interval between events in seconds
 
         if (
-            len(self.pending_times) >= min_samples
-            and len(self.sync_times) >= min_samples
+            len(self.file_change_intervals) >= min_samples
+            and len(self.file_processing_durations) >= min_samples
         ):
             # Filter out large time gaps
             filtered_intervals = [
-                self.pending_times[i] - self.pending_times[i - 1]
-                for i in range(1, len(self.pending_times))
-                if self.pending_times[i] - self.pending_times[i - 1] <= max_interval
+                self.file_change_intervals[i] - self.file_change_intervals[i - 1]
+                for i in range(1, len(self.file_change_intervals))
+                if self.file_change_intervals[i] - self.file_change_intervals[i - 1]
+                <= max_interval
             ]
 
             if filtered_intervals:
-                avg_interval = sum(filtered_intervals) / len(filtered_intervals)
-                pending_files_per_second = 1 / avg_interval if avg_interval > 0 else 0
+                avg_change_interval = sum(filtered_intervals) / len(filtered_intervals)
+                changes_per_second = (
+                    1 / avg_change_interval if avg_change_interval > 0 else 0
+                )
             else:
-                pending_files_per_second = 0
+                changes_per_second = 0
 
-            sync_time_total = sum(self.sync_times)
-            sync_files_per_second = (
-                len(self.sync_times) / sync_time_total if sync_time_total > 0 else 0
+            total_processing_time = sum(self.file_processing_durations)
+            processing_per_second = (
+                len(self.file_processing_durations) / total_processing_time
+                if total_processing_time > 0
+                else 0
             )
 
-            if pending_files_per_second > 0 and sync_files_per_second > 0:
-                rate = pending_files_per_second / sync_files_per_second
+            if changes_per_second > 0 and processing_per_second > 0:
+                rate = changes_per_second / processing_per_second
                 new_processing_interval = max(1, math.ceil(self.sparsity_factor * rate))
 
                 current_time = time.time()
                 if current_time - self.last_battery_check > self.battery_check_interval:
                     self.last_battery_check = current_time
                     is_on_battery.cache_clear()  # Clear the cache to get fresh battery status
-                new_processing_interval = (
-                    new_processing_interval * 2
-                    if is_on_battery()
-                    else new_processing_interval
-                )
+                if is_on_battery():
+                    new_processing_interval *= 2
+                    self.logger.info(
+                        "Running on battery, doubling the processing interval."
+                    )
 
                 if new_processing_interval != self.processing_interval:
                     old_processing_interval = self.processing_interval
                     self.processing_interval = new_processing_interval
                     self.logger.info(
-                        f"Updated processing interval: {old_processing_interval} -> {self.processing_interval}"
+                        f"Processing interval: {old_processing_interval} -> {self.processing_interval}, Changes: {changes_per_second:.2f}it/s, Processing: {processing_per_second:.2f}it/s, Rate (changes/processing): {rate:.2f}"
                     )
-                    self.logger.debug(
-                        f"Pending files per second: {pending_files_per_second:.2f}"
-                    )
-                    self.logger.debug(
-                        f"Sync files per second: {sync_files_per_second:.2f}"
-                    )
-                    self.logger.debug(f"Rate (pending/sync): {rate:.2f}")
 
     def is_valid_file(self, path):
         filename = os.path.basename(path)
