@@ -239,7 +239,7 @@ async def new_entity(
         await trigger_webhooks(library, entity, request, plugins)
 
     if update_index:
-        crud.update_entity_index(entity, db)
+        crud.update_entity_index(entity.id, db)
 
     return entity
 
@@ -360,7 +360,7 @@ async def update_entity(
         await trigger_webhooks(library, entity, request, plugins)
 
     if update_index:
-        crud.update_entity_index(entity, db)
+        crud.update_entity_index(entity.id, db)
 
     return entity
 
@@ -398,7 +398,7 @@ def update_index(entity_id: int, db: Session = Depends(get_db)):
             detail="Entity not found",
         )
 
-    crud.update_entity_index(entity, db)
+    crud.update_entity_index(entity.id, db)
 
 
 @app.post(

@@ -733,9 +733,13 @@ def prepare_vec_data(entity: EntityModel) -> str:
     return vec_metadata
 
 
-def update_entity_index(entity: EntityModel, db: Session):
+def update_entity_index(entity_id: int, db: Session):
     """Update both FTS and vector indexes for an entity"""
     try:
+        entity = get_entity_by_id(entity_id, db)
+        if not entity:
+            raise ValueError(f"Entity with id {entity_id} not found")
+        
         # Update FTS index
         tags, fts_metadata = prepare_fts_data(entity)
         db.execute(
