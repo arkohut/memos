@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "memos"
 version = "0.23.1"
-description = "A package for memos"
-readme = "README.md"
+description = "A package for Pensieve (previously known as memos)"
+readme = "README.pypi.md"
 authors = [{ name = "arkohut" }]
 license = { file = "LICENSE" }
 classifiers = [
