@@ -170,7 +170,18 @@ class LibraryPluginModel(Base):
 
 
 def load_extension(dbapi_conn, connection_record):
-    dbapi_conn.enable_load_extension(True)
+    try:
+        dbapi_conn.enable_load_extension(True)
+    except AttributeError as e:
+        print("Error: Current SQLite3 build doesn't support loading extensions.")
+        print("\nRecommended solutions:")
+        print("1. Install Python using Conda (recommended for both Windows and macOS):")
+        print("   conda create -n yourenv python")
+        print("   conda activate yourenv")
+        print("\n2. Or on macOS, you can use Homebrew:")
+        print("   brew install python")
+        print(f"\nDetailed error: {str(e)}")
+        raise
 
     # load simple tokenizer
     current_dir = Path(__file__).parent.resolve()
