@@ -223,6 +223,40 @@ memos scan
 
 このコマンドは記録されたすべてのスクリーンショットをスキャンしてインデックス化します。スクリーンショットの数とシステム構成に応じて、このプロセスには時間がかかる場合があり、システムリソースを多く消費する可能性があります。インデックスの構築は冪等であり、このコマンドを複数回実行しても既にインデックス化されたデータを再インデックス化することはありません。
 
+### サンプリング戦略
+
+Pensieveは、スクリーンショット生成の速度と個々の画像処理の速度に基づいて、画像処理の間隔を動的に調整します。NVIDIA GPUがない環境では、画像処理がスクリーンショット生成の速度に追いつくことが難しい場合があります。これに対処するために、Pensieveはサンプリングベースで画像を処理します。
+
+システム負荷を防ぐために、Pensieveのデフォルトのサンプリング戦略は意図的に保守的です。しかし、この保守的なアプローチは、より高い計算能力を持つデバイスのパフォーマンスを制限する可能性があります。より柔軟性を提供するために、`~/.memos/config.yaml`に追加の制御オプションが導入されており、ユーザーはシステムをより保守的またはより積極的な処理戦略に設定することができます。
+
+```yaml
+watch:
+  # number of recent events to consider when calculating processing rates
+  rate_window_size: 10
+  # sparsity factor for file processing
+  # a higher value means less frequent processing
+  # 1.0 means process every file, can not be less than 1.0
+  sparsity_factor: 3.0
+  # initial processing interval for file processing, means process one file with plugins for every N files
+  # but will be adjusted automatically based on the processing rate
+  # 12 means processing one file every 12 screenshots generated
+  processing_interval: 12
+```
+
+すべてのスクリーンショットファイルを処理したい場合は、次のように設定を構成できます：
+
+```yaml
+# A watch config like this means process every file with plugins at the beginning
+# but if the processing rate is slower than file generated, the processing interval 
+# will be increased automatically
+watch:
+  rate_window_size: 10
+  sparsity_factor: 1.0
+  processing_interval: 1
+```
+
+新しい設定を反映させるために、`memos stop && memos start`を実行してください。
+
 ## プライバシーとセキュリティ
 
 Pensieveの開発中、私は特に[Rewind](https://www.rewind.ai/)と[Windows Recall](https://support.microsoft.com/en-us/windows/retrace-your-steps-with-recall-aa03f8a0-a78b-4b3e-b0a1-2eb8ac48701c)の進展を密接に追っていました。これらの製品の理念には非常に感銘を受けましたが、プライバシー保護の面では十分ではありません。これは多くのユーザー（または潜在的なユーザー）が懸念している問題です。個人用コンピュータの画面を記録することは、銀行口座、パスワード、チャット記録など、非常に機密性の高いプライベートデータを露出させる可能性があります。したがって、データの保存と処理が完全にユーザーによって制御され、データの漏洩を防ぐことが特に重要です。

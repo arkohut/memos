@@ -223,6 +223,40 @@ memos scan
 
 This command will scan and index all recorded screenshots. Note that depending on the number of screenshots and system configuration, this process may take some time and consume significant system resources. The index construction is idempotent, and running this command multiple times will not re-index already indexed data.
 
+### Sampling Strategy
+
+Pensieve dynamically adjusts the image processing interval based on the speed of screenshot generation and the speed of processing individual images. In environments without NVIDIA GPUs, it may be challenging to ensure that image processing keeps up with the rate of screenshot generation. To address this, Pensieve processes images on a sampled basis.
+
+To prevent excessive system load, Pensieve’s default sampling strategy is intentionally conservative. However, this conservative approach might limit the performance of devices with higher computational capacity. To provide more flexibility, additional control options have been introduced in `~/.memos/config.yaml`, allowing users to configure the system for either more conservative or more aggressive processing strategies.
+
+```yaml
+watch:
+  # number of recent events to consider when calculating processing rates
+  rate_window_size: 10
+  # sparsity factor for file processing
+  # a higher value means less frequent processing
+  # 1.0 means process every file, can not be less than 1.0
+  sparsity_factor: 3.0
+  # initial processing interval for file processing, means process one file with plugins for every N files
+  # but will be adjusted automatically based on the processing rate
+  # 12 means processing one file every 12 screenshots generated
+  processing_interval: 12
+```
+
+If you want every screenshot file to be processed, you can configure the settings as follows:
+
+```yaml
+# A watch config like this means process every file with plugins at the beginning
+# but if the processing rate is slower than file generated, the processing interval 
+# will be increased automatically
+watch:
+  rate_window_size: 10
+  sparsity_factor: 1.0
+  processing_interval: 1
+```
+
+Remember to do `memos stop && memos start` to make the new config work.
+
 ## Privacy and Security
 
 During the development of Pensieve, I closely followed the progress of similar products, especially [Rewind](https://www.rewind.ai/) and [Windows Recall](https://support.microsoft.com/en-us/windows/retrace-your-steps-with-recall-aa03f8a0-a78b-4b3e-b0a1-2eb8ac48701c). I greatly appreciate their product philosophy, but they do not do enough in terms of privacy protection, which is a concern for many users (or potential users). Recording the screen of a personal computer may expose extremely sensitive private data, such as bank accounts, passwords, chat records, etc. Therefore, ensuring that data storage and processing are completely controlled by the user to prevent data leakage is particularly important.
