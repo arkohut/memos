@@ -237,7 +237,8 @@ watch:
   # a higher value means less frequent processing
   # 1.0 means process every file, can not be less than 1.0
   sparsity_factor: 3.0
-  # initial processing interval for file processing, means process one file with plugins for every N files
+  # initial processing interval for file processing, means process one file 
+  # with plugins for every N files
   # but will be adjusted automatically based on the processing rate
   # 12 means processing one file every 12 screenshots generated
   processing_interval: 12
